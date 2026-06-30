@@ -1,0 +1,61 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Java / Kotlin / Spring Boot
+*.class
+*.jar
+*.war
+target/
+build/
+.gradle/
+out/
+
+# Node / Next.js
+node_modules/
+.next/
+dist/
+.cache/
+
+# Python / FastAPI
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+.pytest_cache/
+.mypy_cache/
+
+# ML artifacts
+ml/models/*.pkl
+ml/models/*.joblib
+ml/models/*.h5
+ml/data/*.xlsx
+ml/data/*.csv
+
+# Android
+android/.gradle/
+android/local.properties
+android/app/release/
+*.apk
+*.aab
+
+# Secrets
+*.pem
+*.key
+firebase-adminsdk*.json
+google-services.json

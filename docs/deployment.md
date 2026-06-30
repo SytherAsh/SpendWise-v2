@@ -1,0 +1,155 @@
+# Deployment & Infrastructure
+
+## Architecture Overview
+
+SpendWise runs as two backend services + one frontend + one database:
+
+| Component | Technology | Hosting |
+|---|---|---|
+| Web Dashboard | Next.js (React) | Vercel (free tier) |
+| Main Backend API | Spring Boot (Java 21) | Render / Railway / Fly.io (free tier) |
+| ML Categorization Service | FastAPI (Python) | Render / Railway / Fly.io (free tier) |
+| Database | PostgreSQL | Supabase (free tier) |
+| Auth | Firebase Authentication | Firebase (free tier) |
+| Error Tracking | Sentry | Sentry (free tier) |
+| Uptime Monitoring | UptimeRobot | UptimeRobot (free tier) |
+| Android Distribution | Firebase App Distribution | Firebase (free tier) |
+
+> Free-tier platform for backend finalized during setup. Preference: always-on (not spin-down on inactivity) since background jobs run on a schedule.
+
+## Environment Variables
+
+All secrets are injected via environment variables — never hardcoded or committed to Git.
+
+### Spring Boot Backend
+
+```
+SUPABASE_URL=
+SUPABASE_KEY=
+FIREBASE_PROJECT_ID=
+FIREBASE_PRIVATE_KEY=
+FASTAPI_ML_URL=http://ml-service/
+JWT_SECRET=
+SENTRY_DSN=
+EMAIL_SMTP_HOST=
+EMAIL_SMTP_USER=
+EMAIL_SMTP_PASS=
+ADMIN_JWT_SECRET=
+```
+
+### FastAPI ML Service
+
+```
+SUPABASE_URL=
+SUPABASE_KEY=
+SENTRY_DSN=
+MODEL_PATH=./models/
+```
+
+### Next.js Frontend
+
+```
+NEXT_PUBLIC_API_BASE_URL=
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+```
+
+## Version Control & Branching
+
+- **Main branch**: `main` — represents production state; never commit directly
+- **Feature branches**: `feature/<short-description>` — all development work
+- **Fix branches**: `fix/<short-description>` — bug fixes
+- **PRs required** to merge into `main` — at least one review (self-review acceptable for solo project)
+- CI tests must pass before merge is allowed
+
+## CI/CD Pipeline
+
+### CI (Continuous Integration)
+Runs automatically on every push and PR:
+
+- Spring Boot: `./gradlew test` (JUnit 5 + Spring Boot Test)
+- FastAPI: `pytest` (unit tests + evaluation script)
+- Android: `./gradlew test` (Kotlin unit tests for parser)
+- E2E: golden path test on staging environment
+
+### CD (Continuous Deployment)
+- **Manual** — developer reviews CI results and deploys manually
+- No automatic deployment to production on merge
+- Deployment steps per service documented below
+
+### Deploying Spring Boot Backend
+
+```bash
+./gradlew build -x test       # build JAR
+# Upload JAR or push to hosting platform via CLI
+# Set environment variables in platform dashboard
+# Restart service
+```
+
+### Deploying FastAPI ML Service
+
+```bash
+pip install -r requirements.txt
+uvicorn api.main:app --host 0.0.0.0 --port 8000
+# Or via Docker if platform supports it
+```
+
+### Deploying Frontend
+
+Vercel auto-deploys from Git on push to `main`. No manual step required for frontend.
+
+### Distributing Android APK
+
+```bash
+./gradlew assembleRelease
+# Upload .apk to Firebase App Distribution via Firebase CLI:
+firebase appdistribution:distribute app/release/app-release.apk \
+  --app <FIREBASE_APP_ID> \
+  --groups testers
+```
+
+## Backend Service Communication
+
+Spring Boot calls the FastAPI ML service internally via HTTP:
+
+```
+POST http://ml-service/predict
+Content-Type: application/json
+
+{
+  "recipient_name": "Swiggy",
+  "upi_id": "swiggy@okicici",
+  "bank": "ICICI",
+  "transaction_mode": "UPI",
+  "amount": -350.0,
+  "note": null
+}
+```
+
+Response:
+```json
+{
+  "category_id": 7,
+  "category_name": "Food / Dine Out",
+  "confidence": 0.94
+}
+```
+
+## Monitoring Setup
+
+After deployment, configure:
+
+1. **Sentry**: Add DSN to both Spring Boot and FastAPI environment variables
+2. **UptimeRobot**: Add monitor pointing to `GET /api/v1/health` — set email alert
+3. **Supabase**: Enable query performance insights in dashboard
+
+## Health Check Endpoint
+
+Spring Boot exposes:
+
+```
+GET /api/v1/health
+→ 200 OK  { "status": "healthy", "db": "connected", "ml": "reachable" }
+```
+
+UptimeRobot pings this every 5 minutes.
