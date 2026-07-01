@@ -21,11 +21,14 @@ epic order, not strict execution order.
 - [x] E0-S2-T4 — Migration: budgets, alerts, EMIs
 - [x] E0-S2-T5 — Migration: ML, admin, and chatbot tables
 - [x] E0-S2-T6 — Row-Level Security policies
-- [ ] E0-S3-T1 — CI: Spring Boot unit + integration tests
-- [ ] E0-S3-T2 — CI: FastAPI pytest
-- [ ] E0-S3-T3 — CI: Android unit tests
-- [ ] E0-S3-T4 — CI: frontend build/lint
-- [ ] E0-S3-T5 — Branch protection & PR process docs
+- [x] E0-S3-T1 — CI: Spring Boot unit + integration tests
+- [x] E0-S3-T2 — CI: FastAPI pytest
+- [x] E0-S3-T3 — CI: Android unit tests
+- [x] E0-S3-T4 — CI: frontend build/lint
+- [ ] E0-S3-T5 — Branch protection & PR process docs (**blocked**: no GitHub
+      remote configured for this repo, so there is nothing to set the branch
+      protection rule on. The PR template itself was completed in E0-S1-T5.
+      Revisit once a remote exists.)
 
 ## Epic 1 — [Auth & User Onboarding](../epics/epic-01-auth-and-user.md)
 
@@ -174,5 +177,5 @@ epic order, not strict execution order.
 
 ---
 
-**Progress: 11 / 125 tasks complete.** Update this line's count as you check items off (or
+**Progress: 15 / 125 tasks complete.** Update this line's count as you check items off (or
 leave it — it's a convenience, not a requirement).
