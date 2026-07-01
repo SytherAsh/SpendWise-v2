@@ -105,10 +105,10 @@ With items 1–2 set, Epic 0's intent is fully satisfied for a solo workflow.
 - [x] E1-S1-T6 — `POST /auth/logout`
 - [x] E1-S1-T7 — User JWT auth filter
 - [x] E1-S2-T1 — Admin JWT filter (independent chain)
-- [ ] E1-S3-T1 — `GET/PUT /users/me`
-- [ ] E1-S3-T2 — `GET/PUT /users/me/preferences`
-- [ ] E1-S3-T3 — `POST /users/me/onboarding`
-- [ ] E1-S4-T1 — Device key hash-and-validate service
+- [x] E1-S3-T1 — `GET/PUT /users/me`
+- [x] E1-S3-T2 — `GET/PUT /users/me/preferences`
+- [x] E1-S3-T3 — `POST /users/me/onboarding`
+- [x] E1-S4-T1 — Device key hash-and-validate service
 
 ## Epic 2 — [Android SMS Parsing & Sync](../epics/epic-02-android-sms-parsing-sync.md)
 
