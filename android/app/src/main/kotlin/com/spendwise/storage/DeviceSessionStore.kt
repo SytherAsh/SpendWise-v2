@@ -8,11 +8,11 @@ import android.content.Context
  * these values at login/onboarding time — this scaffold is the seam they write into; Epic 2
  * itself has zero backend dependency and only reads whatever is already stored locally.
  */
-class DeviceSessionStore(context: Context) {
+class DeviceSessionStore(context: Context) : UserSessionProvider {
 
     private val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    fun getUserId(): String? = prefs.getString(KEY_USER_ID, null)
+    override fun getUserId(): String? = prefs.getString(KEY_USER_ID, null)
 
     fun getDeviceApiKey(): String? = prefs.getString(KEY_DEVICE_API_KEY, null)
 

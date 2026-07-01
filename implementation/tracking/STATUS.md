@@ -119,9 +119,9 @@ With items 1–2 set, Epic 0's intent is fully satisfied for a solo workflow.
 - [x] E2-S2-T4 — Unknown-sender fallback extractor
 - [x] E2-S3-T1 — Synthesized `transaction_id` + on-device dedup
 - [x] E2-S4-T1 — Room entities & DAOs for local sync queue
-- [ ] E2-S5-T1 — Batch sync client (retry/backoff, 409-as-success)
-- [ ] E2-S5-T2 — Real-time SMS capture (BroadcastReceiver + foreground service)
-- [ ] E2-S5-T3 — First-launch SMS inbox backfill
+- [x] E2-S5-T1 — Batch sync client (retry/backoff, 409-as-success)
+- [x] E2-S5-T2 — Real-time SMS capture (BroadcastReceiver + foreground service)
+- [x] E2-S5-T3 — First-launch SMS inbox backfill
 
 ## Epic 3 — [Ingestion & Transaction Management](../epics/epic-03-ingestion-and-transactions.md)
 

@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">SpendWise</string>
     <string name="placeholder_message">SpendWise — under construction</string>
+    <string name="sms_monitoring_notification_title">SpendWise is watching for transaction SMS</string>
 </resources>
