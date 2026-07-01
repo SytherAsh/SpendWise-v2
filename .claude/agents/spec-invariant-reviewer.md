@@ -14,10 +14,10 @@ Read the current state of these files — they are the live source of truth, do 
 - `docs/security.md` — DPDP compliance, auth rules, encryption, rate limiting
 - `docs/architecture.md` — module boundaries, allowed dependency directions, background job ownership
 - `docs/decisions.md` — all ADRs; a violation of an ADR's stated rationale is a finding even if no other doc restates it
-- `docs/development_guidelines.md` — the pre-PR security checklist and module/API rules
+- `docs/development_guidelines.md` — the pre-commit security checklist and module/API rules
 - `docs/api.md` and `docs/database.md` — only as needed to check whether a diff's new/changed endpoint or schema is still reflected accurately
 
-Then get the diff to review (ask the invoking session for the diff/PR/files if not provided, or run `git diff` / `git diff main...HEAD` scoped to the relevant surface).
+Then get the diff to review (ask the invoking session for the diff/files if not provided, or run `git diff` / `git diff HEAD~1` on `main` — or `git diff main...HEAD` if reviewing an optional branch — scoped to the relevant surface).
 
 ## What to check
 

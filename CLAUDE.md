@@ -86,10 +86,10 @@ See [docs/decisions.md](./docs/decisions.md) for full ADRs.
 
 ## Working in this codebase
 
-- Read [docs/development_guidelines.md](./docs/development_guidelines.md) before opening a PR
+- Read [docs/development_guidelines.md](./docs/development_guidelines.md) for coding standards and the pre-commit security checklist
 - All API routes are prefixed `/api/v1/`
 - JWT Bearer token required on all protected endpoints
-- See **Git & GitHub Workflow** below for branching, commit, and epic-completion process
+- See **Git & GitHub Workflow** below for the commit, push, and epic-completion process
 
 ### Security invariants
 
@@ -114,7 +114,7 @@ See [docs/decisions.md](./docs/decisions.md) for full ADRs.
 
 ## Git & GitHub Workflow
 
-This is the authoritative process for how Claude Code operates on this repository day to day. Branch/commit-message conventions and code style live in [docs/development_guidelines.md](./docs/development_guidelines.md); test commands live in [docs/testing.md](./docs/testing.md); epic/task tracking lives in [implementation/](./implementation/README.md). This section governs *when* and *how* those are used — it does not restate them.
+This is the authoritative process for how Claude Code operates on this repository day to day. **SpendWise is a solo project — the normal workflow is to work directly on `main`; feature branches and pull requests are not required.** Commit-message conventions and code style live in [docs/development_guidelines.md](./docs/development_guidelines.md); test commands live in [docs/testing.md](./docs/testing.md); epic/task tracking lives in [implementation/](./implementation/README.md). This section governs *when* and *how* those are used — it does not restate them.
 
 ### Git Operations
 
@@ -131,13 +131,14 @@ This is the authoritative process for how Claude Code operates on this repositor
 - Commit only after completing a logical unit of work (a task, a story, a fix) — not mid-edit.
 - Use the conventional-commits format defined in [docs/development_guidelines.md § Commit Messages](./docs/development_guidelines.md#commit-messages).
 - Never commit code that fails to build or fails its test suite, unless the user explicitly asks for a checkpoint commit — say so in the message (e.g. `wip: checkpoint, tests not passing`).
-- Run the relevant test suite(s) for whatever was touched (see [docs/testing.md](./docs/testing.md) and [docs/development_guidelines.md § Running Tests Locally](./docs/development_guidelines.md#running-tests-locally)) before recommending a commit.
+- Run the relevant test suite(s) for whatever was touched (see [docs/testing.md](./docs/testing.md) and [docs/development_guidelines.md § Running Tests Locally](./docs/development_guidelines.md#running-tests-locally)) before recommending a commit or a push. If any test fails, explain the failure and its cause before committing or pushing — do not proceed silently.
 
-### Branch Strategy
+### Working on `main`
 
-- Never commit directly to `main` — no exceptions, including trivial doc fixes. Always work on a branch named per [docs/development_guidelines.md § Branching Strategy](./docs/development_guidelines.md#branching-strategy) (`feature/`, `fix/`, `chore/`).
-- One branch per feature, fix, or epic story — don't let a branch accumulate unrelated work. If a task grows past its expected size, stop and split it, per the complexity guidance in [implementation/README.md](./implementation/README.md).
-- Merge to `main` only after tests pass and (per Git Operations above) the user has approved the push.
+- Solo project — **work directly on `main`.** Feature branches and pull requests are **not** part of the normal workflow; do not create them by default.
+- Commit each completed unit of work straight to `main` (per the Commit Policy above), then ask before pushing (per Git Operations above).
+- Branches remain available if *you or the user* deliberately choose to isolate a risky or experimental change — but they are optional, never the default. Don't open one without a specific reason, and don't require one for routine work, including epics.
+- If a task grows past its expected 2–4 hour size, stop and split it per the complexity guidance in [implementation/README.md](./implementation/README.md) — this is about task sizing, not branching.
 
 ### Epic Workflow
 
@@ -155,7 +156,7 @@ Epics and tasks are tracked in [implementation/](./implementation/README.md) —
 
 ### Repository Safety
 
-- Never commit secrets, API keys, credentials, or `.env` files — see [docs/development_guidelines.md § Security Checklist](./docs/development_guidelines.md#security-checklist-before-every-pr).
+- Never commit secrets, API keys, credentials, or `.env` files — see [docs/development_guidelines.md § Security Checklist](./docs/development_guidelines.md#security-checklist-before-every-commit-to-main).
 - Protect the existing project structure — don't reorganize directories as a side effect of unrelated work.
 - Avoid unnecessary file moves or renames; if one is warranted, do it in its own commit.
 - Prefer incremental, reviewable changes over large refactors.

@@ -136,7 +136,7 @@ early as Epic 0, in parallel with everything else — see `../DEPENDENCY-GRAPH.m
 - **Required Tests:** The golden path test itself, run against production as its final gate (not just CI).
 - **Estimated Complexity:** Medium
 - **Depends on:** E12-S1-T1, E12-S1-T2, E12-S1-T4
-- **Grounded in:** `docs/testing.md` §4 (full E2E section, env vars, "run before every PR merge... after ML model retraining" — here applied as the pre-launch gate specifically).
+- **Grounded in:** `docs/testing.md` §4 (full E2E section, env vars, "run before every push to `main`... after ML model retraining" — here applied as the pre-launch gate specifically).
 
 #### E12-S4-T2 — Security checklist verification against production
 

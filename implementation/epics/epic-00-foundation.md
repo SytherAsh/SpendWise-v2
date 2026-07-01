@@ -4,8 +4,8 @@
 `./gradlew test` passes on an empty Spring Boot skeleton; the Next.js app renders a
 placeholder page; the Android app builds and installs a blank launcher screen; FastAPI
 `/health` returns 200; the full DB schema is migrated on a Supabase project with RLS
-policies active on every `user_id` table; CI runs all four test jobs on a PR and reports
-green (trivially, since there are no tests yet beyond scaffolding smoke tests).
+policies active on every `user_id` table; CI runs all four test jobs on a push to `main`
+and reports green (trivially, since there are no tests yet beyond scaffolding smoke tests).
 
 No business logic is written in this epic — it is purely project setup so that every
 later epic has a working, testable base to build on.
@@ -202,9 +202,9 @@ instance (local Docker or Supabase) and querying `information_schema` for expect
 ### E0-S3 — CI Skeleton
 
 Wire up the four CI jobs described in `docs/deployment.md` and `docs/testing.md` so every
-later epic's tests run automatically on push/PR.
+later epic's tests run automatically on every push to `main` (and on any optional PR).
 
-**Independently testable via:** opening a throwaway PR and watching all 4 jobs go green.
+**Independently testable via:** pushing to `main` and watching all 4 jobs go green.
 
 #### E0-S3-T1 — CI: Spring Boot unit + integration tests
 
@@ -250,17 +250,26 @@ later epic's tests run automatically on push/PR.
 - **Depends on:** E0-S1-T2
 - **Grounded in:** `docs/deployment.md` CI section (extended to frontend for parity — see task note above), `docs/development_guidelines.md` TypeScript conventions.
 
-#### E0-S3-T5 — Branch protection & PR process docs
+#### E0-S3-T5 — Branch protection (solo direct-to-`main` guardrails)
 
-- **Objective:** Enforce the branching/PR rules from `docs/development_guidelines.md` at
-  the GitHub repo-settings level, not just as documentation.
-- **Expected Deliverable:** Branch protection rule on `main` requiring all 4 CI jobs to
-  pass before merge; PR template (from E0-S1-T5) linked in repo settings.
-- **Definition of Done:** A direct push to `main` is rejected; a PR cannot merge with a failing job.
-- **Required Tests:** N/A — verify by attempting a direct push to `main` on a throwaway branch and confirming rejection.
+- **Objective:** Add the *safety* guardrails to `main` at the GitHub repo-settings level,
+  without imposing a pull-request workflow — this is a solo project that works directly on
+  `main` (see `docs/development_guidelines.md` Git Workflow and `CLAUDE.md` Working on `main`).
+- **Expected Deliverable:** Branch protection rule on `main` that (a) prevents force pushes,
+  (b) prevents branch deletion, and (c) leaves direct pushes to `main` allowed — i.e. does
+  **not** require pull requests or reviews. Keep GitHub Actions CI running on every push to
+  `main` (already configured in E0-S3-T1..T4) as the validation signal.
+- **Definition of Done:** A force-push to `main` is rejected and `main` cannot be deleted;
+  a normal direct push to `main` still succeeds; CI runs on that push.
+- **Required Tests:** N/A (repo settings) — verify by confirming a normal push to `main`
+  succeeds and CI triggers, and that a force-push is rejected.
 - **Estimated Complexity:** Small
 - **Depends on:** E0-S3-T1, E0-S3-T2, E0-S3-T3, E0-S3-T4
-- **Grounded in:** `docs/development_guidelines.md` Branching Strategy & Workflow.
+- **Grounded in:** `docs/development_guidelines.md` Git Workflow; `docs/deployment.md`
+  Version Control & Branching (branch-protection recommendation); `CLAUDE.md` Git & GitHub Workflow.
+- **Note:** Configuring GitHub repo settings requires repo-admin access and, per `CLAUDE.md`,
+  explicit user approval — so this is a **manual step for the repo owner**, not something the
+  agent performs. The exact settings and rationale are recorded in `tracking/STATUS.md`.
 
 ---
 

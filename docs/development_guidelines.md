@@ -1,24 +1,24 @@
 # Development Guidelines
 
-## Branching Strategy
+## Git Workflow
 
-- `main` — production state. **Never commit directly to main.**
-- `feature/<short-name>` — all new features (e.g., `feature/sms-parser-sbi`)
-- `fix/<short-name>` — bug fixes (e.g., `fix/duplicate-transaction-check`)
-- `chore/<short-name>` — tooling, deps, config (e.g., `chore/update-gradle`)
+SpendWise is a **solo project** — the normal workflow is to work directly on `main`. Feature branches and pull requests are **not** required.
+
+- `main` — the working branch. Commit completed units of work directly to it.
+- Optional branches (`feature/<short-name>`, `fix/<short-name>`, `chore/<short-name>`) remain available for isolating a risky or experimental change, but are not part of the routine flow — don't create one without a specific reason.
 
 ### Workflow
 
 ```
 1. Pull latest main
-2. Create feature branch from main
-3. Develop and commit to feature branch
-4. Open PR against main
-5. CI must pass (tests green)
-6. Self-review or peer review
-7. Merge to main
-8. Deploy manually after verification
+2. Develop and commit each completed unit of work directly to main
+3. Run the relevant test suites (all four must be green — see Running Tests Locally)
+4. Ask for confirmation, then push to main
+5. GitHub Actions CI runs automatically on the push
+6. Deploy manually after verification
 ```
+
+Do not force-push, rewrite pushed history, or delete branches without explicit approval. Always ask before pushing to GitHub.
 
 ## Commit Messages
 
@@ -80,7 +80,7 @@ test: add parser unit tests for Paytm format
 - All responses include consistent error shape: `{ error, message, status }`
 - `sms_raw_text` must never appear in any user-facing API response — add a filter at the serialization layer
 
-## Security Checklist (before every PR)
+## Security Checklist (before every commit to main)
 
 - [ ] No secrets or API keys in code or comments
 - [ ] New endpoints have JWT auth guard applied
@@ -104,7 +104,7 @@ cd android && ./gradlew test
 cd tests/e2e && pytest test_golden_path.py -v
 ```
 
-All four test suites must pass before a PR can be merged.
+All four test suites must pass before pushing to `main`.
 
 ## Environment Setup
 

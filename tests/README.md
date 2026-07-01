@@ -39,7 +39,7 @@ pytest test_golden_path.py -v
 
 ## When to Run
 
-- Before every PR merge to `main`
+- Before every push to `main`
 - After any change to the ingest, categorization, or analytics modules
 - After ML model retraining
 

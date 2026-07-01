@@ -27,15 +27,15 @@ epic order, not strict execution order.
 - [x] E0-S3-T3 — CI: Android unit tests (confirmed green on real GitHub
       Actions — see close-out note below)
 - [x] E0-S3-T4 — CI: frontend build/lint (confirmed green on real GitHub Actions)
-- [ ] E0-S3-T5 — Branch protection & PR process docs (**partially blocked**:
-      a GitHub remote now exists (`SytherAsh/SpendWise-v2`) and CI is
-      confirmed green there, but the branch-protection rule itself still
-      requires repo-admin access this session doesn't have (no `gh` CLI,
-      no token — confirmed via an unauthenticated API probe) and, per
-      `CLAUDE.md` "Git & GitHub Workflow", must not be configured without
-      explicit approval regardless. The PR template was completed in
-      E0-S1-T5. **Manual action required from the user** — exact settings
-      and rationale given in the Epic 0 close-out report.)
+- [ ] E0-S3-T5 — Branch protection (solo direct-to-`main` guardrails)
+      (**manual step for the repo owner** — see the "Branch protection" note
+      in the close-out below. Revised from the original "mandatory PR"
+      framing: this is now a solo project that works directly on `main`, so
+      the rule should only prevent force-pushes and branch deletion and must
+      **not** require pull requests. Configuring repo settings needs repo-admin
+      access this session doesn't have, and per `CLAUDE.md` must not be changed
+      without explicit approval regardless — hence it stays unchecked as an
+      owner action, not an agent action.)
 
 ### Epic 0 close-out (post-merge, real GitHub verification)
 
@@ -57,6 +57,33 @@ again on the merge commit to `main` — all 4 jobs green both times.
 
 This is the only defect the real-GitHub verification pass turned up; no
 other Epic 0 technical debt was found on repository audit.
+
+### Git workflow change (solo, direct-to-`main`)
+
+The project's Git workflow was changed to a **solo, work-directly-on-`main`**
+model (no mandatory feature branches or pull requests). `CLAUDE.md`,
+`docs/development_guidelines.md`, `docs/deployment.md`, `docs/testing.md`, and
+this file's E0-S3-T5 were updated to match. Branches and PRs remain *available*
+(optional) but are no longer the default flow; commits go straight to `main`,
+CI runs on each push, and the agent still asks before pushing.
+
+### Branch protection — exact settings (manual, repo owner)
+
+E0-S3-T5's remaining piece is a one-time GitHub setting the owner applies at
+**Settings → Branches → Add branch ruleset (or classic rule)** for `main`:
+
+1. **Block force pushes** — enable. Matches "never force-push"; prevents history clobbering.
+2. **Restrict deletions** — enable. Prevents `main` being deleted.
+3. **Require status checks to pass** — *optional* for a solo dev. If enabled, it
+   applies only when changes arrive via PR; with direct-to-`main` pushes it does
+   not gate anything, so it's fine to leave off and rely on watching the CI run
+   after each push. (Do **not** pair it with "Require a pull request before
+   merging" — that would reintroduce the mandatory-PR flow we just removed.)
+4. **Do NOT enable "Require a pull request before merging"** — this is the key
+   difference from a team setup; leaving it off is what keeps direct pushes to
+   `main` working.
+
+With items 1–2 set, Epic 0's intent is fully satisfied for a solo workflow.
 
 ## Epic 1 — [Auth & User Onboarding](../epics/epic-01-auth-and-user.md)
 

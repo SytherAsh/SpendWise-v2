@@ -66,17 +66,18 @@ NEXT_PUBLIC_FIREBASE_APP_ID=
 
 ## Version Control & Branching
 
-- **Main branch**: `main` — represents production state; never commit directly
-- **Feature branches**: `feature/<short-description>` — all development work
-- **Fix branches**: `fix/<short-description>` — bug fixes
-- **PRs required** to merge into `main` — at least one review (self-review acceptable for solo project)
-- CI tests must pass before merge is allowed
+Solo project — work directly on `main`; feature branches and pull requests are not required.
+
+- **Main branch**: `main` — the working branch; commit completed units of work directly to it
+- **Optional branches**: `feature/<short-description>`, `fix/<short-description>`, `chore/<short-description>` — available for isolating a risky or experimental change, not part of the routine flow
+- CI tests run on every push to `main` (GitHub Actions) and should be green before deploying
+- **Branch protection (recommended for `main`)**: prevent force pushes and prevent branch deletion; do **not** require pull requests (they would only get in the way of a solo direct-to-`main` flow)
 
 ## CI/CD Pipeline
 
 ### CI (Continuous Integration)
 
-Runs automatically on every push and PR:
+Runs automatically on every push to `main` (and on any optional pull request):
 
 - Spring Boot unit tests: `./gradlew test` (JUnit 5 + Spring Boot Test)
 - Spring Boot integration tests: `./gradlew integrationTest` — requires Docker in the CI runner; Testcontainers provisions a PostgreSQL container automatically (GitHub Actions `ubuntu-latest` includes Docker by default)
