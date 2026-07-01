@@ -31,14 +31,23 @@ src/main/java/com/spendwise/
 ## Running Locally
 
 ```bash
-# Set environment variables (copy from docs/deployment.md)
+# Start the local Postgres substitute (see docker-compose.yml for why this
+# isn't the real Supabase project — no live project exists yet)
+docker compose up -d
+
+# Set environment variables (copy from docs/deployment.md); defaults already
+# point at the local Postgres above, so this step is optional for local dev
 cp .env.example .env
 
-# Build and run
+# Build and run — Flyway migrates the schema automatically on startup
 ./gradlew bootRun
 ```
 
 API available at `http://localhost:8080/api/v1/`
+
+Local Postgres connects as `spendwise_app`, a non-superuser role created by
+`db-init/01-app-role.sql` — not the container's default superuser, which
+would silently bypass Row-Level Security (see `V5__row_level_security.sql`).
 
 ## Running Tests
 

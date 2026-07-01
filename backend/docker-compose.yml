@@ -1,0 +1,25 @@
+# Local Postgres substitute for the Supabase dev project.
+#
+# SpendWise's production/dev database is Supabase-hosted Postgres (see
+# docs/deployment.md). Provisioning a live Supabase project requires an
+# interactive account signup that can't be automated, so local development
+# runs against this Dockerized Postgres instead — same engine, same SQL
+# dialect, same Flyway migrations. Point SPRING_DATASOURCE_* at the real
+# Supabase connection string once a project exists (see implementation/
+# epics/epic-12-deployment-and-launch.md E12-S1-T4) — no code changes
+# needed, only environment variables.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: spendwise
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - spendwise-postgres-data:/var/lib/postgresql/data
+      - ./db-init:/docker-entrypoint-initdb.d
+
+volumes:
+  spendwise-postgres-data:

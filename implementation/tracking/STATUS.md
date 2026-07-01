@@ -15,12 +15,12 @@ epic order, not strict execution order.
 - [x] E0-S1-T3 — Android project skeleton
 - [x] E0-S1-T4 — FastAPI project skeleton
 - [x] E0-S1-T5 — Root tooling audit
-- [ ] E0-S2-T1 — Supabase project & migration tool setup
-- [ ] E0-S2-T2 — Migration: identity & session tables
-- [ ] E0-S2-T3 — Migration: transactions & categories
-- [ ] E0-S2-T4 — Migration: budgets, alerts, EMIs
-- [ ] E0-S2-T5 — Migration: ML, admin, and chatbot tables
-- [ ] E0-S2-T6 — Row-Level Security policies
+- [x] E0-S2-T1 — Supabase project & migration tool setup
+- [x] E0-S2-T2 — Migration: identity & session tables
+- [x] E0-S2-T3 — Migration: transactions & categories
+- [x] E0-S2-T4 — Migration: budgets, alerts, EMIs
+- [x] E0-S2-T5 — Migration: ML, admin, and chatbot tables
+- [x] E0-S2-T6 — Row-Level Security policies
 - [ ] E0-S3-T1 — CI: Spring Boot unit + integration tests
 - [ ] E0-S3-T2 — CI: FastAPI pytest
 - [ ] E0-S3-T3 — CI: Android unit tests
@@ -174,5 +174,5 @@ epic order, not strict execution order.
 
 ---
 
-**Progress: 5 / 125 tasks complete.** Update this line's count as you check items off (or
+**Progress: 11 / 125 tasks complete.** Update this line's count as you check items off (or
 leave it — it's a convenience, not a requirement).

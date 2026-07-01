@@ -7,5 +7,30 @@ spring:
     virtual:
       enabled: true # ADR-009 — Project Loom virtual threads, Spring Boot 3.2+
 
+  # SPRING_DATASOURCE_* are not part of the docs/deployment.md env var list —
+  # that list documents SUPABASE_URL/SUPABASE_KEY, which are Supabase's
+  # client-SDK/REST credentials, not a raw JDBC connection. Flyway and
+  # Spring's DataSource need an actual JDBC URL + credentials, so these three
+  # vars fill that gap. Defaults below point at the local Docker Postgres in
+  # backend/docker-compose.yml so `./gradlew bootRun` works with zero env
+  # vars set locally. Production sets these to the real Supabase Postgres
+  # connection string (see implementation/epics/epic-12-deployment-and-launch.md
+  # E12-S1-T4).
+  datasource:
+    # Note: the JVM's default timezone must also be forced to UTC (see
+    # build.gradle.kts bootRun/test jvmArgs) — pgjdbc sends it as the
+    # Postgres "TimeZone" startup parameter, and older zone aliases (e.g.
+    # this machine's "Asia/Calcutta") are rejected by Postgres outright.
+    # Connects as spendwise_app, NOT the postgres superuser — see
+    # db-init/01-app-role.sql for why (Postgres superusers always bypass
+    # Row-Level Security, which would silently defeat V5__row_level_security.sql).
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/spendwise}
+    username: ${SPRING_DATASOURCE_USERNAME:spendwise_app}
+    password: ${SPRING_DATASOURCE_PASSWORD:spendwise_app_password}
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
 server:
   port: 8080
