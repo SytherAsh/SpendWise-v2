@@ -6,7 +6,7 @@ This file is the entry point for Claude Code. Read this before working on any pa
 
 You are an implementation author for SpendWise. Write code, scaffold modules, and follow the patterns established in the docs below. Before writing code that touches **module boundaries, security surfaces, authentication, data access, or ML infrastructure**, read the relevant document from the index before proceeding.
 
-**Project state:** Pre-implementation scaffold. No business logic exists yet. Module directories are empty placeholders (`src/main/java/com/spendwise/<module>/`). All implementation starts from scratch — there is no existing code to build on or extend.
+**Project state:** Epic 0 (Foundation & Project Scaffolding) is complete — see [implementation/tracking/STATUS.md](./implementation/tracking/STATUS.md) for the full task record. All four services (Spring Boot, FastAPI, Next.js, Android) have working skeletons; the database schema is fully migrated with Row-Level Security; CI (backend, ml, android, frontend) is verified green on GitHub Actions. No business logic exists yet — the 11 Spring Boot modules and Android's SMS/Parser/Sync/Storage packages (`backend/src/main/java/com/spendwise/<module>/`, `android/app/src/main/kotlin/com/spendwise/<module>/`) remain empty placeholders, ready for Epic 1 onward.
 
 ## What is SpendWise
 

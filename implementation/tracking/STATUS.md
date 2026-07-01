@@ -21,14 +21,42 @@ epic order, not strict execution order.
 - [x] E0-S2-T4 — Migration: budgets, alerts, EMIs
 - [x] E0-S2-T5 — Migration: ML, admin, and chatbot tables
 - [x] E0-S2-T6 — Row-Level Security policies
-- [x] E0-S3-T1 — CI: Spring Boot unit + integration tests
-- [x] E0-S3-T2 — CI: FastAPI pytest
-- [x] E0-S3-T3 — CI: Android unit tests
-- [x] E0-S3-T4 — CI: frontend build/lint
-- [ ] E0-S3-T5 — Branch protection & PR process docs (**blocked**: no GitHub
-      remote configured for this repo, so there is nothing to set the branch
-      protection rule on. The PR template itself was completed in E0-S1-T5.
-      Revisit once a remote exists.)
+- [x] E0-S3-T1 — CI: Spring Boot unit + integration tests (confirmed green
+      on real GitHub Actions — see close-out note below)
+- [x] E0-S3-T2 — CI: FastAPI pytest (confirmed green on real GitHub Actions)
+- [x] E0-S3-T3 — CI: Android unit tests (confirmed green on real GitHub
+      Actions — see close-out note below)
+- [x] E0-S3-T4 — CI: frontend build/lint (confirmed green on real GitHub Actions)
+- [ ] E0-S3-T5 — Branch protection & PR process docs (**partially blocked**:
+      a GitHub remote now exists (`SytherAsh/SpendWise-v2`) and CI is
+      confirmed green there, but the branch-protection rule itself still
+      requires repo-admin access this session doesn't have (no `gh` CLI,
+      no token — confirmed via an unauthenticated API probe) and, per
+      `CLAUDE.md` "Git & GitHub Workflow", must not be configured without
+      explicit approval regardless. The PR template was completed in
+      E0-S1-T5. **Manual action required from the user** — exact settings
+      and rationale given in the Epic 0 close-out report.)
+
+### Epic 0 close-out (post-merge, real GitHub verification)
+
+Once a GitHub remote became available, the real (not `act`-simulated) CI run
+on the direct push of the E0-S1/S2/S3 commits **failed** on exactly the two
+jobs that shell out to a checked-in script (`backend`, `android`) — root
+cause: `backend/gradlew` and `android/gradlew` were committed as mode
+`100644` (non-executable), since they were originally added from Windows,
+which doesn't track the Unix executable bit. Fixed in
+[PR #1](https://github.com/SytherAsh/SpendWise-v2/pull/1)
+(`fix/epic-0-ci-executable-bit`): `git update-index --chmod=+x` on both
+files, plus a new root `.gitattributes` to stop a future contributor's
+`core.autocrlf` setting from reintroducing a CRLF shebang line (a related
+but distinct way the same class of script breaks on Linux). Verified fixed
+on a genuine Linux filesystem (WSL2, not the `/mnt/c` Windows-mounted path,
+which reports all files as executable regardless of git's real stored mode)
+before pushing, and confirmed via the real GitHub Actions run on the PR and
+again on the merge commit to `main` — all 4 jobs green both times.
+
+This is the only defect the real-GitHub verification pass turned up; no
+other Epic 0 technical debt was found on repository audit.
 
 ## Epic 1 — [Auth & User Onboarding](../epics/epic-01-auth-and-user.md)
 
