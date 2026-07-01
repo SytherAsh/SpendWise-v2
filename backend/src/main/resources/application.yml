@@ -34,3 +34,16 @@ spring:
 
 server:
   port: 8080
+
+app:
+  security:
+    # Signing secret for the user session JWT (7-day access tokens). Must be
+    # set via env in dev/prod; the local default below is dev-only and
+    # deliberately weak/obvious so it's never mistaken for a real secret.
+    jwt-secret: ${JWT_SECRET:local-dev-only-jwt-secret-do-not-use-in-prod}
+    # Completely separate secret for admin-signed tokens (E1-S2 isolation
+    # invariant) — never derived from or shared with jwt-secret.
+    admin-jwt-secret: ${ADMIN_JWT_SECRET:local-dev-only-admin-jwt-secret-do-not-use-in-prod}
+  firebase:
+    project-id: ${FIREBASE_PROJECT_ID:}
+    private-key: ${FIREBASE_PRIVATE_KEY:}

@@ -30,7 +30,7 @@ epic order, not strict execution order.
 - [x] E0-S3-T3 — CI: Android unit tests (confirmed green on real GitHub
       Actions — see close-out note below)
 - [x] E0-S3-T4 — CI: frontend build/lint (confirmed green on real GitHub Actions)
-- [ ] E0-S3-T5 — Branch protection (solo direct-to-`main` guardrails)
+- [x] E0-S3-T5 — Branch protection (solo direct-to-`main` guardrails)
       (**manual step for the repo owner** — see the "Branch protection" note
       in the close-out below. Revised from the original "mandatory PR"
       framing: this is now a solo project that works directly on `main`, so
@@ -97,14 +97,14 @@ With items 1–2 set, Epic 0's intent is fully satisfied for a solo workflow.
 
 ## Epic 1 — [Auth & User Onboarding](../epics/epic-01-auth-and-user.md)
 
-- [ ] E1-S1-T1 — Firebase Admin SDK integration
-- [ ] E1-S1-T2 — JWT issuance & refresh-token storage
-- [ ] E1-S1-T3 — `POST /auth/otp/send` + `/auth/otp/verify`
-- [ ] E1-S1-T4 — `POST /auth/google`
-- [ ] E1-S1-T5 — `POST /auth/token/refresh` with rotation + replay detection
-- [ ] E1-S1-T6 — `POST /auth/logout`
-- [ ] E1-S1-T7 — User JWT auth filter
-- [ ] E1-S2-T1 — Admin JWT filter (independent chain)
+- [x] E1-S1-T1 — Firebase Admin SDK integration
+- [x] E1-S1-T2 — JWT issuance & refresh-token storage
+- [x] E1-S1-T3 — `POST /auth/otp/send` + `/auth/otp/verify`
+- [x] E1-S1-T4 — `POST /auth/google`
+- [x] E1-S1-T5 — `POST /auth/token/refresh` with rotation + replay detection
+- [x] E1-S1-T6 — `POST /auth/logout`
+- [x] E1-S1-T7 — User JWT auth filter
+- [x] E1-S2-T1 — Admin JWT filter (independent chain)
 - [ ] E1-S3-T1 — `GET/PUT /users/me`
 - [ ] E1-S3-T2 — `GET/PUT /users/me/preferences`
 - [ ] E1-S3-T3 — `POST /users/me/onboarding`

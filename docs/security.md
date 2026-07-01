@@ -131,3 +131,11 @@ USING (EXISTS (
 ```
 
 The same join pattern applies to `ml_corrections` (via its own `transaction_id` column).
+
+### Auth login lookup policy (V6, added during Epic 1 implementation)
+
+The `users` policy above only matches when `id = current_setting('app.current_user_id')`. Login (`/auth/otp/verify`, `/auth/google`) must look up a user by phone or google_id *before* that variable exists, so a second, narrowly-scoped, SELECT-only permissive policy was added in `V6__auth_lookup_policy.sql`: it exposes a row only when the caller first sets `app.auth_lookup_identifier` to the exact phone number or google_id being searched for — an identifier the caller inherently already holds, having just completed Firebase-verified OTP/Google authentication with it. This grants no INSERT/UPDATE/DELETE rights beyond what the primary policy already allows and does not enable browsing or enumeration.
+
+The identical gap exists on `refresh_tokens`: `/auth/token/refresh` and `/auth/logout` receive a raw refresh token and must find its row **by `token_hash`** before knowing which user it belongs to. V6 adds the same pattern there, gated by `app.auth_lookup_token_hash` — a row is visible only to a caller who already supplies the exact SHA-256 hash, which requires already possessing the valid raw token.
+
+Approved by project owner 2026-07-02 as a deviation from this document's original RLS design; see `docs/database.md` `device_api_keys` section addendum.

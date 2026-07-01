@@ -36,16 +36,32 @@ integrationTest.runtimeClasspath += sourceSets.main.get().output
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
 
+    // Own JWT issuance/validation for the user (JWT_SECRET) and admin
+    // (ADMIN_JWT_SECRET) sessions — see E1-S1-T7/E1-S2-T1 for why these stay
+    // as two independent filters rather than a shared Spring Security
+    // resource-server/OAuth2 setup.
+    implementation("io.jsonwebtoken:jjwt-api:0.12.6")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
+
+    // Firebase Admin SDK — server-side verification of phone-OTP/Google ID
+    // tokens (E1-S1-T1). Never used to trust a client-asserted identity.
+    implementation("com.google.firebase:firebase-admin:9.4.1")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     "integrationTestImplementation"("org.springframework.boot:spring-boot-testcontainers")
     "integrationTestImplementation"("org.testcontainers:junit-jupiter")
     "integrationTestImplementation"("org.testcontainers:postgresql")
+    "integrationTestImplementation"("org.springframework.security:spring-security-test")
 }
 
 tasks.withType<Test> {

@@ -313,6 +313,10 @@ CREATE INDEX idx_device_keys_user ON device_api_keys(user_id, is_active);
 
 Registered once per device at onboarding. The raw key is generated on-device and stored in device secure storage; only the hash is persisted here. Validation at `/ingest`: hash the incoming key → `SELECT WHERE user_id = ? AND is_active = TRUE AND key_hash = ?` → reject with 401 if not found.
 
+### Auth login lookup addendum (V6, added during Epic 1 implementation)
+
+`V5__row_level_security.sql`'s `users` policy only permits access when `id = current_setting('app.current_user_id')`. Login (OTP verify / Google login) must find an existing user **by phone or google_id** before any `app.current_user_id` exists — that policy can never match during this lookup, and under `FORCE ROW LEVEL SECURITY` the query would always return zero rows. `V6__auth_lookup_policy.sql` adds a second, permissive, SELECT-only policy on `users` (Postgres SELECT policies OR together): a row is visible only when the caller first sets `app.auth_lookup_identifier` to the exact phone/google_id being searched for. The same gap exists on `refresh_tokens` — `/auth/token/refresh` and `/auth/logout` must find a row **by `token_hash`** before knowing its `user_id` — so V6 adds an analogous SELECT-only policy there too, gated by `app.auth_lookup_token_hash`; exposing "a row with this exact SHA-256 hash exists" grants no capability beyond what already holding that raw token implies. See `docs/security.md` Supabase Row-Level Security for the full rationale. Approved by project owner 2026-07-02 as a deviation from this document's original RLS design.
+
 ## Deduplication Strategy
 
 Before inserting a transaction, check:
