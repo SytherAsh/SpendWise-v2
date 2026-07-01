@@ -1,0 +1,5 @@
+# Production deployment profile.
+logging:
+  level:
+    root: WARN
+    com.spendwise: INFO

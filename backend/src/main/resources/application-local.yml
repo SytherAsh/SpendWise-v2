@@ -1,0 +1,5 @@
+# Local development profile — a developer's own machine.
+logging:
+  level:
+    root: INFO
+    com.spendwise: DEBUG

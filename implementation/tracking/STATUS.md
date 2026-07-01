@@ -10,11 +10,11 @@ epic order, not strict execution order.
 
 ## Epic 0 — [Foundation & Project Scaffolding](../epics/epic-00-foundation.md)
 
-- [ ] E0-S1-T1 — Spring Boot project skeleton
-- [ ] E0-S1-T2 — Next.js project skeleton
-- [ ] E0-S1-T3 — Android project skeleton
-- [ ] E0-S1-T4 — FastAPI project skeleton
-- [ ] E0-S1-T5 — Root tooling audit
+- [x] E0-S1-T1 — Spring Boot project skeleton
+- [x] E0-S1-T2 — Next.js project skeleton
+- [x] E0-S1-T3 — Android project skeleton
+- [x] E0-S1-T4 — FastAPI project skeleton
+- [x] E0-S1-T5 — Root tooling audit
 - [ ] E0-S2-T1 — Supabase project & migration tool setup
 - [ ] E0-S2-T2 — Migration: identity & session tables
 - [ ] E0-S2-T3 — Migration: transactions & categories
@@ -174,5 +174,5 @@ epic order, not strict execution order.
 
 ---
 
-**Progress: 0 / 125 tasks complete.** Update this line's count as you check items off (or
+**Progress: 5 / 125 tasks complete.** Update this line's count as you check items off (or
 leave it — it's a convenience, not a requirement).

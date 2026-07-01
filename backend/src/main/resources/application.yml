@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: spendwise-backend
+  profiles:
+    active: local
+  threads:
+    virtual:
+      enabled: true # ADR-009 — Project Loom virtual threads, Spring Boot 3.2+
+
+server:
+  port: 8080

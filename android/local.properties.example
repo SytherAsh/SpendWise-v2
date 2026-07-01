@@ -1,0 +1,6 @@
+# Copy to local.properties and fill in locally. Never commit the real local.properties file.
+# sdk.dir is normally written automatically by Android Studio on first sync.
+
+sdk.dir=/path/to/Android/Sdk
+FIREBASE_APP_ID=
+API_BASE_URL=http://10.0.2.2:8080/api/v1/

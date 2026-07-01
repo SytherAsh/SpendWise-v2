@@ -1,0 +1,11 @@
+fastapi==0.138.2
+uvicorn[standard]==0.49.0
+pydantic==2.13.4
+pydantic-settings==2.14.2
+
+# Test tooling
+pytest==9.1.1
+httpx==0.28.1
+
+# Dev tooling
+black==26.5.1

@@ -12,20 +12,30 @@
 .DS_Store
 Thumbs.db
 
+# Shared build output (Gradle "build/"+"out/", npm/Python "dist/") —
+# intentionally not scoped per-language since these dir names recur across
+# backend/, android/, frontend/, and ml/.
+build/
+out/
+dist/
+
 # Java / Kotlin / Spring Boot
 *.class
 *.jar
+!**/gradle/wrapper/gradle-wrapper.jar
 *.war
 target/
-build/
 .gradle/
-out/
 
 # Node / Next.js
 node_modules/
 .next/
-dist/
 .cache/
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+coverage/
 
 # Python / FastAPI
 __pycache__/
@@ -36,7 +46,6 @@ __pycache__/
 venv/
 env/
 *.egg-info/
-dist/
 .pytest_cache/
 .mypy_cache/
 
@@ -48,7 +57,6 @@ ml/data/*.xlsx
 ml/data/*.csv
 
 # Android
-android/.gradle/
 android/local.properties
 android/app/release/
 *.apk
