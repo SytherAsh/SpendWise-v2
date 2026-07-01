@@ -112,12 +112,12 @@ With items 1–2 set, Epic 0's intent is fully satisfied for a solo workflow.
 
 ## Epic 2 — [Android SMS Parsing & Sync](../epics/epic-02-android-sms-parsing-sync.md)
 
-- [ ] E2-S1-T1 — Financial vs. non-financial keyword detector
-- [ ] E2-S2-T1 — SBI parser
-- [ ] E2-S2-T2 — Paytm parser
-- [ ] E2-S2-T3 — GPay parser
-- [ ] E2-S2-T4 — Unknown-sender fallback extractor
-- [ ] E2-S3-T1 — Synthesized `transaction_id` + on-device dedup
+- [x] E2-S1-T1 — Financial vs. non-financial keyword detector
+- [x] E2-S2-T1 — SBI parser
+- [x] E2-S2-T2 — Paytm parser
+- [x] E2-S2-T3 — GPay parser
+- [x] E2-S2-T4 — Unknown-sender fallback extractor
+- [x] E2-S3-T1 — Synthesized `transaction_id` + on-device dedup
 - [ ] E2-S4-T1 — Room entities & DAOs for local sync queue
 - [ ] E2-S5-T1 — Batch sync client (retry/backoff, 409-as-success)
 - [ ] E2-S5-T2 — Real-time SMS capture (BroadcastReceiver + foreground service)
