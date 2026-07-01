@@ -87,10 +87,9 @@ See [docs/decisions.md](./docs/decisions.md) for full ADRs.
 ## Working in this codebase
 
 - Read [docs/development_guidelines.md](./docs/development_guidelines.md) before opening a PR
-- Never commit directly to `main` — use feature branches
-- Run tests before marking a PR ready: see [docs/testing.md](./docs/testing.md)
 - All API routes are prefixed `/api/v1/`
 - JWT Bearer token required on all protected endpoints
+- See **Git & GitHub Workflow** below for branching, commit, and epic-completion process
 
 ### Security invariants
 
@@ -112,3 +111,55 @@ See [docs/decisions.md](./docs/decisions.md) for full ADRs.
 - All services run on free-tier hosting — do not introduce any solution that requires a paid plan
 - Do not add Redis, Kafka, RabbitMQ, Celery, or any external message queue or cache without explicit approval
 - Background jobs run inside the Spring Boot process via Spring `@Scheduled` — no external job runner
+
+## Git & GitHub Workflow
+
+This is the authoritative process for how Claude Code operates on this repository day to day. Branch/commit-message conventions and code style live in [docs/development_guidelines.md](./docs/development_guidelines.md); test commands live in [docs/testing.md](./docs/testing.md); epic/task tracking lives in [implementation/](./implementation/README.md). This section governs *when* and *how* those are used — it does not restate them.
+
+### Git Operations
+
+- Always ask for explicit confirmation before pushing to GitHub — never push proactively.
+- Never force-push (`--force`, `--force-with-lease`) under any circumstance.
+- Never rewrite history (rebase, amend a pushed commit, squash) unless explicitly requested for the specific commit(s) in question.
+- Never delete a local or remote branch without approval.
+- Never modify GitHub repository settings (branch protection, webhooks, secrets, collaborators, Actions permissions) without approval.
+- Verify the current branch (`git branch --show-current`) before making any commit — never assume.
+- Keep the working tree clean: no stray debug files, commented-out code, or unrelated changes bundled into a commit.
+
+### Commit Policy
+
+- Commit only after completing a logical unit of work (a task, a story, a fix) — not mid-edit.
+- Use the conventional-commits format defined in [docs/development_guidelines.md § Commit Messages](./docs/development_guidelines.md#commit-messages).
+- Never commit code that fails to build or fails its test suite, unless the user explicitly asks for a checkpoint commit — say so in the message (e.g. `wip: checkpoint, tests not passing`).
+- Run the relevant test suite(s) for whatever was touched (see [docs/testing.md](./docs/testing.md) and [docs/development_guidelines.md § Running Tests Locally](./docs/development_guidelines.md#running-tests-locally)) before recommending a commit.
+
+### Branch Strategy
+
+- Never commit directly to `main` — no exceptions, including trivial doc fixes. Always work on a branch named per [docs/development_guidelines.md § Branching Strategy](./docs/development_guidelines.md#branching-strategy) (`feature/`, `fix/`, `chore/`).
+- One branch per feature, fix, or epic story — don't let a branch accumulate unrelated work. If a task grows past its expected size, stop and split it, per the complexity guidance in [implementation/README.md](./implementation/README.md).
+- Merge to `main` only after tests pass and (per Git Operations above) the user has approved the push.
+
+### Epic Workflow
+
+Epics and tasks are tracked in [implementation/](./implementation/README.md) — read it first for how the workspace is organized (`ROADMAP.md`, `DEPENDENCY-GRAPH.md`, `epics/*.md`, `tracking/STATUS.md`). For every epic or standalone task:
+
+1. Review the requirements — read the task's card in its epic file (`implementation/epics/epic-<NN>-*.md`) and the `docs/` source it's grounded in.
+2. Verify dependencies — check [implementation/DEPENDENCY-GRAPH.md](./implementation/DEPENDENCY-GRAPH.md) to confirm prerequisite epics/tasks are actually done, not just assumed.
+3. Implement the epic, respecting the security and architectural invariants above.
+4. Run all tests named in the task's "Required Tests" and in [docs/testing.md](./docs/testing.md).
+5. Fix any failures — do not proceed with red tests.
+6. Commit the completed work per the Commit Policy above.
+7. Ask for approval before pushing, per Git Operations above.
+8. Once the epic is complete and pushed, recommend a Git tag (e.g. `epic-<NN>-<slug>-complete`, matching the epic's filename) — propose it, don't create it without confirmation.
+9. Update [implementation/tracking/STATUS.md](./implementation/tracking/STATUS.md) (check off the task/epic) and any documentation the epic actually changed — e.g. [docs/roadmap.md](./docs/roadmap.md) if MVP scope shifted.
+
+### Repository Safety
+
+- Never commit secrets, API keys, credentials, or `.env` files — see [docs/development_guidelines.md § Security Checklist](./docs/development_guidelines.md#security-checklist-before-every-pr).
+- Protect the existing project structure — don't reorganize directories as a side effect of unrelated work.
+- Avoid unnecessary file moves or renames; if one is warranted, do it in its own commit.
+- Prefer incremental, reviewable changes over large refactors.
+
+### Communication
+
+Before any potentially destructive or irreversible action — force-push, history rewrite, branch deletion, repo settings change, or anything else that can't be undone — stop and ask for confirmation first.
