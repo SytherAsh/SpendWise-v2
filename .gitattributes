@@ -1,0 +1,18 @@
+# Normalize line endings project-wide so a contributor's local core.autocrlf
+# setting can't silently reintroduce CRLF into files Linux CI/runtime must
+# read as LF (shell scripts especially — a CRLF shebang line fails outright
+# on Linux). See implementation/tracking/STATUS.md E0-S3 close-out notes for
+# the concrete bug this fixed (gradlew committed non-executable + this guard
+# added alongside it).
+* text=auto eol=lf
+
+*.bat text eol=crlf
+gradlew text eol=lf
+gradlew.bat text eol=crlf
+
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.zip binary
