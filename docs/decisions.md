@@ -84,7 +84,7 @@ This document records the key architectural decisions made during the SpendWise 
 
 **Status**: Accepted
 
-**Context**: DPDP Act 2023 requires explicit user consent for collecting personal data. Multiple consent purposes need to be covered (SMS access, server storage, ML training, raw SMS storage).
+**Context**: DPDP Act 2023 requires explicit user consent for collecting personal data. Multiple consent purposes need to be covered (SMS access, server storage, ML training).
 
 **Options considered**:
 1. Granular toggles per purpose (user can opt out of individual purposes)
@@ -94,7 +94,7 @@ This document records the key architectural decisions made during the SpendWise 
 
 **Rationale**:
 - SMS access and server-side storage are non-negotiable — the app cannot function without them.
-- The ML training and raw SMS storage purposes are also core to the product's improvement loop.
+- The ML training purpose is also core to the product's improvement loop.
 - Allowing users to opt out of individual purposes would create complex partial-consent states that are difficult to handle correctly.
 - The simpler approach: one consent screen explaining all purposes clearly. If the user does not consent, they cannot use the app.
 
@@ -164,7 +164,7 @@ This document records the key architectural decisions made during the SpendWise 
 **Decision**: Java 21.
 
 **Rationale**:
-- Java 21 introduces virtual threads (Project Loom) via `@EnableVirtualThreads` in Spring Boot 3.2+, providing non-blocking I/O without coroutines.
+- Java 21 introduces virtual threads (Project Loom), enabled in Spring Boot 3.2+ via the `spring.threads.virtual.enabled=true` property, providing non-blocking I/O without coroutines.
 - The Spring Boot ecosystem has first-class Java support; Java records (since Java 16) cover most of Kotlin's data class use cases for DTOs.
 - Java 21 is an LTS release — stable and widely supported by hosting platforms.
 - Android app remains Kotlin (unchanged) — the language split is Android = Kotlin, backend = Java 21.

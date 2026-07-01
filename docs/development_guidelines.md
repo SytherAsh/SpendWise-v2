@@ -84,7 +84,7 @@ test: add parser unit tests for Paytm format
 
 - [ ] No secrets or API keys in code or comments
 - [ ] New endpoints have JWT auth guard applied
-- [ ] Admin endpoints have admin role check
+- [ ] Admin endpoints validate `ADMIN_JWT_SECRET`-signed tokens only (separate auth filter — not a role claim on the user JWT)
 - [ ] User data queries include `WHERE user_id = ?` **and** a Supabase RLS policy exists for the table
 - [ ] Input validated at API boundary (not assumed valid downstream)
 

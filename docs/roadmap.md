@@ -7,6 +7,7 @@
 Core features (must be complete before any post-MVP work):
 
 - SMS ingestion (SBI, Paytm, GPay)
+- Bank statement upload (historical transaction seed + budget suggestions)
 - ML categorization with correction feedback loop
 - Budget tracking and alerts
 - EMI and subscription tracking (automatic recurring payment detection)

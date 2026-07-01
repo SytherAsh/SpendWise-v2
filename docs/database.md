@@ -169,7 +169,7 @@ CREATE TABLE budgets (
 ### `alerts`
 
 ```sql
-CREATE TYPE alert_type AS ENUM ('mid_month_budget', 'category_overspend', 'recurring_payment');
+CREATE TYPE alert_type AS ENUM ('mid_month_budget', 'category_overspend', 'category_approaching_limit', 'recurring_payment');
 
 CREATE TABLE alerts (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),

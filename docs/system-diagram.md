@@ -62,7 +62,7 @@ flowchart TB
     subgraph BGJOBS["Background Jobs  (Spring @Scheduled)"]
       direction LR
       J1["Alert Evaluator\nAlerts · every 30 min"]
-      J2["Rec Generator\nRecommendations · every 6 h · idempotent\nalso triggered: bank-stmt import · budget creation"]
+      J2["Rec Generator\nRecommendations · every 6 h · idempotent\nchecks txn/budget timestamps since last run"]
       J3["ML Retraining\nCategorization · weekly"]
       J4["Cat Retry\nCategorization · every 30 min"]
     end
@@ -96,6 +96,7 @@ flowchart TB
 
   %% Core
   CAT            -->|"update category"| TXN
+  BUDGET         -->|"read spend (read-only)"| TXN
 
   %% Consumer ← Core
   ALERTS         -->|"read spend"| TXN
@@ -153,7 +154,7 @@ flowchart TB
 | Admin | All modules — read; Categorization — retrain + evaluate |
 | User | Ingest — bank statement handoff only |
 | Auth | (no outbound calls) |
-| Budget | (no outbound calls) |
+| Budget | Transaction (read-only) |
 
 No circular dependencies. No module calls back up the ingestion chain (Ingest → Transaction → Analytics).
 

@@ -69,7 +69,7 @@ SpendWise is built as a **modular monolith** for the MVP. The codebase is organi
 | --- | --- | --- |
 | **Ingest** | Transaction (persist), Categorization (trigger) | Any other module |
 | **Categorization** | Transaction (update category) | Any module except Transaction |
-| **Budget** | *(no outbound calls — data is read from it)* | Any other module |
+| **Budget** | Transaction (read-only — spend data for progress/suggestions) | Any other module |
 | **Alerts** | Transaction (read spend; read EMIs for recurring-payment detection), Budget (read limits) | Recommendations, Chatbot, Ingest |
 | **Recommendations** | Analytics (read aggregations) | Alerts, Chatbot, Ingest, Categorization |
 | **Chatbot** | Transaction (read history), Analytics (read summaries) | Any module that writes data |
@@ -211,6 +211,6 @@ Dashboard and budget suggestions reflect imported data
 | Job | Owner | Schedule | What it does |
 | --- | --- | --- | --- |
 | Alert evaluator | Alerts | Every 30 minutes | Checks mid-month budget thresholds and category overspend for all users |
-| Recommendation generator | Recommendations | Every 6 hours | Reads spending aggregations from Analytics; generates recommendations where a threshold has been crossed since the last generation for that user and category. Idempotent — suppresses duplicates by checking `generated_at` on the most recent record per user per category. May also be triggered after significant user events (bank statement import, budget creation). |
+| Recommendation generator | Recommendations | Every 6 hours | Reads spending aggregations from Analytics; generates recommendations where a threshold has been crossed since the last generation for that user and category, determined by comparing transaction and budget timestamps against the time of its own last run. Idempotent — suppresses duplicates by checking `generated_at` on the most recent record per user per category. |
 | ML retraining | Categorization | Weekly (configurable) | Sends `ml_corrections` data to FastAPI /retrain |
 | Categorization retry | Categorization | Every 30 minutes | Re-triggers ML categorization for transactions ingested but not yet categorized (e.g., FastAPI unavailable during ingest) |

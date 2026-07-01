@@ -17,10 +17,10 @@ Test business logic in isolation (mock dependencies):
 - **Auth**: token generation, OTP validation logic, refresh token rotation; replay attack detection (presenting an already-rotated token revokes all refresh tokens for that user); JWT secret routing (`ADMIN_JWT_SECRET`-signed tokens rejected by user auth filter; `JWT_SECRET`-signed tokens rejected by admin auth filter)
 - **User**: preference updates, onboarding state transitions
 - **Ingest**: deduplication logic (primary key check, composite key check), batch validation; dual-auth validation (valid JWT + valid device key → 200; missing JWT → 401; missing device key → 401; inactive device key → 401; device key not matching `user_id` → 401)
-- **Transaction Management**: filtering, pagination cursor logic, sorting; category correction (verify `PUT /transactions/:id/category` writes to `transaction_categories` and inserts to `ml_corrections` atomically)
+- **Transaction Management**: filtering, pagination cursor logic, sorting; category correction (verify `PUT /transactions/:id/category` writes to `transaction_categories` and inserts to `ml_corrections` atomically); EMI CRUD (create, update, deactivate via `PATCH`, `source_transaction_id` linkage on auto-detected entries)
 - **Categorization**: calling ML service, handling low-confidence responses, reading `ml_corrections` as training data for retraining, evaluating model accuracy
 - **Budget**: progress calculation (% spent), mid-month 50% total budget threshold (high priority), 80% per-category approaching-limit threshold (medium priority — in-app only), category budget overspend threshold (high priority)
-- **Alerts**: evaluation engine logic (which alerts should fire given current spend state)
+- **Alerts**: evaluation engine logic (which alerts should fire given current spend state); recurring-payment detection (3+ transactions from the same `upi_id`/`recipient_name` within a rolling 60-day window, amounts within ±10% of each other, excluding transactions already tracked in `emis`)
 - **Recommendations**: priority assignment based on spending data, dismissal logic
 - **Chatbot**: context injection (transaction data summary), session management
 - **Analytics**: aggregation correctness (totals, category breakdowns, comparisons)

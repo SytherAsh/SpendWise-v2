@@ -49,7 +49,7 @@ Alert priority levels:
 | Priority | Delivery |
 |---|---|
 | High (budget exceeded) | Push notification + email |
-| Medium (approaching limit — 80% of category budget spent — or unusual spending spike) | In-app pop-up only |
+| Medium (approaching limit — 80% of category budget spent) | In-app pop-up only |
 | Low (general savings insight) | Passive dashboard feed only |
 
 *Alert priority is stored as a `priority` column on the `alerts` table (`high` / `medium` / `low`). See `docs/database.md`.*

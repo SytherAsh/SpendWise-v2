@@ -55,7 +55,7 @@ Declining consent blocks access to the app (SMS is the core feature).
 ### Data Subject Rights
 
 - **Access**: Users can view all their data via the app and dashboard
-- **Deletion**: User can request account deletion; admin purges all data (transactions, preferences, corrections, chatbot history) within a reasonable timeframe. **Exception:** `admin_logs` rows are retained with `user_id` set to `NULL` for audit integrity — if `action` or `target_resource` fields contain identifying strings referencing the deleted user, those fields must be scrubbed or the row deleted as part of the erasure process
+- **Deletion**: User can request account deletion; admin purges all data (transactions, preferences, corrections, chatbot history) within a reasonable timeframe. **Exception:** `admin_logs` rows are retained with `user_id` set to `NULL` for audit integrity — if the `event_type` value or any value within the `payload` JSONB contains identifying strings referencing the deleted user, those fields must be scrubbed or the row deleted as part of the erasure process
 - **Portability**: Users can export all their data as PDF or CSV at any time
 
 ### Privacy Policy
@@ -116,3 +116,18 @@ USING (user_id = current_setting('app.current_user_id', true)::uuid);
 ```
 
 With this approach, a missing session variable causes the policy to evaluate to `null` — which is a safe-fail deny. RLS policies defined this way also enforce isolation for direct database access via the Supabase dashboard or any future direct-connection path, not just Spring Boot requests.
+
+**Tables without a `user_id` column:** `transaction_categories` and `ml_corrections` are scoped to a transaction rather than a user directly. Their RLS policy must join through `transactions` instead of comparing `user_id` directly:
+
+```sql
+CREATE POLICY "Users can only access own transaction_categories"
+ON transaction_categories
+FOR ALL
+USING (EXISTS (
+    SELECT 1 FROM transactions
+    WHERE transactions.id = transaction_categories.transaction_id
+    AND transactions.user_id = current_setting('app.current_user_id', true)::uuid
+));
+```
+
+The same join pattern applies to `ml_corrections` (via its own `transaction_id` column).
