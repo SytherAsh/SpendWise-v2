@@ -14,7 +14,10 @@ epic order, not strict execution order.
 - [x] E0-S1-T2 — Next.js project skeleton
 - [x] E0-S1-T3 — Android project skeleton
 - [x] E0-S1-T4 — FastAPI project skeleton
-- [x] E0-S1-T5 — Root tooling audit
+- [x] E0-S1-T5 — Root tooling audit (`.editorconfig` + `.gitignore` audit stand;
+      the PR template this task originally created was deleted once the
+      workflow moved to solo direct-to-`main` — see the Git workflow change
+      note below)
 - [x] E0-S2-T1 — Supabase project & migration tool setup
 - [x] E0-S2-T2 — Migration: identity & session tables
 - [x] E0-S2-T3 — Migration: transactions & categories
@@ -66,6 +69,13 @@ model (no mandatory feature branches or pull requests). `CLAUDE.md`,
 this file's E0-S3-T5 were updated to match. Branches and PRs remain *available*
 (optional) but are no longer the default flow; commits go straight to `main`,
 CI runs on each push, and the agent still asks before pushing.
+
+Follow-up cleanup once the workflow changed: `.github/pull_request_template.md`
+(from E0-S1-T5) was deleted — a PR template has no purpose when PRs aren't part
+of the normal flow. The two feature branches used for PR-based merges before
+the workflow change (`fix/epic-0-ci-executable-bit`, `docs/epic-0-closeout`)
+were deleted, locally and on the remote, once confirmed fully merged into
+`main` (`git merge-base --is-ancestor` — zero unique commits on either).
 
 ### Branch protection — exact settings (manual, repo owner)
 
