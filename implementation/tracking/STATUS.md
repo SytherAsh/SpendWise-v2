@@ -1,0 +1,178 @@
+# Status
+
+The living checklist for the whole MVP backlog. Check a box the moment a task is fully
+done (see `../README.md` Definition of Done discipline — don't check early). This file is
+the only place progress is recorded; epic files under `../epics/` are the specification,
+not a log.
+
+Work top-to-bottom within the constraints in `../DEPENDENCY-GRAPH.md` — this list is in
+epic order, not strict execution order.
+
+## Epic 0 — [Foundation & Project Scaffolding](../epics/epic-00-foundation.md)
+
+- [ ] E0-S1-T1 — Spring Boot project skeleton
+- [ ] E0-S1-T2 — Next.js project skeleton
+- [ ] E0-S1-T3 — Android project skeleton
+- [ ] E0-S1-T4 — FastAPI project skeleton
+- [ ] E0-S1-T5 — Root tooling audit
+- [ ] E0-S2-T1 — Supabase project & migration tool setup
+- [ ] E0-S2-T2 — Migration: identity & session tables
+- [ ] E0-S2-T3 — Migration: transactions & categories
+- [ ] E0-S2-T4 — Migration: budgets, alerts, EMIs
+- [ ] E0-S2-T5 — Migration: ML, admin, and chatbot tables
+- [ ] E0-S2-T6 — Row-Level Security policies
+- [ ] E0-S3-T1 — CI: Spring Boot unit + integration tests
+- [ ] E0-S3-T2 — CI: FastAPI pytest
+- [ ] E0-S3-T3 — CI: Android unit tests
+- [ ] E0-S3-T4 — CI: frontend build/lint
+- [ ] E0-S3-T5 — Branch protection & PR process docs
+
+## Epic 1 — [Auth & User Onboarding](../epics/epic-01-auth-and-user.md)
+
+- [ ] E1-S1-T1 — Firebase Admin SDK integration
+- [ ] E1-S1-T2 — JWT issuance & refresh-token storage
+- [ ] E1-S1-T3 — `POST /auth/otp/send` + `/auth/otp/verify`
+- [ ] E1-S1-T4 — `POST /auth/google`
+- [ ] E1-S1-T5 — `POST /auth/token/refresh` with rotation + replay detection
+- [ ] E1-S1-T6 — `POST /auth/logout`
+- [ ] E1-S1-T7 — User JWT auth filter
+- [ ] E1-S2-T1 — Admin JWT filter (independent chain)
+- [ ] E1-S3-T1 — `GET/PUT /users/me`
+- [ ] E1-S3-T2 — `GET/PUT /users/me/preferences`
+- [ ] E1-S3-T3 — `POST /users/me/onboarding`
+- [ ] E1-S4-T1 — Device key hash-and-validate service
+
+## Epic 2 — [Android SMS Parsing & Sync](../epics/epic-02-android-sms-parsing-sync.md)
+
+- [ ] E2-S1-T1 — Financial vs. non-financial keyword detector
+- [ ] E2-S2-T1 — SBI parser
+- [ ] E2-S2-T2 — Paytm parser
+- [ ] E2-S2-T3 — GPay parser
+- [ ] E2-S2-T4 — Unknown-sender fallback extractor
+- [ ] E2-S3-T1 — Synthesized `transaction_id` + on-device dedup
+- [ ] E2-S4-T1 — Room entities & DAOs for local sync queue
+- [ ] E2-S5-T1 — Batch sync client (retry/backoff, 409-as-success)
+- [ ] E2-S5-T2 — Real-time SMS capture (BroadcastReceiver + foreground service)
+- [ ] E2-S5-T3 — First-launch SMS inbox backfill
+
+## Epic 3 — [Ingestion & Transaction Management](../epics/epic-03-ingestion-and-transactions.md)
+
+- [ ] E3-S1-T1 — Dual-auth guard for `/ingest/transactions`
+- [ ] E3-S1-T2 — Batch persistence with two-layer dedup
+- [ ] E3-S1-T3 — `sms_raw_text` response-exclusion enforcement
+- [ ] E3-S2-T1 — `GET /transactions` (cursor pagination + filters)
+- [ ] E3-S2-T2 — `GET /transactions/:id`
+- [ ] E3-S2-T3 — `POST /transactions` (manual entry)
+- [ ] E3-S2-T4 — `PUT /transactions/:id/category`
+- [ ] E3-S2-T5 — `GET /categories`
+- [ ] E3-S3-T1 — `GET/POST /emis`
+- [ ] E3-S3-T2 — `PUT/PATCH /emis/:id`
+
+## Epic 4 — [ML Categorization Service](../epics/epic-04-ml-categorization.md)
+
+- [ ] E4-S1-T1 — `X-Internal-Key` middleware
+- [ ] E4-S2-T1 — Preprocessing & feature extraction
+- [ ] E4-S2-T2 — Train baseline scikit-learn classifier
+- [ ] E4-S2-T3 — `POST /predict`
+- [ ] E4-S2-T4 — `POST /retrain`
+- [ ] E4-S2-T5 — `GET /evaluate` + evaluation script
+- [ ] E4-S3-T1 — Categorization service interface + FastAPI client
+- [ ] E4-S3-T2 — Wire Ingest → Categorization trigger
+- [ ] E4-S3-T3 — Categorization retry job (every 30 min)
+- [ ] E4-S3-T4 — ML retraining weekly job
+- [ ] E4-S3-T5 — Admin-triggered retrain + evaluate (service-interface only)
+
+## Epic 5 — [Budget & Alerts](../epics/epic-05-budget-and-alerts.md)
+
+- [ ] E5-S1-T1 — `POST /budgets` (idempotent upsert)
+- [ ] E5-S1-T2 — `GET /budgets`
+- [ ] E5-S1-T3 — `GET /budgets/progress`
+- [ ] E5-S1-T4 — `GET /budgets/suggestions`
+- [ ] E5-S2-T1 — Mid-month 50%-of-total-budget rule
+- [ ] E5-S2-T2 — Category 80%-approaching-limit rule
+- [ ] E5-S2-T3 — Category overspend rule
+- [ ] E5-S2-T4 — Alert evaluator scheduled job (every 30 min)
+- [ ] E5-S3-T1 — FCM push dispatch
+- [ ] E5-S3-T2 — SMTP email dispatch
+- [ ] E5-S4-T1 — `GET /alerts` (cursor pagination + `is_read` filter)
+- [ ] E5-S4-T2 — `PUT /alerts/:id/read`
+
+## Epic 6 — [EMI & Recurring Payment Detection](../epics/epic-06-emi-and-recurring.md)
+
+- [ ] E6-S1-T1 — Rolling-window grouping + tolerance matching
+- [ ] E6-S2-T1 — Wire detection into the alert evaluator
+- [ ] E6-S2-T2 — Confirm-as-subscription / dismiss flow
+
+## Epic 7 — [Analytics & Export](../epics/epic-07-analytics-and-export.md)
+
+- [ ] E7-S1-T1 — `GET /analytics/summary`
+- [ ] E7-S1-T2 — `GET /analytics/categories`
+- [ ] E7-S1-T3 — `GET /analytics/comparison`
+- [ ] E7-S1-T4 — `GET /analytics/trends`
+- [ ] E7-S2-T1 — `GET /analytics/export/csv`
+- [ ] E7-S2-T2 — `GET /analytics/export/pdf`
+- [ ] E7-S3-T1 — Architecture test: Analytics is read-only
+
+## Epic 8 — [Recommendations & Chatbot](../epics/epic-08-recommendations-and-chatbot.md)
+
+- [ ] E8-S1-T1 — `LlmClient` interface + stub implementation
+- [ ] E8-S2-T1 — Recommendation generator job (every 6h, idempotent)
+- [ ] E8-S2-T2 — `GET /recommendations`, `PUT /recommendations/:id/dismiss`
+- [ ] E8-S3-T1 — Chatbot session endpoints
+- [ ] E8-S3-T2 — `POST /chatbot/message` with context injection
+
+## Epic 9 — [Android App UI](../epics/epic-09-android-app-ui.md)
+
+- [ ] E9-S1-T1 — Sign-up screen (Phone OTP / Google login)
+- [ ] E9-S1-T2 — Consent screen
+- [ ] E9-S1-T3 — SMS + notification permission flow
+- [ ] E9-S1-T4 — Onboarding questionnaire + optional bank statement upload
+- [ ] E9-S1-T5 — Backfill trigger, foreground service start, land on dashboard
+- [ ] E9-S2-T1 — Dashboard screen
+- [ ] E9-S2-T2 — Transactions screen
+- [ ] E9-S2-T3 — Budget screen
+- [ ] E9-S2-T4 — EMI/Subscriptions screen
+- [ ] E9-S2-T5 — Chatbot screen
+- [ ] E9-S2-T6 — Settings screen
+
+## Epic 10 — [Web Dashboard](../epics/epic-10-web-dashboard.md)
+
+- [ ] E10-S1-T1 — Routes, layout, Firebase client login
+- [ ] E10-S1-T2 — Client-side token storage, refresh, protected routes
+- [ ] E10-S2-T1 — Dashboard page
+- [ ] E10-S2-T2 — Transactions page
+- [ ] E10-S2-T3 — Budget page
+- [ ] E10-S2-T4 — EMI/Subscriptions page
+- [ ] E10-S2-T5 — Chatbot page
+- [ ] E10-S2-T6 — Export page
+- [ ] E10-S2-T7 — Settings page
+- [ ] E10-S3-T1 — Client-side cache fallback with stale indicator
+
+## Epic 11 — [Admin Portal](../epics/epic-11-admin-portal.md)
+
+- [ ] E11-S1-T1 — Admin login issuing `ADMIN_JWT_SECRET`-signed tokens
+- [ ] E11-S2-T1 — `GET /admin/users`, `GET /admin/users/:id`
+- [ ] E11-S2-T2 — `GET /admin/analytics`, `GET /admin/analytics/comparison`
+- [ ] E11-S2-T3 — `GET /admin/logs`
+- [ ] E11-S2-T4 — `GET /admin/ml/accuracy`, `POST /admin/ml/retrain`
+- [ ] E11-S2-T5 — `DELETE /admin/users/:id` (full erasure, DPDP)
+- [ ] E11-S3-T1 — Minimal admin web screens
+
+## Epic 12 — [Deployment, Monitoring & Launch](../epics/epic-12-deployment-and-launch.md)
+
+- [ ] E12-S1-T1 — Deploy Spring Boot backend
+- [ ] E12-S1-T2 — Deploy FastAPI ML service
+- [ ] E12-S1-T3 — Deploy Next.js frontend
+- [ ] E12-S1-T4 — Finalize production Supabase project + RLS verification
+- [ ] E12-S2-T1 — Sentry integration (both backend services)
+- [ ] E12-S2-T2 — `GET /api/v1/health` implementation
+- [ ] E12-S2-T3 — UptimeRobot monitor
+- [ ] E12-S3-T1 — Firebase App Distribution release
+- [ ] E12-S4-T1 — E2E golden path against deployed environment
+- [ ] E12-S4-T2 — Security checklist verification against production
+- [ ] E12-S4-T3 — Go-live checklist & rollback plan
+
+---
+
+**Progress: 0 / 125 tasks complete.** Update this line's count as you check items off (or
+leave it — it's a convenience, not a requirement).
