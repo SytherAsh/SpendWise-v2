@@ -5,7 +5,7 @@
 SpendWise runs as two backend services + one frontend + one database:
 
 | Component | Technology | Hosting |
-|---|---|---|
+| --- | --- | --- |
 | Web Dashboard | Next.js (React) | Vercel (free tier) |
 | Main Backend API | Spring Boot (Java 21) | Render / Railway / Fly.io (free tier) |
 | ML Categorization Service | FastAPI (Python) | Render / Railway / Fly.io (free tier) |
@@ -23,7 +23,7 @@ All secrets are injected via environment variables — never hardcoded or commit
 
 ### Spring Boot Backend
 
-```
+```env
 SUPABASE_URL=
 SUPABASE_KEY=
 FIREBASE_PROJECT_ID=
@@ -32,26 +32,36 @@ FASTAPI_ML_URL=http://ml-service/
 JWT_SECRET=
 SENTRY_DSN=
 EMAIL_SMTP_HOST=
+EMAIL_SMTP_PORT=
 EMAIL_SMTP_USER=
 EMAIL_SMTP_PASS=
 ADMIN_JWT_SECRET=
+FCM_SERVER_KEY=
+ML_INTERNAL_KEY=
 ```
+
+> `FASTAPI_ML_URL` uses plain HTTP because `ml-service` resolves to the hosting platform's internal private network, not the public internet. This does not violate the TLS requirement. The `X-Internal-Key` header provides application-layer authentication on every request.
 
 ### FastAPI ML Service
 
-```
+```env
 SUPABASE_URL=
 SUPABASE_KEY=
 SENTRY_DSN=
 MODEL_PATH=./models/
+ML_INTERNAL_KEY=
 ```
+
+> **Model artifacts:** The trained scikit-learn model is committed to the repository at `MODEL_PATH`. Train locally, export the artifact, and commit it alongside service code. The service loads the model at startup. External model storage is not used at MVP.
 
 ### Next.js Frontend
 
-```
+```env
 NEXT_PUBLIC_API_BASE_URL=
 NEXT_PUBLIC_FIREBASE_API_KEY=
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
 ```
 
 ## Version Control & Branching
@@ -65,14 +75,17 @@ NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
 ## CI/CD Pipeline
 
 ### CI (Continuous Integration)
+
 Runs automatically on every push and PR:
 
-- Spring Boot: `./gradlew test` (JUnit 5 + Spring Boot Test)
+- Spring Boot unit tests: `./gradlew test` (JUnit 5 + Spring Boot Test)
+- Spring Boot integration tests: `./gradlew integrationTest` — requires Docker in the CI runner; Testcontainers provisions a PostgreSQL container automatically (GitHub Actions `ubuntu-latest` includes Docker by default)
 - FastAPI: `pytest` (unit tests + evaluation script)
 - Android: `./gradlew test` (Kotlin unit tests for parser)
 - E2E: golden path test on staging environment
 
 ### CD (Continuous Deployment)
+
 - **Manual** — developer reviews CI results and deploys manually
 - No automatic deployment to production on merge
 - Deployment steps per service documented below
@@ -88,11 +101,24 @@ Runs automatically on every push and PR:
 
 ### Deploying FastAPI ML Service
 
+**Before first deploy and after each approved retraining cycle:** commit the updated model artifact to the repository:
+
+```bash
+# Train locally and export the artifact
+python training/train.py --output models/
+git add models/
+git commit -m "chore: update model artifact"
+```
+
+**Deploy:**
+
 ```bash
 pip install -r requirements.txt
 uvicorn api.main:app --host 0.0.0.0 --port 8000
 # Or via Docker if platform supports it
 ```
+
+The service loads the model from `MODEL_PATH` at startup. Model artifacts are version-controlled alongside service code — no external object storage at MVP. Future versions may migrate to an external store or model registry.
 
 ### Deploying Frontend
 
@@ -112,9 +138,10 @@ firebase appdistribution:distribute app/release/app-release.apk \
 
 Spring Boot calls the FastAPI ML service internally via HTTP:
 
-```
+```http
 POST http://ml-service/predict
 Content-Type: application/json
+X-Internal-Key: ${ML_INTERNAL_KEY}
 
 {
   "recipient_name": "Swiggy",
@@ -127,6 +154,7 @@ Content-Type: application/json
 ```
 
 Response:
+
 ```json
 {
   "category_id": 7,
@@ -147,9 +175,11 @@ After deployment, configure:
 
 Spring Boot exposes:
 
-```
+```text
 GET /api/v1/health
 → 200 OK  { "status": "healthy", "db": "connected", "ml": "reachable" }
 ```
 
-UptimeRobot pings this every 5 minutes.
+UptimeRobot pings this every 5 minutes. The response checks both the Supabase database connection and the FastAPI ML service reachability.
+
+> This is an operational endpoint not listed in the API reference (`docs/api.md`). It is unauthenticated and intended for infrastructure monitoring only.

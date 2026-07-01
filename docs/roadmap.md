@@ -5,12 +5,15 @@
 **Goal**: Working end-to-end product for personal use + family (~5–10 users).
 
 Core features (must be complete before any post-MVP work):
+
 - SMS ingestion (SBI, Paytm, GPay)
 - ML categorization with correction feedback loop
 - Budget tracking and alerts
+- EMI and subscription tracking (automatic recurring payment detection)
 - Web dashboard with interactive charts
 - Android app with background SMS monitoring
-- AI chatbot (proactive + interactive)
+- Savings recommendations (proactive LLM-powered spend insights, threshold-triggered)
+- AI chatbot (interactive financial assistant — user-initiated, session-based)
 - PDF and CSV export
 - Admin portal
 
@@ -20,7 +23,7 @@ Core features (must be complete before any post-MVP work):
 
 ### Phase 1: Language Expansion
 
-**Hindi and Marathi support**
+#### Hindi and Marathi support
 
 - UI localisation: translate all screens, labels, and alerts
 - SMS parsing: SBI, Paytm, GPay send SMS in Hindi for some users — parser must handle Devanagari script amounts and keywords
@@ -28,9 +31,10 @@ Core features (must be complete before any post-MVP work):
 
 ### Phase 2: Multi-Bank SMS Expansion
 
-**Add parser rules for more senders**
+#### Add parser rules for more senders
 
 Priority order based on Indian market share:
+
 1. HDFC Bank
 2. ICICI Bank
 3. Axis Bank
@@ -39,13 +43,14 @@ Priority order based on Indian market share:
 6. Kotak Mahindra Bank
 
 Each new sender requires:
+
 - Analyzing real SMS formats (3–5 samples per sender)
 - Adding regex rules to the Android parser
 - Releasing an updated APK
 
 ### Phase 3: Stock & Investment Portfolio Tracking
 
-**Track equity and mutual fund holdings alongside spending**
+#### Track equity and mutual fund holdings alongside spending
 
 - Integrate with a market data API (BSE/NSE) for live prices
 - Manual entry for holdings (SIP amounts, folio numbers)
@@ -54,7 +59,7 @@ Each new sender requires:
 
 ### Phase 4: Per-User Personalised ML Model
 
-**Shift from global model to user-specific models**
+#### Shift from global model to user-specific models
 
 - Current: all users use the same global model trained on aggregate data
 - Future: once a user has accumulated enough correction data (threshold TBD), switch to a per-user fine-tuned model
@@ -63,9 +68,10 @@ Each new sender requires:
 
 ### Phase 5: Google Play Store Distribution
 
-**Replace Firebase App Distribution with public Play Store listing**
+#### Replace Firebase App Distribution with public Play Store listing
 
 Requirements:
+
 - Google Play Developer account ($25 one-time)
 - Privacy policy hosted at a public URL
 - App content rating questionnaire
@@ -73,14 +79,14 @@ Requirements:
 
 ### Phase 6: Espresso UI Test Suite (Android)
 
-**Automated UI testing for the Android app**
+#### Automated UI testing for the Android app
 
 - Espresso tests for critical user flows: onboarding, transaction list, category correction, budget screen
 - Added when the Android UI stabilises (reduces refactoring churn)
 
 ### Phase 7: Commercialise Categorisation Model
 
-**B2B API: expose the trained categorisation model to other fintech apps**
+#### B2B API: expose the trained categorisation model to other fintech apps
 
 - The aggregate categorisation model (trained on all SpendWise user data) becomes a licensable asset
 - Expose as a standalone REST API with API key billing
@@ -89,9 +95,10 @@ Requirements:
 
 ### Phase 8: Microservices Extraction
 
-**Extract high-load modules when traffic demands it**
+#### Extract high-load modules when traffic demands it
 
 Candidates for extraction (in order of likelihood):
+
 1. ML Service (FastAPI) — already separate, just needs independent scaling
 2. Ingest module — high write volume as users scale
 3. Analytics module — heavy read queries during peak usage

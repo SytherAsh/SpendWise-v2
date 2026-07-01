@@ -2,7 +2,7 @@
 
 ## Problem
 
-Indian UPI users typically transact across 3–4 payment apps (Paytm, GPay, PhonePe) and one or more bank accounts. Each app has its own dashboard. At the end of the month, there is no single place to review total spending — users have to manually check multiple apps, and most give up.
+Indian UPI users typically transact across 2–3 payment apps (Paytm, GPay) and one or more bank accounts (SBI and others). Each app has its own dashboard. At the end of the month, there is no single place to review total spending — users have to manually check multiple apps, and most give up.
 
 ## Solution
 
@@ -11,8 +11,8 @@ SpendWise reads SMS transaction alerts sent by banks and payment apps, parses th
 ## Success Criteria
 
 - Developer can demo the product confidently as a portfolio/resume project
-- Works reliably for personal use and immediate family
-- Scales to ~20–30 early users without infrastructure changes
+- Works reliably for personal use and immediate family (~5–10 users)
+- Architecture supports growth to ~20–30 early users without infrastructure changes
 - Core flow (SMS → parse → categorize → dashboard) works end-to-end
 
 ## Target Users
@@ -26,7 +26,7 @@ SpendWise reads SMS transaction alerts sent by banks and payment apps, parses th
 ## What success looks like for a user
 
 1. Download the app, grant SMS permission
-2. See all their transactions from the last 3 years appear automatically
+2. See all available SMS transaction history appear automatically (up to several years, depending on what is stored on the device)
 3. Transactions are categorized correctly most of the time
 4. Get an alert when they're overspending on food this month
 5. Open the web dashboard and see a clear picture of their spending patterns
@@ -38,3 +38,4 @@ SpendWise reads SMS transaction alerts sent by banks and payment apps, parses th
 - Monetization
 - Social or shared finance features
 - Investment/stock tracking (post-MVP)
+- PhonePe SMS parsing (post-MVP — deferred to roadmap Phase 2)

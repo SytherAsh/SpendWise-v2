@@ -14,10 +14,16 @@
 CREATE TABLE users (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     phone       VARCHAR,           -- nullable if Google login
-    email       VARCHAR NOT NULL,
+    email       VARCHAR,           -- nullable if phone OTP login
     google_id   VARCHAR,           -- nullable if OTP login
-    created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_user_identifier CHECK (phone IS NOT NULL OR google_id IS NOT NULL)
 );
+
+-- Prevents duplicate accounts: two users cannot share the same phone number or Google ID.
+-- Partial indexes allow NULLs (phone-OTP user has no google_id; Google-login user may have no phone).
+CREATE UNIQUE INDEX idx_users_unique_phone     ON users(phone)     WHERE phone IS NOT NULL;
+CREATE UNIQUE INDEX idx_users_unique_google_id ON users(google_id) WHERE google_id IS NOT NULL;
 ```
 
 ### `user_preferences`
@@ -33,6 +39,36 @@ CREATE TABLE user_preferences (
 );
 ```
 
+### `user_consent`
+
+```sql
+CREATE TABLE user_consent (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    consented_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    app_version  VARCHAR,           -- version of the app shown at consent time
+    consent_text TEXT NOT NULL      -- snapshot of the exact consent text shown to the user
+);
+```
+
+### `refresh_tokens`
+
+```sql
+CREATE TABLE refresh_tokens (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash  VARCHAR NOT NULL,     -- SHA-256 of the raw token; never stored plain-text
+    issued_at   TIMESTAMP NOT NULL DEFAULT NOW(),
+    expires_at  TIMESTAMP NOT NULL,   -- sliding window; reset on each silent rotation
+    revoked_at  TIMESTAMP             -- null until logout or replay-attack detection; all user tokens revoked on compromise
+);
+
+-- Primary lookup path: every /auth/token/refresh and /auth/logout hashes the incoming token and looks up this index.
+CREATE UNIQUE INDEX idx_refresh_tokens_hash ON refresh_tokens(token_hash);
+-- Supports per-user session listing and scheduled purge of expired tokens.
+CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id, expires_at);
+```
+
 ### `transactions`
 
 Schema grounded in real SBI bank statement data (1,653 transactions, April 2023 – March 2026).
@@ -46,18 +82,23 @@ CREATE TABLE transactions (
     transaction_date TIMESTAMP NOT NULL,         -- date-only from bank statement; date+time from SMS
     debit            NUMERIC NOT NULL DEFAULT 0, -- 0 if credit transaction
     credit           NUMERIC NOT NULL DEFAULT 0, -- 0 if debit transaction
-    amount           NUMERIC NOT NULL,           -- signed: negative=debit, positive=credit
+    amount           NUMERIC NOT NULL,           -- signed: negative=debit, positive=credit; canonical field for all DR/CR query filters
     balance          NUMERIC,                    -- nullable (absent from most SMS)
     transaction_mode VARCHAR,                    -- UPI, INB, IMPS, NEFT (nullable — 36 nulls in real data)
     dr_cr_indicator  CHAR(2) NOT NULL,           -- 'DR' or 'CR'
-    transaction_id   VARCHAR NOT NULL,           -- bank reference number (deduplication key)
+    transaction_id   VARCHAR NOT NULL,           -- bank ref number (dedup key); for SMS without an explicit ref,
+                                                 -- synthesize: hex(SHA-256(user_id || upi_id_or_recipient_name || amount || date_trunc('minute', transaction_date)))
     recipient_name   VARCHAR,                    -- nullable (48 nulls in real data)
     bank             VARCHAR,                    -- recipient bank code: HDFC, SBIN, PYTM (nullable — 180 nulls)
     upi_id           VARCHAR,                    -- nullable (absent for IMPS/NEFT — 180 nulls)
     note             TEXT,                       -- nullable (933/1653 null in real data)
     sms_raw_text     TEXT,                       -- stored for debugging; never exposed via user API
     source           transaction_source NOT NULL,
-    parsed_at        TIMESTAMP NOT NULL DEFAULT NOW()
+    parsed_at        TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_dr_cr_consistency CHECK (
+        (dr_cr_indicator = 'DR' AND amount < 0 AND debit > 0 AND credit = 0) OR
+        (dr_cr_indicator = 'CR' AND amount > 0 AND credit > 0 AND debit = 0)
+    )
 );
 
 CREATE INDEX idx_transactions_user_date ON transactions(user_id, transaction_date DESC);
@@ -70,15 +111,16 @@ CREATE UNIQUE INDEX idx_transactions_unique_dedup ON transactions(user_id, trans
 CREATE TABLE categories (
     id   SERIAL PRIMARY KEY,
     name VARCHAR NOT NULL,   -- Shopping, Entertainment, Sports & Fitness, Groceries, Travel,
-                             -- Miscellaneous, Food/Dine Out, Cosmetics, Subscriptions
-    icon VARCHAR             -- icon identifier for UI
+                             -- Miscellaneous, Food / Dine Out, Cosmetics, Subscriptions, Transfers
+    icon VARCHAR,            -- icon identifier for UI
+    CONSTRAINT uq_categories_name UNIQUE (name)  -- prevents duplicate seed entries on re-deploy or repeated migrations
 );
 ```
 
 Seed data (10 categories):
 
 | id | name | icon |
-|---|---|---|
+| --- | --- | --- |
 | 1 | Shopping | shopping_bag |
 | 2 | Entertainment | movie |
 | 3 | Sports & Fitness | fitness_center |
@@ -88,7 +130,7 @@ Seed data (10 categories):
 | 7 | Food / Dine Out | restaurant |
 | 8 | Cosmetics | face |
 | 9 | Subscriptions | subscriptions |
-| 10 | *(reserved)* | — |
+| 10 | Transfers | swap_horiz |
 
 ### `transaction_categories`
 
@@ -103,6 +145,10 @@ CREATE TABLE transaction_categories (
     assigned_at      TIMESTAMP NOT NULL DEFAULT NOW(),
     PRIMARY KEY (transaction_id)
 );
+
+-- Supports budget aggregation and analytics queries that join transactions → category.
+-- Without this, every budget progress calculation scans the entire transaction_categories table.
+CREATE INDEX idx_txn_categories_category ON transaction_categories(category_id);
 ```
 
 ### `budgets`
@@ -115,7 +161,8 @@ CREATE TABLE budgets (
     monthly_limit NUMERIC NOT NULL,
     month         INT NOT NULL CHECK (month BETWEEN 1 AND 12),
     year          INT NOT NULL,
-    UNIQUE (user_id, category_id, month, year)
+    UNIQUE (user_id, category_id, month, year),
+    CONSTRAINT chk_budget_limit_positive CHECK (monthly_limit > 0)  -- a zero or negative limit causes the 80% threshold alert to fire immediately or inverts progress bars
 );
 ```
 
@@ -128,24 +175,39 @@ CREATE TABLE alerts (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type         alert_type NOT NULL,
+    priority     VARCHAR NOT NULL CHECK (priority IN ('high', 'medium', 'low')),
     triggered_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    delivered_at TIMESTAMP,  -- null until successfully delivered
-    payload      JSONB        -- alert-specific context (category_id, amount, threshold, etc.)
+    delivered_at TIMESTAMP,              -- null until successfully delivered
+    is_read      BOOLEAN NOT NULL DEFAULT FALSE,
+    payload      JSONB                   -- alert-specific context (category_id, amount, threshold, etc.)
 );
+
+-- Covers the alerts-history list query: all alerts for a user ordered by most recent.
+CREATE INDEX idx_alerts_user_date ON alerts(user_id, triggered_at DESC);
+-- Covers the unread-badge count and notification-centre queries.
+-- Preferred by the planner over idx_alerts_user_date when is_read = FALSE is in the predicate because it is smaller and excludes already-read rows.
+CREATE INDEX idx_alerts_unread ON alerts(user_id, triggered_at DESC) WHERE is_read = FALSE;
 ```
 
 ### `emis`
 
 ```sql
 CREATE TABLE emis (
-    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id            UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    label              VARCHAR NOT NULL,   -- e.g. "Home Loan EMI"
-    amount             NUMERIC NOT NULL,
-    due_day            INT CHECK (due_day BETWEEN 1 AND 31),
-    detected_from_sms  BOOLEAN NOT NULL DEFAULT TRUE,
-    is_active          BOOLEAN NOT NULL DEFAULT TRUE
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id               UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    label                 VARCHAR NOT NULL,   -- e.g. "Home Loan EMI"
+    amount                NUMERIC NOT NULL,
+    due_day               INT CHECK (due_day BETWEEN 1 AND 31),
+    detected_from_sms     BOOLEAN NOT NULL DEFAULT TRUE,
+    is_active             BOOLEAN NOT NULL DEFAULT TRUE,
+    source_transaction_id UUID REFERENCES transactions(id) ON DELETE SET NULL,  -- representative transaction that triggered auto-detection; null for manual entries
+    CONSTRAINT chk_emi_amount_positive CHECK (amount > 0)  -- EMI amounts are always positive; the debit direction is implicit in the fact that it is a scheduled outgoing payment
 );
+
+-- Prevents the same transaction from generating duplicate EMI entries across detection runs.
+CREATE UNIQUE INDEX idx_emis_source_txn   ON emis(source_transaction_id) WHERE source_transaction_id IS NOT NULL;
+-- Covers the EMI tracking panel query: active EMIs for a user.
+CREATE INDEX         idx_emis_user_active ON emis(user_id, is_active);
 ```
 
 ### `recommendations`
@@ -154,11 +216,24 @@ CREATE TABLE emis (
 CREATE TABLE recommendations (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    text         TEXT NOT NULL,   -- LLM-generated one-liner
+    category_id  INT REFERENCES categories(id),  -- null for global (cross-category) recommendations
+    text         TEXT NOT NULL,                  -- LLM-generated one-liner
     priority     VARCHAR NOT NULL CHECK (priority IN ('high', 'medium', 'low')),
     generated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     is_dismissed BOOLEAN NOT NULL DEFAULT FALSE
 );
+
+-- Prevents duplicate active recommendations per user per category.
+-- Global recommendations (category_id IS NULL) are not deduplicated by this index.
+CREATE UNIQUE INDEX idx_recs_user_category_active
+    ON recommendations(user_id, category_id)
+    WHERE is_dismissed = FALSE AND category_id IS NOT NULL;
+-- Covers the recommendations dashboard list: active recs for a user ordered by recency.
+-- Not redundant with idx_recs_user_category_active — that index enforces per-category uniqueness;
+-- this one provides the ordered list display path and covers global recs (category_id IS NULL) too.
+CREATE INDEX idx_recs_user_active
+    ON recommendations(user_id, generated_at DESC)
+    WHERE is_dismissed = FALSE;
 ```
 
 ### `ml_corrections`
@@ -169,8 +244,12 @@ CREATE TABLE ml_corrections (
     transaction_id  UUID NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
     old_category_id INT REFERENCES categories(id),
     new_category_id INT NOT NULL REFERENCES categories(id),
-    corrected_at    TIMESTAMP NOT NULL DEFAULT NOW()
+    corrected_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_correction_different_category CHECK (old_category_id IS DISTINCT FROM new_category_id)  -- a no-op correction (old = new) produces a useless labeled example; IS DISTINCT FROM handles the NULL case where old_category_id is absent
 );
+
+-- Covers the weekly retraining job's incremental read: corrections since last_retrain_timestamp.
+CREATE INDEX idx_ml_corrections_date ON ml_corrections(corrected_at);
 ```
 
 ### `admin_logs`
@@ -179,11 +258,26 @@ CREATE TABLE ml_corrections (
 CREATE TABLE admin_logs (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_type  VARCHAR NOT NULL,  -- 'parse_failure', 'model_retrain', 'sync_error', 'prediction_low_confidence'
+    user_id     UUID REFERENCES users(id) ON DELETE SET NULL,  -- null for system-wide events (e.g. model_retrain)
     payload     JSONB,
     created_at  TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_admin_logs_event_type ON admin_logs(event_type, created_at DESC);
+CREATE INDEX idx_admin_logs_user ON admin_logs(user_id, created_at DESC) WHERE user_id IS NOT NULL;
+```
+
+### `chatbot_sessions`
+
+```sql
+CREATE TABLE chatbot_sessions (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at     TIMESTAMP NOT NULL DEFAULT NOW(),
+    last_active_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_chatbot_sessions_user ON chatbot_sessions(user_id, created_at DESC);
 ```
 
 ### `chatbot_conversations`
@@ -194,7 +288,7 @@ CREATE TYPE chat_role AS ENUM ('user', 'assistant');
 CREATE TABLE chatbot_conversations (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    session_id UUID NOT NULL,          -- groups messages into a single session
+    session_id UUID NOT NULL REFERENCES chatbot_sessions(id) ON DELETE CASCADE,
     role       chat_role NOT NULL,
     message    TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -211,6 +305,7 @@ CREATE TABLE device_api_keys (
     user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     key_hash      VARCHAR NOT NULL,     -- bcrypt/SHA-256 hash of raw device key
     registered_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    last_used_at  TIMESTAMP,            -- updated on every successful /ingest auth; null until first use
     is_active     BOOLEAN NOT NULL DEFAULT TRUE
 );
 CREATE INDEX idx_device_keys_user ON device_api_keys(user_id, is_active);
