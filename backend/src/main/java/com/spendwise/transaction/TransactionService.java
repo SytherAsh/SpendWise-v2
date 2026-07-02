@@ -9,8 +9,8 @@ import java.util.UUID;
  * Service interface for the Transaction module's core domain (transactions themselves —
  * categories and EMIs have their own sibling interfaces). Consumed cross-module by Ingest (only
  * via {@link #persistFromIngest}) and by Categorization (via {@link #getById}, {@link
- * #assignMlCategory}, {@link #isCategorized}, {@link #findAllUncategorized}, and {@link
- * #findAllCorrections}) — docs/architecture.md "Allowed module dependencies".
+ * #assignMlCategory}, {@link #findAllUncategorized}, and {@link #findAllCorrections}) —
+ * docs/architecture.md "Allowed module dependencies".
  */
 public interface TransactionService {
 
@@ -51,9 +51,6 @@ public interface TransactionService {
      * Categorization module never crashes the ingest flow on a bad write).
      */
     void assignMlCategory(UUID userId, UUID transactionId, int categoryId, double confidence);
-
-    /** Whether {@code transactionId} already has a category assignment (ML or user). */
-    boolean isCategorized(UUID userId, UUID transactionId);
 
     /**
      * Cross-user (E4-S3-T3) — every transaction with no {@code transaction_categories} row yet,

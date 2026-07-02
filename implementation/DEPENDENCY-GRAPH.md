@@ -65,7 +65,7 @@ parallel tracks in this backlog:
 
 ## No-go: things that look parallelizable but aren't
 
-- **E4-S4/S5 (backend Categorization job wiring) before E3-S1 (Ingest endpoint) exists** —
+- **E4-S3 (backend Categorization job wiring) before E3-S1 (Ingest endpoint) exists** —
   the retry job and ingest-trigger wiring need the Ingest→Transaction persistence path in
   place first, even though the FastAPI side (E4-S1/S2) doesn't.
 - **E6 (recurring detection) before E5 (Alerts pipeline)** — the recurring-payment alert

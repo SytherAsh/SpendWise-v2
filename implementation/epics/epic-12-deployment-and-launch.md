@@ -59,9 +59,16 @@ early as Epic 0, in parallel with everything else — see `../DEPENDENCY-GRAPH.m
 - **Objective:** Move off any local/dev Supabase project onto the production one, with
   migrations applied and RLS verified in that environment specifically (not assumed carried
   over from dev).
-- **Expected Deliverable:** Production Supabase project with all migrations from Epic 0 applied; RLS policies confirmed active.
+- **Expected Deliverable:** Production Supabase project with all migrations from Epic 0 applied; RLS policies confirmed active. Also covers manually creating both non-superuser
+  roles that `backend/db-init/*.sql` only provisions for local Docker Compose — `spendwise_app`
+  (01, Epic 0) and, since Epic 4, `spendwise_jobs WITH BYPASSRLS`, `GRANT spendwise_app TO
+  spendwise_jobs` (02, E4-S3-T3/T4) — against the real Supabase Postgres instance, since
+  Supabase doesn't run `docker-entrypoint-initdb.d` scripts. See `docs/security.md`
+  "Cross-user reads for background jobs" for the exact role/grant statements.
 - **Definition of Done:** The RLS cross-user isolation test from E0-S2-T6 is re-run (or
-  re-verified) against the production project, not just the dev/CI one.
+  re-verified) against the production project, not just the dev/CI one. `spendwise_jobs`
+  confirmed to have `BYPASSRLS` and correctly read cross-user data in production (a targeted
+  smoke test of the categorization retry/ML retraining jobs, not just the isolation test).
 - **Required Tests:** Re-run of E0-S2-T6's RLS isolation test against the production Supabase project.
 - **Estimated Complexity:** Medium
 - **Depends on:** E0-S2-T6

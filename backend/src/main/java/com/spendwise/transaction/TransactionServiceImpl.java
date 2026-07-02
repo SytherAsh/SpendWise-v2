@@ -111,12 +111,6 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    @Transactional
-    public boolean isCategorized(UUID userId, UUID transactionId) {
-        return transactionCategoryRepository.hasAssignment(userId, transactionId);
-    }
-
-    @Override
     public List<UncategorizedTransactionRef> findAllUncategorized(int limit) {
         // No @Transactional / RlsSession here — this reads via the separate spendwise_jobs
         // DataSource (BYPASSRLS), which the primary DataSource's transaction manager doesn't

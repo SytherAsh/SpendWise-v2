@@ -77,20 +77,4 @@ public class TransactionCategoryRepository {
                 transactionId,
                 userId);
     }
-
-    /** Whether a category (ML or user) has already been assigned — E4-S3-T3's retry job target. */
-    public boolean hasAssignment(UUID userId, UUID transactionId) {
-        rlsSession.setCurrentUser(userId);
-        return jdbcTemplate
-                .query(
-                        "SELECT 1 FROM transaction_categories tc "
-                                + "JOIN transactions t ON t.id = tc.transaction_id "
-                                + "WHERE tc.transaction_id = ? AND t.user_id = ?",
-                        (rs, rowNum) -> true,
-                        transactionId,
-                        userId)
-                .stream()
-                .findFirst()
-                .orElse(false);
-    }
 }

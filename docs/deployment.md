@@ -39,12 +39,22 @@ ADMIN_JWT_SECRET=
 FCM_SERVER_KEY=
 ML_INTERNAL_KEY=
 ML_LOW_CONFIDENCE_THRESHOLD=0.5
+ML_RETRAIN_CRON=0 0 3 * * SUN
 ```
 
 > `ML_LOW_CONFIDENCE_THRESHOLD` (E4-S3-T1): not specified elsewhere in this doc set — a
 > `/predict` response below this confidence is treated the same as a failed call and left
 > uncategorized for the categorization retry job (`docs/architecture.md` Background Jobs
 > table) rather than written to `transaction_categories`. Defaults to `0.5` if unset.
+>
+> `ML_RETRAIN_CRON` (E4-S3-T4): the "Weekly (configurable)" schedule from `docs/architecture.md`'s
+> Background Jobs table. Defaults to Sunday 03:00 server time if unset.
+>
+> `SPRING_DATASOURCE_JOBS_USERNAME`/`_PASSWORD` (E4-S3-T3/T4) follow the same pattern as
+> `SPRING_DATASOURCE_URL`/`_USERNAME`/`_PASSWORD` above — internal JDBC role credentials for
+> the second, `BYPASSRLS`-enabled connection pool background jobs use, not part of Supabase's
+> client-SDK credential set, so omitted from this list too. See `docs/security.md`
+> "Cross-user reads for background jobs" and `backend/.env.example`.
 
 > `FASTAPI_ML_URL` uses plain HTTP because `ml-service` resolves to the hosting platform's internal private network, not the public internet. This does not violate the TLS requirement. The `X-Internal-Key` header provides application-layer authentication on every request.
 
