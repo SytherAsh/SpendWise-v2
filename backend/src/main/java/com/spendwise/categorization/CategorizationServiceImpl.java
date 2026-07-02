@@ -1,7 +1,11 @@
 package com.spendwise.categorization;
 
+import com.spendwise.categorization.dto.MlEvaluationResponse;
 import com.spendwise.categorization.dto.MlPredictionRequest;
 import com.spendwise.categorization.dto.MlPredictionResponse;
+import com.spendwise.categorization.dto.MlRetrainCorrection;
+import com.spendwise.categorization.dto.MlRetrainRequest;
+import com.spendwise.transaction.MlCorrectionRecord;
 import com.spendwise.transaction.Transaction;
 import com.spendwise.transaction.TransactionService;
 import org.slf4j.Logger;
@@ -9,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -52,6 +57,18 @@ public class CategorizationServiceImpl implements CategorizationService {
         }
     }
 
+    @Override
+    public void triggerRetrain() {
+        List<MlCorrectionRecord> corrections = transactionService.findAllCorrections();
+        List<MlRetrainCorrection> payload = corrections.stream().map(CategorizationServiceImpl::toRetrainCorrection).toList();
+        mlClient.retrain(new MlRetrainRequest(payload));
+    }
+
+    @Override
+    public MlEvaluationResponse getAccuracyMetrics() {
+        return mlClient.evaluate();
+    }
+
     private static MlPredictionRequest toPredictionRequest(Transaction transaction) {
         return new MlPredictionRequest(
                 transaction.recipientName(),
@@ -60,5 +77,16 @@ public class CategorizationServiceImpl implements CategorizationService {
                 transaction.transactionMode(),
                 transaction.amount(),
                 transaction.note());
+    }
+
+    private static MlRetrainCorrection toRetrainCorrection(MlCorrectionRecord record) {
+        return new MlRetrainCorrection(
+                record.recipientName(),
+                record.upiId(),
+                record.bank(),
+                record.transactionMode(),
+                record.amount(),
+                record.note(),
+                record.categoryId());
     }
 }

@@ -139,3 +139,17 @@ The `users` policy above only matches when `id = current_setting('app.current_us
 The identical gap exists on `refresh_tokens`: `/auth/token/refresh` and `/auth/logout` receive a raw refresh token and must find its row **by `token_hash`** before knowing which user it belongs to. V6 adds the same pattern there, gated by `app.auth_lookup_token_hash` — a row is visible only to a caller who already supplies the exact SHA-256 hash, which requires already possessing the valid raw token.
 
 Approved by project owner 2026-07-02 as a deviation from this document's original RLS design; see `docs/database.md` `device_api_keys` section addendum.
+
+### Cross-user reads for background jobs (added during Epic 4 implementation)
+
+Every RLS-protected table has `FORCE ROW LEVEL SECURITY` (`V5__row_level_security.sql`), and Spring Boot's primary connection uses `spendwise_app`, a plain role with no superuser/`BYPASSRLS` attribute — so a query with no `app.current_user_id` set returns zero rows, by design. `V5`'s own header comment flagged this as a real gap: some background jobs are inherently cross-user (e.g. "for all users" appears throughout `docs/architecture.md`'s Background Jobs table), and there was no mechanism for that.
+
+**Resolution:** a second Postgres role, `spendwise_jobs` (`backend/db-init/02-jobs-role.sql`), created with the `BYPASSRLS` attribute and granted membership in `spendwise_app` (so it inherits privileges on every table `spendwise_app` owns, including ones created by later migrations). Spring Boot wires this up as a **second connection pool** (`com.spendwise.common.db.JobsDataSourceConfig`) alongside the normal `spendwise_app`-backed one:
+
+- The default `DataSource`/`JdbcTemplate` — used by every controller, service, and repository in the app via unqualified injection — is completely unaffected and stays fully RLS-enforced, exactly as before.
+- A second `JdbcTemplate` bean, injected only via `@Qualifier("jobsJdbcTemplate")`, bypasses RLS entirely. Only `@Scheduled` job classes may use it, and only for the specific cross-user read each job needs (`TransactionRepository.findAllUncategorized`, `MlCorrectionRepository.findAllCorrections` — both in `com.spendwise.transaction`, exposed to `com.spendwise.categorization`'s jobs through the normal `TransactionService` interface, not a new cross-module dependency).
+- First landed for E4-S3-T3 (categorization retry job) and E4-S3-T4 (ML retraining job); the same mechanism is available to Epic 5's alert evaluator and Epic 8's recommendation generator, both also described as system-wide jobs.
+
+This is a real, audited exception scoped to exactly one role and exactly the job classes that explicitly request it — not a blanket RLS bypass. See `implementation/tracking/STATUS.md`'s Epic 4 close-out for the full context of why this was needed.
+
+> **Local dev note:** `docker-entrypoint-initdb.d` scripts (`db-init/*.sql`) only run once, when a Postgres data volume is first created. An existing local `spendwise-postgres-data` volume created before `02-jobs-role.sql` was added won't have the `spendwise_jobs` role — run `docker compose down -v` (recreates the volume) or apply `02-jobs-role.sql` manually against the running container.

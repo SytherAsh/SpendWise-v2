@@ -116,6 +116,19 @@ public class TransactionServiceImpl implements TransactionService {
         return transactionCategoryRepository.hasAssignment(userId, transactionId);
     }
 
+    @Override
+    public List<UncategorizedTransactionRef> findAllUncategorized(int limit) {
+        // No @Transactional / RlsSession here — this reads via the separate spendwise_jobs
+        // DataSource (BYPASSRLS), which the primary DataSource's transaction manager doesn't
+        // span, and a single SELECT needs no explicit transaction anyway.
+        return transactionRepository.findAllUncategorized(limit);
+    }
+
+    @Override
+    public List<MlCorrectionRecord> findAllCorrections() {
+        return mlCorrectionRepository.findAllCorrections();
+    }
+
     private static NewTransactionData withSource(NewTransactionData data, TransactionSource source) {
         return new NewTransactionData(
                 data.transactionDate(),

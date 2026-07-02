@@ -181,47 +181,70 @@ actually exercise `integrationTest` end-to-end.
 - [x] E4-S2-T5 — `GET /evaluate` + evaluation script
 - [x] E4-S3-T1 — Categorization service interface + FastAPI client
 - [x] E4-S3-T2 — Wire Ingest → Categorization trigger
-- [ ] E4-S3-T3 — Categorization retry job (every 30 min) — **blocked, see close-out note below**
-- [ ] E4-S3-T4 — ML retraining weekly job — **blocked, see close-out note below**
-- [ ] E4-S3-T5 — Admin-triggered retrain + evaluate (service-interface only) — partial: the
-      Required Test (ArchUnit boundary check, `CategorizationBoundaryTest`) is done; the two
-      interface methods (`triggerRetrain()`, `getAccuracyMetrics()`) are not yet added — see
-      close-out note below
+- [x] E4-S3-T3 — Categorization retry job (every 30 min)
+- [x] E4-S3-T4 — ML retraining weekly job
+- [x] E4-S3-T5 — Admin-triggered retrain + evaluate (service-interface only)
 
-### Epic 4 close-out — E4-S3-T3/T4/T5 blocked on a pre-existing cross-user RLS gap
+### Epic 4 close-out — cross-user RLS gap found and resolved mid-epic
 
-E4-S1, E4-S2, and E4-S3-T1/T2 are complete and tested (FastAPI pytest suite green;
-Spring Boot unit tests green, including a new ArchUnit test proving only
-`com.spendwise.categorization` depends on `MlClient`). E4-S3-T3 (categorization retry
-job) and E4-S3-T4 (ML retraining weekly job) were **not implemented** — both require a
+E4-S3-T3 (categorization retry job) and E4-S3-T4 (ML retraining weekly job) both need a
 `@Scheduled` job to read across *all* users' data (uncategorized transactions;
-`ml_corrections`), and the schema has no mechanism for that today:
+`ml_corrections`), which the schema had no mechanism for — every RLS-protected table has
+`FORCE ROW LEVEL SECURITY`, and Spring Boot's primary connection (`spendwise_app`) has no
+`BYPASSRLS`, so an unscoped query always returns zero rows. Not a gap introduced here —
+`V5__row_level_security.sql`'s own header comment already flagged it as deferred to Epic
+11. `docs/architecture.md`'s Background Jobs table describes every scheduled job as
+system-wide, so this also blocks Epic 5's alert evaluator and Epic 8's recommendation
+generator, not just Epic 4 — a cross-cutting gap, first surfaced here because E4-S3-T3/T4
+are the earliest scheduled, cross-user jobs in the build order.
 
-- Every RLS-protected table (`transactions`, `ml_corrections`, `users`, ...) has `FORCE
-  ROW LEVEL SECURITY` (`V5__row_level_security.sql`), and Spring Boot connects as the
-  non-superuser `spendwise_app` role specifically so it can't bypass that. Every query
-  requires `SELECT set_config('app.current_user_id', ...)` first, scoping it to exactly
-  one user. There is currently no way for the app's DB connection to read more than one
-  user's rows in a single query, or even to enumerate user ids to loop over.
-- This is not a gap I introduced — `V5__row_level_security.sql`'s own header comment
-  already flags it: *"The Admin module (Epic 11) needs cross-user reads ... how that
-  coexists with FORCE RLS on these tables is an open question deferred to Epic 11, not
-  resolved by this migration."* `docs/architecture.md`'s Background Jobs table describes
-  every scheduled job as system-wide ("for all users"), so this actually blocks Epic 5's
-  alert evaluator and Epic 8's recommendation generator too, not just Epic 4 — it's a
-  cross-cutting gap, first surfaced here because E4-S3-T3/T4 are the earliest scheduled,
-  cross-user jobs in the build order.
-- E4-S3-T5's `triggerRetrain()` hits the same wall (it needs the same cross-user
-  `ml_corrections` read as T4). `getAccuracyMetrics()` would not be blocked (`GET
-  /evaluate` needs no per-user backend data at all — it evaluates against the FastAPI
-  service's own labeled dataset), but wasn't added yet either, to avoid extending
-  `CategorizationService`'s public interface twice for the same story.
+Flagged to the project owner rather than inventing a fix unilaterally, since it's a
+security-relevant schema decision. **Decision (2026-07-02): a dedicated system-jobs DB
+role.** Implemented as:
 
-Flagged to the project owner rather than inventing a bypass mechanism (a new DB role, a
-`SECURITY DEFINER` function, a per-user-loop workaround) unilaterally, since it's a
-security-relevant schema decision the migration itself already deferred to Epic 11.
-Epic 4 was paused here pending that decision — see the conversation this session for the
-full writeup.
+- `backend/db-init/02-jobs-role.sql` — a new `spendwise_jobs` Postgres role with
+  `BYPASSRLS`, granted membership in `spendwise_app` (inherits its table privileges,
+  including on tables created by later migrations).
+- `com.spendwise.common.db.JobsDataSourceConfig` — a second `DataSource`/`JdbcTemplate`
+  bean pair, connected as `spendwise_jobs`. The default (unqualified) `DataSource`/
+  `JdbcTemplate` — used everywhere else in the app — is completely unaffected and stays
+  fully RLS-enforced; only `@Qualifier("jobsJdbcTemplate")` injections bypass RLS, and
+  only two call sites do that (`TransactionRepository.findAllUncategorized`,
+  `MlCorrectionRepository.findAllCorrections`), both exposed to Categorization through
+  the normal `TransactionService` interface rather than a new cross-module dependency.
+  Both DataSource beans derive their JDBC URL from the same `JdbcConnectionDetails` bean
+  (not raw `spring.datasource.*` properties) so this stays correct under Testcontainers'
+  `@ServiceConnection` in integration tests, not just local/prod.
+- Full design rationale and the local-dev volume-recreation caveat: `docs/security.md`
+  "Cross-user reads for background jobs".
+
+E4-S3-T5 landed in full this pass: `triggerRetrain()` (reads all `ml_corrections` via the
+jobs role, POSTs to FastAPI `/retrain`) and `getAccuracyMetrics()` (calls `GET /evaluate`
+— not blocked by any of the above, since it needs no per-user backend data) are both on
+`CategorizationService` now, alongside the `CategorizationBoundaryTest` ArchUnit test from
+the previous pass.
+
+**Verification caveat:** unit tests are green (72/72). The new integration test
+(`CategorizationJobsIntegrationTest`, using an embedded `HttpServer` stub in place of a
+real FastAPI process, and bootstrapping `spendwise_jobs` directly since Testcontainers'
+bare Postgres image doesn't run `db-init/`) compiles clean but is **unexecuted** — Docker
+is unavailable in this environment, consistent with every other integration test in this
+repo per Epic 3's close-out note above. The dual-DataSource wiring in particular has not
+been verified against a real Postgres instance and should be smoke-tested (`./gradlew
+integrationTest` or `./gradlew bootRun` against `docker-compose.yml`) before this is
+considered production-ready.
+
+A `spec-invariant-reviewer` pass on this diff caught one real bug before commit: the jobs
+`HikariDataSource` validated a connection eagerly at Spring context startup (Hikari's
+default `initializationFailTimeout`), which would have failed context load for **every
+other** `@SpringBootTest` integration test in the repo the moment Docker became available
+to run them — none of them bootstrap the `spendwise_jobs` role the way
+`CategorizationJobsIntegrationTest` does. Fixed with
+`HikariDataSource.setInitializationFailTimeout(-1)` on the jobs pool only (the primary
+pool stays fail-fast) — a real connection is now only attempted, and can only fail, when
+something actually queries via `jobsJdbcTemplate`. Everything else the review checked
+(module boundaries, ArchUnit coverage, BYPASSRLS blast radius, SQL correctness, per-item
+exception isolation) came back clean.
 
 ## Epic 5 — [Budget & Alerts](../epics/epic-05-budget-and-alerts.md)
 
@@ -315,5 +338,5 @@ full writeup.
 
 ---
 
-**Progress: 23 / 125 tasks complete.** Update this line's count as you check items off (or
+**Progress: 26 / 125 tasks complete.** Update this line's count as you check items off (or
 leave it — it's a convenience, not a requirement).

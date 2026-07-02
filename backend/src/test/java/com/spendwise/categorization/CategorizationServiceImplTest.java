@@ -1,7 +1,11 @@
 package com.spendwise.categorization;
 
+import com.spendwise.categorization.dto.MlEvaluationResponse;
 import com.spendwise.categorization.dto.MlPredictionRequest;
 import com.spendwise.categorization.dto.MlPredictionResponse;
+import com.spendwise.categorization.dto.MlRetrainRequest;
+import com.spendwise.categorization.dto.MlRetrainResponse;
+import com.spendwise.transaction.MlCorrectionRecord;
 import com.spendwise.transaction.Transaction;
 import com.spendwise.transaction.TransactionService;
 import com.spendwise.transaction.TransactionSource;
@@ -9,10 +13,12 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -94,6 +100,42 @@ class CategorizationServiceImplTest {
         given(transactionService.getById(userId, transactionId)).willThrow(new com.spendwise.transaction.TransactionNotFoundException());
 
         assertThatCode(() -> service.categorize(userId, transactionId)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void triggerRetrainSendsAllCorrectionsToFastApi() {
+        given(transactionService.findAllCorrections())
+                .willReturn(List.of(new MlCorrectionRecord("Cult Gym", "cult@okhdfc", "HDFC", "UPI", BigDecimal.valueOf(-800.0), null, 3)));
+        given(mlClient.retrain(any(MlRetrainRequest.class))).willReturn(new MlRetrainResponse("success", 1811));
+
+        service.triggerRetrain();
+
+        verify(mlClient)
+                .retrain(
+                        eq(
+                                new MlRetrainRequest(
+                                        List.of(
+                                                new com.spendwise.categorization.dto.MlRetrainCorrection(
+                                                        "Cult Gym", "cult@okhdfc", "HDFC", "UPI", BigDecimal.valueOf(-800.0), null, 3)))));
+    }
+
+    @Test
+    void triggerRetrainPropagatesMlClientFailure() {
+        given(transactionService.findAllCorrections()).willReturn(List.of());
+        when(mlClient.retrain(any(MlRetrainRequest.class))).thenThrow(new RuntimeException("FastAPI unreachable"));
+
+        assertThatThrownBy(service::triggerRetrain).isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void getAccuracyMetricsReturnsMlClientEvaluateResult() {
+        MlEvaluationResponse response = new MlEvaluationResponse(
+                "2026-07-02T00:00:00Z", 362, 0.917, List.of(), List.of(), List.of(), new com.spendwise.categorization.dto.MlConfidenceDistribution(0.8, 0.9, 0.3, 1.0), "reports/evaluation_1.json");
+        given(mlClient.evaluate()).willReturn(response);
+
+        MlEvaluationResponse result = service.getAccuracyMetrics();
+
+        assertThat(result).isEqualTo(response);
     }
 
     private Transaction transaction() {

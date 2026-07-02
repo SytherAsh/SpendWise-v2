@@ -36,6 +36,17 @@ server:
   port: 8080
 
 app:
+  datasource:
+    # Second connection pool — same host/port/database as the primary connection above
+    # (JobsDataSourceConfig derives the URL from the same JdbcConnectionDetails bean, so
+    # this also works under Testcontainers), a different role (db-init/02-jobs-role.sql)
+    # with BYPASSRLS — used ONLY by @Scheduled job beans that must read across all users
+    # (E4-S3-T3/T4; see JobsDataSourceConfig and STATUS.md's Epic 4 close-out). Every
+    # other bean in the app keeps using the default spendwise_app-backed DataSource
+    # above, which stays fully RLS-enforced.
+    jobs:
+      username: ${SPRING_DATASOURCE_JOBS_USERNAME:spendwise_jobs}
+      password: ${SPRING_DATASOURCE_JOBS_PASSWORD:spendwise_jobs_password}
   security:
     # Signing secret for the user session JWT (7-day access tokens). Must be
     # set via env in dev/prod; the local default below is dev-only and
@@ -57,3 +68,6 @@ app:
     # treated the same as a failed call (E4-S3-T1 DoD): left uncategorized for
     # E4-S3-T3's retry job rather than written to transaction_categories.
     low-confidence-threshold: ${ML_LOW_CONFIDENCE_THRESHOLD:0.5}
+    # "Weekly (configurable)" per docs/architecture.md's Background Jobs table —
+    # default fires Sunday 03:00 server time (cron: sec min hour day month weekday).
+    retrain-cron: ${ML_RETRAIN_CRON:0 0 3 * * SUN}

@@ -1,7 +1,10 @@
 package com.spendwise.categorization;
 
+import com.spendwise.categorization.dto.MlEvaluationResponse;
 import com.spendwise.categorization.dto.MlPredictionRequest;
 import com.spendwise.categorization.dto.MlPredictionResponse;
+import com.spendwise.categorization.dto.MlRetrainRequest;
+import com.spendwise.categorization.dto.MlRetrainResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -16,11 +19,13 @@ import org.springframework.web.client.RestClient;
 @Component
 public class MlClient {
 
-    // Short timeouts, not Spring's OS-default (which can be 60s+): a FastAPI outage must fail
-    // fast enough that E4-S3-T1's "never crashes the ingest flow" doesn't mean "hangs the ingest
-    // flow" instead — every ingested item calls this synchronously (E4-S3-T2).
+    // Fast-fail connect timeout, not Spring's OS-default (which can be 60s+): a FastAPI outage
+    // must fail fast enough that E4-S3-T1's "never crashes the ingest flow" doesn't mean "hangs
+    // the ingest flow" instead — /predict is called synchronously per ingested item (E4-S3-T2).
+    // Read timeout is generous (once connected, FastAPI is up and actually working) — /retrain
+    // and /evaluate both fit a fresh RandomForest and can legitimately take tens of seconds.
     private static final int CONNECT_TIMEOUT_MILLIS = 3_000;
-    private static final int READ_TIMEOUT_MILLIS = 10_000;
+    private static final int READ_TIMEOUT_MILLIS = 120_000;
 
     private final RestClient restClient;
     private final String internalKey;
@@ -45,5 +50,21 @@ public class MlClient {
                 .body(request)
                 .retrieve()
                 .body(MlPredictionResponse.class);
+    }
+
+    /** @throws org.springframework.web.client.RestClientException on network failure or non-2xx response */
+    public MlRetrainResponse retrain(MlRetrainRequest request) {
+        return restClient
+                .post()
+                .uri("/retrain")
+                .header("X-Internal-Key", internalKey)
+                .body(request)
+                .retrieve()
+                .body(MlRetrainResponse.class);
+    }
+
+    /** @throws org.springframework.web.client.RestClientException on network failure or non-2xx response */
+    public MlEvaluationResponse evaluate() {
+        return restClient.get().uri("/evaluate").header("X-Internal-Key", internalKey).retrieve().body(MlEvaluationResponse.class);
     }
 }

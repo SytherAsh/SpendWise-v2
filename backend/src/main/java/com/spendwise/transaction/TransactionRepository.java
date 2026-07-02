@@ -1,6 +1,7 @@
 package com.spendwise.transaction;
 
 import com.spendwise.common.db.RlsSession;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -53,10 +54,31 @@ public class TransactionRepository {
 
     private final JdbcTemplate jdbcTemplate;
     private final RlsSession rlsSession;
+    private final JdbcTemplate jobsJdbcTemplate;
 
-    public TransactionRepository(JdbcTemplate jdbcTemplate, RlsSession rlsSession) {
+    public TransactionRepository(
+            JdbcTemplate jdbcTemplate, RlsSession rlsSession, @Qualifier("jobsJdbcTemplate") JdbcTemplate jobsJdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
         this.rlsSession = rlsSession;
+        this.jobsJdbcTemplate = jobsJdbcTemplate;
+    }
+
+    /**
+     * Cross-user (E4-S3-T3) — uses the {@code spendwise_jobs} connection
+     * ({@code BYPASSRLS}, see {@code com.spendwise.common.db.JobsDataSourceConfig}), never the
+     * RLS-scoped {@code jdbcTemplate} above. Returns only (user_id, transaction_id) pairs, never
+     * a full row — the retry job immediately re-scopes to one user at a time via {@link
+     * com.spendwise.categorization.CategorizationService#categorize}, which uses the normal
+     * RLS-scoped path to do the actual write.
+     */
+    public List<UncategorizedTransactionRef> findAllUncategorized(int limit) {
+        return jobsJdbcTemplate.query(
+                "SELECT t.id, t.user_id FROM transactions t "
+                        + "LEFT JOIN transaction_categories tc ON tc.transaction_id = t.id "
+                        + "WHERE tc.transaction_id IS NULL "
+                        + "ORDER BY t.parsed_at ASC LIMIT ?",
+                (rs, rowNum) -> new UncategorizedTransactionRef(UUID.fromString(rs.getString("user_id")), UUID.fromString(rs.getString("id"))),
+                limit);
     }
 
     /**

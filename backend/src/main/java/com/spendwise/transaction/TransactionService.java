@@ -1,15 +1,16 @@
 package com.spendwise.transaction;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 /**
  * Service interface for the Transaction module's core domain (transactions themselves —
  * categories and EMIs have their own sibling interfaces). Consumed cross-module by Ingest (only
- * via {@link #persistFromIngest}) and by Categorization (only via {@link #getById}, {@link
- * #assignMlCategory}, and {@link #isCategorized}) — docs/architecture.md "Allowed module
- * dependencies".
+ * via {@link #persistFromIngest}) and by Categorization (via {@link #getById}, {@link
+ * #assignMlCategory}, {@link #isCategorized}, {@link #findAllUncategorized}, and {@link
+ * #findAllCorrections}) — docs/architecture.md "Allowed module dependencies".
  */
 public interface TransactionService {
 
@@ -53,4 +54,18 @@ public interface TransactionService {
 
     /** Whether {@code transactionId} already has a category assignment (ML or user). */
     boolean isCategorized(UUID userId, UUID transactionId);
+
+    /**
+     * Cross-user (E4-S3-T3) — every transaction with no {@code transaction_categories} row yet,
+     * across all users, oldest-first. Backs the categorization retry job; bypasses RLS via the
+     * {@code spendwise_jobs} role (see {@code com.spendwise.common.db.JobsDataSourceConfig}).
+     */
+    List<UncategorizedTransactionRef> findAllUncategorized(int limit);
+
+    /**
+     * Cross-user (E4-S3-T4) — every {@code ml_corrections} row across all users, joined with its
+     * transaction's feature fields. Backs the weekly ML retraining job; bypasses RLS via the
+     * {@code spendwise_jobs} role.
+     */
+    List<MlCorrectionRecord> findAllCorrections();
 }
