@@ -145,11 +145,31 @@ Epic 2 Sync module was treated as still "continuing in background" per
 `DEPENDENCY-GRAPH.md`, not as a dependency to build against — see the E3-S1
 commit body for the one place this mattered: the ingest response shape).
 Unit tests (26 new, full backend suite green — 55 tests) were written and
-run this session. Integration tests (Testcontainers/Docker-based, per
-`docs/testing.md`) were written for every story to the Required Tests spec
-and compile clean, but **could not be executed** — Docker is unavailable in
-this environment — so their assertions are unverified pending a run of
-`./gradlew integrationTest` on a machine with Docker.
+run this session.
+
+**Integration tests — verified green (2026-07-02), after fixing two
+pre-existing Epic 1 bugs the first real run of `./gradlew integrationTest`
+surfaced** (commit `c26175b`, pushed after the epic's own 4 story commits):
+1. `RlsSession`'s three setters called `JdbcTemplate.update(...)` on
+   `SELECT set_config(...)` — a query, not DML. PostgreSQL's JDBC driver
+   rejects `executeUpdate()` against any statement returning a result set,
+   so every RLS-scoped repository call across the whole app was broken (25
+   of 48 integration tests failed, including pre-existing Epic 1 tests that
+   had apparently never been run against real Docker/CI before). Fixed with
+   `queryForObject`.
+2. `RefreshTokenService.rotate()`'s replay-detection branch wrote
+   `revokeAllForUser(...)` and then threw `InvalidRefreshTokenException` to
+   reject the replay — but the method is `@Transactional`, and the default
+   rollback-on-RuntimeException behavior silently undid the revocation. The
+   replay itself was correctly rejected, but every *other* session for that
+   user stayed valid, defeating docs/security.md's "replay revokes all
+   sessions" invariant. Fixed with `@Transactional(noRollbackFor = ...)`.
+
+Confirmed via `./gradlew integrationTest` against real Docker (48/48 passing)
+and on real GitHub Actions (`gh run watch` — all 4 CI jobs green, including
+Backend's Integration tests step). Neither bug is Epic-3-specific; both were
+pre-existing and only became visible once Epic 3's push was the first to
+actually exercise `integrationTest` end-to-end.
 
 ## Epic 4 — [ML Categorization Service](../epics/epic-04-ml-categorization.md)
 
