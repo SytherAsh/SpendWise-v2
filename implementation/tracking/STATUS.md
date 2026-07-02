@@ -246,7 +246,7 @@ something actually queries via `jobsJdbcTemplate`. Everything else the review ch
 (module boundaries, ArchUnit coverage, BYPASSRLS blast radius, SQL correctness, per-item
 exception isolation) came back clean.
 
-### Epic 4 post-push CI incident — jobs pool retry storm (2026-07-02)
+### Epic 4 post-push CI incident — unqualified JdbcTemplate silently became the BYPASSRLS pool (2026-07-02)
 
 The verification caveat above turned out to matter: pushing to `main` and running the real
 `integrationTest` job in CI (Docker, for the first time ever on this repo) failed every
@@ -257,22 +257,49 @@ integration test in the suite — not just the new `CategorizationJobsIntegratio
 via CI history that `integrationTest` had passed cleanly on the commit immediately before
 this epic (`0b39d81`) — a genuine regression, not a pre-existing gap.
 
-**Root cause:** `CategorizationRetryJob`'s `@Scheduled(fixedRate = ...)` had no
-`initialDelay`, so Spring fired it immediately on every app context startup — including in
-every OTHER integration test's context, none of which provision `spendwise_jobs`. Hikari's
-`minimumIdle` defaults to `maximumPoolSize` (10), so once that first query failed, the jobs
-pool's background connection-adder kept retrying indefinitely trying to keep 10 idle
-connections warm against a role that doesn't exist there — starving the CI runner's CPU/
-threads badly enough to degrade every other request (including completely unrelated
-`/auth/otp/verify` calls) to ~30 seconds each (Hikari's default `connectionTimeout`), which
-is why the failures were spaced in near-exact 30-second intervals across the whole suite.
+**Two wrong hypotheses first** (both plausible from timing alone — every failure was
+~30 seconds apart, matching Hikari's default `connectionTimeout`), each pushed as a fix and
+each failed to change the symptom:
 
-**Fix:** `initialDelay` added to the job (also correct behavior on its own merits — a full
-system-wide sweep on every app restart isn't what "every 30 minutes" means), plus
-`minimumIdle(0)` and a small `maximumPoolSize` on the jobs pool so a missing-role
-environment fails once on actual demand rather than retrying forever in the background. See
+1. `CategorizationRetryJob`'s `@Scheduled(fixedRate = ...)` had no `initialDelay`, firing
+   immediately at every test context's startup against a role that doesn't exist there.
+   Added an `initialDelay` — no change.
+2. Hikari's `minimumIdle` (defaults to `maximumPoolSize`, 10) would make the jobs pool's
+   background connection-adder retry forever against a nonexistent role, starving the CI
+   runner. Set `minimumIdle(0)` + a small `maximumPoolSize` — no change.
+
+Gradle's default test logging only prints failure stack traces, so neither attempt had
+real application log output to work from. Adding explicit `testLogging` (full
+stdout/stderr, `build.gradle.kts`) to the `integrationTest` task surfaced the actual error:
+
+```text
+org.postgresql.util.PSQLException: FATAL: password authentication failed for user "spendwise_jobs"
+```
+
+**Real root cause:** Spring Boot's auto-configured `JdbcTemplate` bean is conditional on
+`@ConditionalOnMissingBean(JdbcOperations.class)`. `jobsJdbcTemplate` is itself a
+`JdbcTemplate` (implements `JdbcOperations`), so its mere presence in the context silently
+disabled the auto-configured default entirely — leaving `jobsJdbcTemplate` as the **only**
+`JdbcTemplate` bean in the whole application. Every unqualified injection (every repository
+that doesn't explicitly ask for `@Qualifier("jobsJdbcTemplate")`) silently received the
+`BYPASSRLS`-enabled connection instead of the RLS-enforced one. This is more than a test
+failure: in CI it failed loudly only because `spendwise_jobs` doesn't exist in the
+Testcontainers image; in an environment where the role DOES exist (real Supabase, per
+`db-init/02-jobs-role.sql`), the identical bug would have silently routed the **entire
+application** through the RLS-bypassing role instead of failing at all.
+
+**Fix:** define the primary `JdbcTemplate` bean explicitly (`@Primary`) in
+`JobsDataSourceConfig` rather than relying on auto-configuration to keep deferring to "the
+original" — plus a regression test
+(`ApplicationContextIntegrationTest.unqualifiedJdbcTemplateIsNotTheJobsBypassRlsPool`)
+asserting the unqualified `JdbcTemplate`'s `SELECT current_user` is never `spendwise_jobs`.
+The `initialDelay`/`minimumIdle` tuning from the two wrong hypotheses was kept — still
+correct, low-risk defensive practice, just not what actually fixed this. See
 `docs/security.md`'s "Cross-user reads for background jobs" incident note for the full
-writeup — flagged there as a general lesson for any future second connection pool.
+writeup — flagged there as a general lesson for any future second `DataSource`/
+`JdbcTemplate`-family bean: always define and `@Primary`-mark the primary one explicitly,
+never assume auto-configuration keeps deferring to it once a second bean of the same type
+exists anywhere in the context.
 
 ## Epic 5 — [Budget & Alerts](../epics/epic-05-budget-and-alerts.md)
 

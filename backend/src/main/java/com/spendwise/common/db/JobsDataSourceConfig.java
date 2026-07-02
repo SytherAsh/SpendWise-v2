@@ -15,9 +15,9 @@ import javax.sql.DataSource;
 /**
  * Two connection pools against the same database, two different Postgres roles.
  *
- * <p>Both beans are built from the same {@link JdbcConnectionDetails} bean (Boot 3.1+'s
- * connection-abstraction — NOT raw {@code spring.datasource.*} properties directly) so this stays
- * correct under Testcontainers' {@code @ServiceConnection}, which overrides {@link
+ * <p>Both {@link DataSource} beans are built from the same {@link JdbcConnectionDetails} bean
+ * (Boot 3.1+'s connection-abstraction — NOT raw {@code spring.datasource.*} properties directly)
+ * so this stays correct under Testcontainers' {@code @ServiceConnection}, which overrides {@link
  * JdbcConnectionDetails}, not the properties themselves: reading the properties directly here
  * would silently reconnect to the wrong (non-ephemeral) database in every integration test.
  * {@code JdbcConnectionDetailsConfiguration}'s own auto-configured fallback bean (derived from
@@ -30,6 +30,23 @@ import javax.sql.DataSource;
  * @ConditionalOnMissingBean(DataSource.class)}), which is required once a second {@link
  * DataSource} bean exists — otherwise every existing unqualified {@link JdbcTemplate} injection
  * (every repository in the app) would become ambiguous.
+ *
+ * <p><b>The {@code jdbcTemplate} bean below is not optional decoration — omitting it is a real
+ * incident that shipped once (Epic 4 close-out, 2026-07-02).</b> Spring Boot's own auto-configured
+ * {@code JdbcTemplate} is conditional on {@code @ConditionalOnMissingBean(JdbcOperations.class)}
+ * — since {@code jobsJdbcTemplate} below is itself a {@code JdbcTemplate} (implements {@code
+ * JdbcOperations}), its mere presence in the context silently disables that auto-configuration
+ * entirely, leaving {@code jobsJdbcTemplate} as the ONLY {@code JdbcTemplate} bean — meaning
+ * every unqualified injection across the whole app (every repository that doesn't explicitly ask
+ * for {@code @Qualifier("jobsJdbcTemplate")}) would silently receive the {@code
+ * BYPASSRLS}-enabled connection instead of the RLS-enforced one. This is exactly what happened in
+ * CI: it surfaced loudly there only because {@code spendwise_jobs} didn't exist in the test
+ * container, so every request failed outright — in an environment where the role DOES exist (real
+ * Supabase, per db-init/02-jobs-role.sql), it would have worked and silently run the entire
+ * application through the RLS-bypassing role instead. Defining this bean explicitly makes Boot's
+ * auto-configuration back off for the SAME reason the {@code dataSource} bean above does, and
+ * pins the unqualified injection target to the correct (RLS-enforced) pool by construction, not
+ * by hoping auto-configuration guesses right.
  *
  * <p>{@code jobsDataSource}/{@code jobsJdbcTemplate} connect as {@code spendwise_jobs}
  * (db-init/02-jobs-role.sql — {@code BYPASSRLS}, same host/port/database as the primary
@@ -49,6 +66,13 @@ public class JobsDataSourceConfig {
                 .username(connectionDetails.getUsername())
                 .password(connectionDetails.getPassword())
                 .build();
+    }
+
+    /** See the class-level javadoc — this is the fix for a real incident, not decoration. */
+    @Primary
+    @Bean
+    public JdbcTemplate jdbcTemplate(@Qualifier("dataSource") DataSource dataSource) {
+        return new JdbcTemplate(dataSource);
     }
 
     @Bean
@@ -72,15 +96,10 @@ public class JobsDataSourceConfig {
         // scheduled job. -1 disables that eager check; a real connection is only attempted (and
         // can only fail) when something actually queries via jobsJdbcTemplate.
         dataSource.setInitializationFailTimeout(-1);
-        // minimumIdle otherwise defaults to maximumPoolSize (10): Hikari's background
-        // connection-adder would then continuously retry, forever, trying to keep 10 idle
-        // connections warm against a role that may not exist in this environment — a real
-        // incident found in CI (E4-S3-T3/T4 close-out): every OTHER integration test's Spring
-        // context degraded to ~30s per request (HikariCP's default connectionTimeout) once
-        // CategorizationRetryJob's immediate first firing triggered that retry storm, starving
-        // the whole JVM of CPU/threads on the runner. 0 means Hikari only ever opens a
-        // connection on actual demand, never speculatively. A small maximumPoolSize is enough —
-        // this pool serves two low-concurrency scheduled jobs, not request traffic.
+        // minimumIdle otherwise defaults to maximumPoolSize (10) — keep it at 0 with a small
+        // maximumPoolSize so a missing-role environment fails once on actual demand rather than
+        // Hikari's background connection-adder retrying indefinitely in an idle-pool-warming
+        // loop. This pool serves two low-concurrency scheduled jobs, not request traffic.
         dataSource.setMinimumIdle(0);
         dataSource.setMaximumPoolSize(2);
         return dataSource;
