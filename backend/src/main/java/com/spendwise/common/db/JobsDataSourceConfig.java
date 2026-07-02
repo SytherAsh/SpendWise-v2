@@ -72,6 +72,17 @@ public class JobsDataSourceConfig {
         // scheduled job. -1 disables that eager check; a real connection is only attempted (and
         // can only fail) when something actually queries via jobsJdbcTemplate.
         dataSource.setInitializationFailTimeout(-1);
+        // minimumIdle otherwise defaults to maximumPoolSize (10): Hikari's background
+        // connection-adder would then continuously retry, forever, trying to keep 10 idle
+        // connections warm against a role that may not exist in this environment — a real
+        // incident found in CI (E4-S3-T3/T4 close-out): every OTHER integration test's Spring
+        // context degraded to ~30s per request (HikariCP's default connectionTimeout) once
+        // CategorizationRetryJob's immediate first firing triggered that retry storm, starving
+        // the whole JVM of CPU/threads on the runner. 0 means Hikari only ever opens a
+        // connection on actual demand, never speculatively. A small maximumPoolSize is enough —
+        // this pool serves two low-concurrency scheduled jobs, not request traffic.
+        dataSource.setMinimumIdle(0);
+        dataSource.setMaximumPoolSize(2);
         return dataSource;
     }
 

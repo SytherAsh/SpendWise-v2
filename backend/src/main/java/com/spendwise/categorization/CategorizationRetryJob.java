@@ -35,7 +35,11 @@ public class CategorizationRetryJob {
         this.categorizationService = categorizationService;
     }
 
-    @Scheduled(fixedRate = 30, timeUnit = TimeUnit.MINUTES)
+    // initialDelay so this doesn't fire the instant the app starts (Spring's default for
+    // fixedRate with no initialDelay) -- a full system-wide categorization sweep on every app
+    // restart/redeploy is wasteful and not what "every 30 minutes" means. Also avoids hitting
+    // the jobs DataSource before the app has had a moment to settle.
+    @Scheduled(initialDelay = 30, fixedRate = 30, timeUnit = TimeUnit.MINUTES)
     public void retryUncategorized() {
         run();
     }

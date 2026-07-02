@@ -246,6 +246,34 @@ something actually queries via `jobsJdbcTemplate`. Everything else the review ch
 (module boundaries, ArchUnit coverage, BYPASSRLS blast radius, SQL correctness, per-item
 exception isolation) came back clean.
 
+### Epic 4 post-push CI incident — jobs pool retry storm (2026-07-02)
+
+The verification caveat above turned out to matter: pushing to `main` and running the real
+`integrationTest` job in CI (Docker, for the first time ever on this repo) failed every
+integration test in the suite — not just the new `CategorizationJobsIntegrationTest`, but
+`AuthControllerIntegrationTest`, `IngestControllerIntegrationTest`,
+`EmiControllerIntegrationTest`, `TransactionControllerIntegrationTest`, and
+`UserControllerIntegrationTest` too, none of which touch Categorization at all. Confirmed
+via CI history that `integrationTest` had passed cleanly on the commit immediately before
+this epic (`0b39d81`) — a genuine regression, not a pre-existing gap.
+
+**Root cause:** `CategorizationRetryJob`'s `@Scheduled(fixedRate = ...)` had no
+`initialDelay`, so Spring fired it immediately on every app context startup — including in
+every OTHER integration test's context, none of which provision `spendwise_jobs`. Hikari's
+`minimumIdle` defaults to `maximumPoolSize` (10), so once that first query failed, the jobs
+pool's background connection-adder kept retrying indefinitely trying to keep 10 idle
+connections warm against a role that doesn't exist there — starving the CI runner's CPU/
+threads badly enough to degrade every other request (including completely unrelated
+`/auth/otp/verify` calls) to ~30 seconds each (Hikari's default `connectionTimeout`), which
+is why the failures were spaced in near-exact 30-second intervals across the whole suite.
+
+**Fix:** `initialDelay` added to the job (also correct behavior on its own merits — a full
+system-wide sweep on every app restart isn't what "every 30 minutes" means), plus
+`minimumIdle(0)` and a small `maximumPoolSize` on the jobs pool so a missing-role
+environment fails once on actual demand rather than retrying forever in the background. See
+`docs/security.md`'s "Cross-user reads for background jobs" incident note for the full
+writeup — flagged there as a general lesson for any future second connection pool.
+
 ## Epic 5 — [Budget & Alerts](../epics/epic-05-budget-and-alerts.md)
 
 - [ ] E5-S1-T1 — `POST /budgets` (idempotent upsert)
