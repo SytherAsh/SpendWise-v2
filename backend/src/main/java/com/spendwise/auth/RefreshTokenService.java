@@ -42,9 +42,13 @@ public class RefreshTokenService {
 
     /**
      * @throws InvalidRefreshTokenException if the token is unknown or expired, or (after
-     *     detecting and handling a replay) if the token had already been rotated once
+     *     detecting and handling a replay) if the token had already been rotated once.
+     *     {@code noRollbackFor} is required here: the replay branch below writes
+     *     {@code revokeAllForUser} and then deliberately throws to reject the caller's
+     *     request — without it, {@code @Transactional}'s default rollback-on-RuntimeException
+     *     would silently undo the revocation, leaving every other session still valid.
      */
-    @Transactional
+    @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
     public RotationResult rotate(String rawToken) {
         String incomingHash = hash(rawToken);
         RefreshToken existing = repository.findByTokenHash(incomingHash)
