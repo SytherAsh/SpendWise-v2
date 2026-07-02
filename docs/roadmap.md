@@ -106,6 +106,26 @@ Candidates for extraction (in order of likelihood):
 
 Trigger: when free-tier limits are consistently hit and paid infrastructure becomes justified.
 
+### Phase 9: Counterparty Metadata Enrichment (Analytics/Dashboard)
+
+#### Let users view Transfers broken down by who it's to/from, without expanding the ML category set
+
+- During Epic 4 training-data labeling, a Payee Knowledge Base was built that already
+  knows which recipients are friends, family, self-transfer accounts, merchants,
+  employers, or subscriptions (`ml/labeling/knowledge_base/`)
+- Proposed: a post-ML-prediction enrichment step (read-only, Analytics-layer) attaches
+  this counterparty metadata to a transaction for display/filtering purposes — the ML
+  model itself keeps predicting only the 12 categories in `docs/requirements.md`,
+  unchanged
+- Design sketch: `docs/architecture.md` "Future Enhancement: Counterparty Metadata
+  Enrichment"; rationale for keeping it out of the ML problem: ADR-010 in
+  `docs/decisions.md`
+- Natural landing point: Epic 7 (Analytics) once prioritized, or a dedicated future
+  epic — not scoped into any current epic
+- Would need: porting `merchant_rules.csv`-style rules into a queryable table, a
+  per-user extension mechanism (new contacts aren't in the training-time knowledge
+  base), and Analytics-module query support — all additive, no ML retraining involved
+
 ---
 
 ## Deferred Indefinitely

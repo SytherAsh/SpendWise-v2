@@ -168,3 +168,65 @@ This document records the key architectural decisions made during the SpendWise 
 - The Spring Boot ecosystem has first-class Java support; Java records (since Java 16) cover most of Kotlin's data class use cases for DTOs.
 - Java 21 is an LTS release — stable and widely supported by hosting platforms.
 - Android app remains Kotlin (unchanged) — the language split is Android = Kotlin, backend = Java 21.
+
+---
+
+## ADR-010: Counterparty Metadata Is Not an ML Category
+
+**Status**: Accepted
+
+**Context**: While preparing ML training data for Epic 4 (`ml/labeling/`), a Payee
+Knowledge Base was built that records, per recipient, information beyond spending
+category — whether the recipient is a friend, family member, self-transfer account,
+merchant, employer, or subscription service. Because ~50% of the labeled dataset is the
+`Transfers` category, and this counterparty information was sitting right there in the
+knowledge base used to produce it, the question arose: should the ML model predict this
+too, e.g. by splitting `Transfers` into `Transfers-Family`, `Transfers-Friend`,
+`Transfers-Self`, etc.?
+
+**Options considered**:
+1. Expand the category set so ML predicts counterparty type as part of (or instead of)
+   the spending category — e.g. more/split Transfer categories.
+2. Keep the ML model's label set exactly the 12 categories in `docs/requirements.md`;
+   treat counterparty type as separate metadata, sourced from the Payee Knowledge Base,
+   attached to a transaction in a later, independent enrichment step (Analytics-layer,
+   post-MVP — see `docs/architecture.md` "Future Enhancement: Counterparty Metadata
+   Enrichment").
+
+**Decision**: Option 2. The classifier continues to predict only the 12 transaction
+categories. Counterparty type is deliberately kept out of the ML problem entirely.
+
+**Rationale**:
+- **Model simplicity**: transaction category and counterparty type are different
+  questions answered by different signals. Category depends on *what* was purchased;
+  counterparty type depends on *who* the recipient is to this specific user. Folding a
+  personal/relationship classification into a spending-category classifier conflates two
+  problems the model doesn't need to solve jointly, and would fragment the already
+  Transfers-heavy class distribution (see `ml/labeling/tracking/LABELING_STATUS.md`
+  category distribution — Sports & Fitness already has zero training examples; splitting
+  Transfers further would create several more near-empty classes).
+- **Maintainability**: the Payee Knowledge Base (who's family/friend/merchant) is
+  fundamentally per-user and per-relationship — it doesn't generalize across users the
+  way "Swiggy → Food / Dine Out" does. Baking it into a shared, retrained ML model would
+  mean either training a model that overfits to one user's contacts, or building
+  per-user models far earlier than the per-user personalization already planned in
+  `docs/roadmap.md` Phase 4. A simple knowledge-base lookup has no such constraint.
+- **Extensibility**: `docs/requirements.md`'s 12 categories are meant to stay stable —
+  `CATEGORY_GUIDELINES.md` explicitly says don't add/split categories without updating
+  that doc. Counterparty types (friend/family/merchant/employer/subscription/settlement)
+  are a fundamentally open-ended, growable list with different governance than the
+  spending category taxonomy; they shouldn't be forced through the same frozen list.
+- **Future analytics value**: kept as a separate, additive metadata layer, counterparty
+  type can be joined onto transactions by the read-only Analytics module without
+  touching the ML pipeline, the `categories` table, or the `transaction_categories`
+  assignment — no retraining required to change how counterparties are grouped or
+  labeled.
+- Consistent with the existing architectural boundary in `docs/architecture.md`: the
+  Analytics module is strictly read-only and must not call write methods on any other
+  module. A counterparty-enrichment feature is a natural fit for that boundary if it's
+  read-only lookup/display, not a fit for the ML training loop.
+
+**Consequence**: Epic 4 trains and evaluates against exactly the 12 categories in
+`docs/requirements.md`, no more. Counterparty metadata enrichment is deferred to a
+post-MVP enhancement (`docs/roadmap.md` Phase 9), most naturally landing in Epic 7
+(Analytics) or a dedicated future epic once prioritized — not built or scoped now.

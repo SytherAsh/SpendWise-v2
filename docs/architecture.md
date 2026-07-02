@@ -224,3 +224,46 @@ Dashboard and budget suggestions reflect imported data
 | Recommendation generator | Recommendations | Every 6 hours | Reads spending aggregations from Analytics; generates recommendations where a threshold has been crossed since the last generation for that user and category, determined by comparing transaction and budget timestamps against the time of its own last run. Idempotent — suppresses duplicates by checking `generated_at` on the most recent record per user per category. |
 | ML retraining | Categorization | Weekly (configurable) | Sends `ml_corrections` data to FastAPI /retrain |
 | Categorization retry | Categorization | Every 30 minutes | Re-triggers ML categorization for transactions ingested but not yet categorized (e.g., FastAPI unavailable during ingest) |
+
+## Future Enhancement (Post-MVP): Counterparty Metadata Enrichment
+
+**Not built. Not scoped into any current epic.** Recorded here as a design sketch so
+the idea isn't lost — see `docs/roadmap.md` Phase 9 and ADR-010 in `docs/decisions.md`
+for the product framing and rationale.
+
+**Problem:** the 12 ML transaction categories (`docs/requirements.md`) intentionally
+don't distinguish *who* a Transfer went to or came from — Transfers is one ML class
+covering family, friends, self-transfers, and settlements alike. During ML training-data
+labeling (`ml/labeling/`), a Payee Knowledge Base was built that already captures this:
+which recipients are friends, family, self-transfer accounts, merchants, employers, or
+subscriptions (`ml/labeling/knowledge_base/merchant_rules.csv`).
+
+**Proposed flow**, added as a step *after* — never instead of — ML categorization:
+
+```text
+Ingest → Transaction stored → Categorization calls FastAPI /predict → category_id stored
+                                                                            │
+                                                                            ▼
+                                          (NEW, post-MVP) Analytics/enrichment step:
+                                          look up recipient_name/upi_id against a
+                                          Payee Knowledge Base table → attach
+                                          counterparty_type metadata (non-authoritative,
+                                          display-only)
+```
+
+Sketch of the shape this would take, **not a committed schema**:
+- A `counterparty_metadata` table (or a `counterparty_type` column on a per-user contacts
+  table), separate from `categories`/`transaction_categories` — never a new ML class, and
+  never a new `categories` row.
+- Populated by porting `ml/labeling/knowledge_base/counterparty_knowledge.csv` (a
+  first-pass extraction of this reasoning, done during Epic 4 prep — see its README)
+  into a queryable table, extended per-user over time (mirrors how `ml_corrections`
+  grows the ML model, but this loop never touches the model). That CSV is raw material
+  only — re-verify its `medium`-confidence rows before treating it as ground truth.
+- Read-only consumer: the Analytics module would join on this table the same way it
+  joins on `transaction_categories` today — Analytics remains strictly read-only per its
+  existing architectural invariant.
+- UI use case: group/filter the Transfers category by counterparty type ("Family",
+  "Friends", "Self", "Settlements") without inflating the ML label set.
+
+**Why this is deliberately not in Epic 4 or Epic 7's current scope:** see ADR-010.
