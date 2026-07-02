@@ -173,12 +173,12 @@ actually exercise `integrationTest` end-to-end.
 
 ## Epic 4 — [ML Categorization Service](../epics/epic-04-ml-categorization.md)
 
-- [ ] E4-S1-T1 — `X-Internal-Key` middleware
-- [ ] E4-S2-T1 — Preprocessing & feature extraction
-- [ ] E4-S2-T2 — Train baseline scikit-learn classifier
-- [ ] E4-S2-T3 — `POST /predict`
-- [ ] E4-S2-T4 — `POST /retrain`
-- [ ] E4-S2-T5 — `GET /evaluate` + evaluation script
+- [x] E4-S1-T1 — `X-Internal-Key` middleware
+- [x] E4-S2-T1 — Preprocessing & feature extraction
+- [x] E4-S2-T2 — Train baseline scikit-learn classifier
+- [x] E4-S2-T3 — `POST /predict`
+- [x] E4-S2-T4 — `POST /retrain`
+- [x] E4-S2-T5 — `GET /evaluate` + evaluation script
 - [ ] E4-S3-T1 — Categorization service interface + FastAPI client
 - [ ] E4-S3-T2 — Wire Ingest → Categorization trigger
 - [ ] E4-S3-T3 — Categorization retry job (every 30 min)
@@ -277,5 +277,5 @@ actually exercise `integrationTest` end-to-end.
 
 ---
 
-**Progress: 15 / 125 tasks complete.** Update this line's count as you check items off (or
+**Progress: 21 / 125 tasks complete.** Update this line's count as you check items off (or
 leave it — it's a convenience, not a requirement).
