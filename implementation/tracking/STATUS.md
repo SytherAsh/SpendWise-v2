@@ -135,8 +135,21 @@ With items 1–2 set, Epic 0's intent is fully satisfied for a solo workflow.
 - [x] E3-S2-T3 — `POST /transactions` (manual entry)
 - [x] E3-S2-T4 — `PUT /transactions/:id/category`
 - [x] E3-S2-T5 — `GET /categories`
-- [ ] E3-S3-T1 — `GET/POST /emis`
-- [ ] E3-S3-T2 — `PUT/PATCH /emis/:id`
+- [x] E3-S3-T1 — `GET/POST /emis`
+- [x] E3-S3-T2 — `PUT/PATCH /emis/:id`
+
+### Epic 3 close-out
+
+All 10 tasks implemented against the frozen `docs/api.md` contract (Android's
+Epic 2 Sync module was treated as still "continuing in background" per
+`DEPENDENCY-GRAPH.md`, not as a dependency to build against — see the E3-S1
+commit body for the one place this mattered: the ingest response shape).
+Unit tests (26 new, full backend suite green — 55 tests) were written and
+run this session. Integration tests (Testcontainers/Docker-based, per
+`docs/testing.md`) were written for every story to the Required Tests spec
+and compile clean, but **could not be executed** — Docker is unavailable in
+this environment — so their assertions are unverified pending a run of
+`./gradlew integrationTest` on a machine with Docker.
 
 ## Epic 4 — [ML Categorization Service](../epics/epic-04-ml-categorization.md)
 
