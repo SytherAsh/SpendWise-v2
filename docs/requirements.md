@@ -2,7 +2,7 @@
 
 ## Functional Requirements
 
-### Transaction Categories (10 predefined)
+### Transaction Categories (12 predefined)
 
 1. Shopping
 2. Entertainment
@@ -14,6 +14,8 @@
 8. Cosmetics
 9. Subscriptions
 10. Transfers *(person-to-person UPI transfers, bank transfers, wallet top-ups, and other money movement that does not belong to a spending category)*
+11. Medical *(clinics, diagnostics labs, pharmacies)*
+12. Fees & Debt *(loan/EMI repayments, coaching/tuition fees, and other debt-service or fee payments)*
 
 ### Categorization
 

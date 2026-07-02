@@ -112,12 +112,16 @@ CREATE TABLE categories (
     id   SERIAL PRIMARY KEY,
     name VARCHAR NOT NULL,   -- Shopping, Entertainment, Sports & Fitness, Groceries, Travel,
                              -- Miscellaneous, Food / Dine Out, Cosmetics, Subscriptions, Transfers
+                             -- (ids 1-10, seeded in V2); Medical, Fees & Debt (ids 11-12, seeded in V7)
     icon VARCHAR,            -- icon identifier for UI
     CONSTRAINT uq_categories_name UNIQUE (name)  -- prevents duplicate seed entries on re-deploy or repeated migrations
 );
 ```
 
-Seed data (10 categories):
+Seed data (12 categories; 1-10 seeded in V2, 11-12 added later in V7 once
+labeling ML training data surfaced medical/fee transactions with no home
+among the original 10 — see `docs/requirements.md` and
+`ml/labeling/CATEGORY_GUIDELINES.md`):
 
 | id | name | icon |
 | --- | --- | --- |
@@ -131,6 +135,8 @@ Seed data (10 categories):
 | 8 | Cosmetics | face |
 | 9 | Subscriptions | subscriptions |
 | 10 | Transfers | swap_horiz |
+| 11 | Medical | local_hospital |
+| 12 | Fees & Debt | request_quote |
 
 ### `transaction_categories`
 

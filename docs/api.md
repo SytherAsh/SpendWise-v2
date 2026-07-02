@@ -70,7 +70,7 @@ Authorization: Bearer <access_token>
 
 | Method | Path | Description | Auth |
 | --- | --- | --- | --- |
-| GET | `/categories` | List all 10 predefined categories | User |
+| GET | `/categories` | List all 12 predefined categories | User |
 
 > **Module:** Served by the Transaction module (`com.spendwise.transaction`). Categories are the shared label set for all transaction operations. The Categorization module is responsible for ML inference and retraining, not for serving the category list.
 
