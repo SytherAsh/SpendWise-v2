@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
 
-/** Same join-based RLS scoping note as {@link TransactionCategoryRepository}. */
+/** Same join-based RLS scoping note as {@link TransactionCategoryRepository}, including the explicit ownership guard. */
 @Repository
 public class MlCorrectionRepository {
 
@@ -22,16 +22,20 @@ public class MlCorrectionRepository {
      * @param oldCategoryId null if the transaction had no prior category assignment.
      *     Callers must not invoke this when {@code oldCategoryId} equals {@code newCategoryId} —
      *     {@code chk_correction_different_category} rejects that as a useless labeled example
-     *     (E3-S2-T4 treats a no-op correction as a no-op, not a write).
+     *     (E3-S2-T4 treats a no-op correction as a no-op, not a write). No-op (zero rows
+     *     affected) if {@code transactionId} isn't owned by {@code userId}.
      */
     public void insert(UUID userId, UUID transactionId, Integer oldCategoryId, int newCategoryId) {
         rlsSession.setCurrentUser(userId);
         jdbcTemplate.update(
                 "INSERT INTO ml_corrections (id, transaction_id, old_category_id, new_category_id, corrected_at) "
-                        + "VALUES (?, ?, ?, ?, NOW())",
+                        + "SELECT ?, ?, ?, ?, NOW() "
+                        + "WHERE EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)",
                 UUID.randomUUID(),
                 transactionId,
                 oldCategoryId,
-                newCategoryId);
+                newCategoryId,
+                transactionId,
+                userId);
     }
 }

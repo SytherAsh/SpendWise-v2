@@ -10,7 +10,9 @@ import java.util.UUID;
 /**
  * {@code transaction_categories}' RLS policy (V5) is join-based (scoped via the owning
  * transaction's {@code user_id}), not a direct {@code user_id} column — {@link RlsSession}'s
- * session variable still governs it, so every method here still sets it first.
+ * session variable still governs it, so every method here still sets it first. Every query also
+ * joins/guards on {@code transactions.user_id = ?} explicitly (CLAUDE.md: "RLS is a backstop,
+ * not a substitute for explicit query scoping") rather than relying solely on RLS.
  */
 @Repository
 public class TransactionCategoryRepository {
@@ -27,21 +29,28 @@ public class TransactionCategoryRepository {
         rlsSession.setCurrentUser(userId);
         return jdbcTemplate
                 .query(
-                        "SELECT category_id FROM transaction_categories WHERE transaction_id = ?",
+                        "SELECT tc.category_id FROM transaction_categories tc "
+                                + "JOIN transactions t ON t.id = tc.transaction_id "
+                                + "WHERE tc.transaction_id = ? AND t.user_id = ?",
                         (rs, rowNum) -> (Integer) rs.getObject("category_id"),
-                        transactionId)
+                        transactionId,
+                        userId)
                 .stream()
                 .findFirst();
     }
 
+    /** No-op (zero rows affected) if {@code transactionId} isn't owned by {@code userId} — the WHERE EXISTS guard below. */
     public void upsertUserAssignment(UUID userId, UUID transactionId, int categoryId) {
         rlsSession.setCurrentUser(userId);
         jdbcTemplate.update(
                 "INSERT INTO transaction_categories (transaction_id, category_id, confidence_score, assigned_by, assigned_at) "
-                        + "VALUES (?, ?, NULL, 'user', NOW()) "
+                        + "SELECT ?, ?, NULL, 'user', NOW() "
+                        + "WHERE EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?) "
                         + "ON CONFLICT (transaction_id) DO UPDATE SET "
                         + "category_id = EXCLUDED.category_id, confidence_score = NULL, assigned_by = 'user', assigned_at = NOW()",
                 transactionId,
-                categoryId);
+                categoryId,
+                transactionId,
+                userId);
     }
 }

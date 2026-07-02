@@ -67,7 +67,7 @@ SpendWise is built as a **modular monolith** for the MVP. The codebase is organi
 
 | Module | May call | Must not call |
 | --- | --- | --- |
-| **Ingest** | Transaction (persist), Categorization (trigger) | Any other module |
+| **Ingest** | Transaction (persist), Categorization (trigger), User (device API key validation only), Auth (reuses the user-JWT filter/service for session validation only) | Any other module |
 | **Categorization** | Transaction (update category) | Any module except Transaction |
 | **Budget** | Transaction (read-only — spend data for progress/suggestions) | Any other module |
 | **Alerts** | Transaction (read spend; read EMIs for recurring-payment detection), Budget (read limits) | Recommendations, Chatbot, Ingest |
@@ -76,6 +76,16 @@ SpendWise is built as a **modular monolith** for the MVP. The codebase is organi
 | **Analytics** | Reads from all modules *(read-only)* | *(must not call any write methods on any module)* |
 | **Admin** | Reads from all; triggers Categorization (retrain + evaluate) | — |
 | **Auth / User** | User → Ingest (bank statement handoff only) | Any module except Ingest |
+
+> **Ingest's User/Auth calls (added during Epic 3 implementation):** `/api/v1/ingest/transactions`
+> requires both a user JWT and a device API key (CLAUDE.md security invariants), so the Ingest
+> module's dual-auth guard necessarily reuses the Auth module's `UserJwtAuthFilter`/`UserJwtService`
+> (rather than reimplementing JWT validation) and calls the User module's `DeviceApiKeyService`
+> through its injected interface (per CLAUDE.md, cross-module calls go through injected service
+> interfaces only) — `DeviceApiKeyService`'s own Javadoc anticipated this consumer from E1-S4-T1.
+> Both are read-only/validation-only calls, not writes, and don't create a cycle: User and Auth
+> never call back into Ingest. Approved by project owner 2026-07-02 as a deviation from this
+> document's original dependency table, analogous to docs/database.md's V6 RLS addendum.
 
 Direction rule: data flows inward through the stack (Ingest → Transaction → Analytics). No module calls back up the ingestion chain.
 
