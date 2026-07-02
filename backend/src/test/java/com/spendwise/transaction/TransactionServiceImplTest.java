@@ -150,6 +150,46 @@ class TransactionServiceImplTest {
         verify(mlCorrectionRepository, never()).insert(any(), any(), any(), org.mockito.ArgumentMatchers.anyInt());
     }
 
+    @Test
+    void listFirstPageDoesNotResolveACursor() {
+        given(transactionRepository.listPage(eq(userId), eq(null), eq(null), eq(null), eq(null), eq(null), eq(51)))
+                .willReturn(List.of(sampleTransaction()));
+
+        TransactionPage page = service.list(userId, 50, null, null, null, null);
+
+        verify(transactionRepository, never()).findTransactionDate(any(), any());
+        assertThat(page.hasMore()).isFalse();
+        assertThat(page.nextCursor()).isNull();
+        assertThat(page.data()).hasSize(1);
+    }
+
+    @Test
+    void listResolvesCursorToADateBeforeSeeking() {
+        UUID cursor = UUID.randomUUID();
+        Instant cursorDate = Instant.parse("2025-06-01T00:00:00Z");
+        given(transactionRepository.findTransactionDate(userId, cursor)).willReturn(Optional.of(cursorDate));
+        given(transactionRepository.listPage(userId, null, null, null, cursorDate, cursor, 51)).willReturn(List.of());
+
+        service.list(userId, 50, cursor, null, null, null);
+
+        verify(transactionRepository).listPage(userId, null, null, null, cursorDate, cursor, 51);
+    }
+
+    @Test
+    void listSetsHasMoreAndNextCursorWhenMoreRowsThanLimitAreReturned() {
+        Transaction first = sampleTransaction();
+        Transaction second = sampleTransaction();
+        // Repository is asked for limit + 1 rows; returning 2 for a limit of 1 signals hasMore.
+        given(transactionRepository.listPage(eq(userId), eq(null), eq(null), eq(null), eq(null), eq(null), eq(2)))
+                .willReturn(List.of(first, second));
+
+        TransactionPage page = service.list(userId, 1, null, null, null, null);
+
+        assertThat(page.data()).containsExactly(first);
+        assertThat(page.hasMore()).isTrue();
+        assertThat(page.nextCursor()).isEqualTo(first.id());
+    }
+
     private NewTransactionData data(String upiId, String transactionId) {
         return new NewTransactionData(
                 Instant.parse("2025-06-15T14:32:00Z"),

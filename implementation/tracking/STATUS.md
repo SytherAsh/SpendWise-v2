@@ -130,11 +130,11 @@ With items 1–2 set, Epic 0's intent is fully satisfied for a solo workflow.
 - [x] E3-S1-T3 — `sms_raw_text` response-exclusion enforcement (DTO layer landed here;
       the black-box integration test proving exclusion end-to-end is added with
       E3-S2-T1/T2, the first GET endpoints to test it against — see close-out note)
-- [ ] E3-S2-T1 — `GET /transactions` (cursor pagination + filters)
-- [ ] E3-S2-T2 — `GET /transactions/:id`
-- [ ] E3-S2-T3 — `POST /transactions` (manual entry)
-- [ ] E3-S2-T4 — `PUT /transactions/:id/category`
-- [ ] E3-S2-T5 — `GET /categories`
+- [x] E3-S2-T1 — `GET /transactions` (cursor pagination + filters)
+- [x] E3-S2-T2 — `GET /transactions/:id`
+- [x] E3-S2-T3 — `POST /transactions` (manual entry)
+- [x] E3-S2-T4 — `PUT /transactions/:id/category`
+- [x] E3-S2-T5 — `GET /categories`
 - [ ] E3-S3-T1 — `GET/POST /emis`
 - [ ] E3-S3-T2 — `PUT/PATCH /emis/:id`
 
