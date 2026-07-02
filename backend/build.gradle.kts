@@ -82,6 +82,24 @@ tasks.register<Test>("integrationTest") {
     testClassesDirs = integrationTest.output.classesDirs
     classpath = integrationTest.output + integrationTest.runtimeClasspath
     shouldRunAfter(tasks.named("test"))
+    // Diagnostic-only (Epic 4 CI incident, 2026-07-02): Gradle's default test logging prints
+    // only failure stack traces, suppressing the application's own log output (Spring Boot
+    // startup, connection pool activity, request timing) during normal operation. A ~17x
+    // suite-wide slowdown appeared after E4-S3-T3/T4 landed and wasn't resolved by the first
+    // fix attempt (initialDelay + minimumIdle(0) on the jobs pool) — this surfaces full output
+    // so the next CI run's log actually shows what's happening during the slow window, instead
+    // of guessing further. Candidate for reverting/toning down once root-caused.
+    testLogging {
+        showStandardStreams = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        events(
+            org.gradle.api.tasks.testing.logging.TestLogEvent.STARTED,
+            org.gradle.api.tasks.testing.logging.TestLogEvent.PASSED,
+            org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED,
+            org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED,
+            org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_OUT,
+            org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_ERROR)
+    }
 }
 
 tasks.named("check") {
