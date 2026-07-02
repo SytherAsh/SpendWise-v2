@@ -47,3 +47,13 @@ app:
   firebase:
     project-id: ${FIREBASE_PROJECT_ID:}
     private-key: ${FIREBASE_PRIVATE_KEY:}
+  ml:
+    # Internal-network URL of the FastAPI ML service (docs/deployment.md — plain
+    # HTTP is fine here, X-Internal-Key is the application-layer auth). Default
+    # points at `uvicorn api.main:app --port 8000` running locally.
+    base-url: ${FASTAPI_ML_URL:http://localhost:8000}
+    internal-key: ${ML_INTERNAL_KEY:local-dev-only-ml-internal-key-do-not-use-in-prod}
+    # Not specified in docs — a /predict response below this confidence is
+    # treated the same as a failed call (E4-S3-T1 DoD): left uncategorized for
+    # E4-S3-T3's retry job rather than written to transaction_categories.
+    low-confidence-threshold: ${ML_LOW_CONFIDENCE_THRESHOLD:0.5}

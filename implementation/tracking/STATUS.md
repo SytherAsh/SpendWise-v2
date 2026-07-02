@@ -179,11 +179,49 @@ actually exercise `integrationTest` end-to-end.
 - [x] E4-S2-T3 — `POST /predict`
 - [x] E4-S2-T4 — `POST /retrain`
 - [x] E4-S2-T5 — `GET /evaluate` + evaluation script
-- [ ] E4-S3-T1 — Categorization service interface + FastAPI client
-- [ ] E4-S3-T2 — Wire Ingest → Categorization trigger
-- [ ] E4-S3-T3 — Categorization retry job (every 30 min)
-- [ ] E4-S3-T4 — ML retraining weekly job
-- [ ] E4-S3-T5 — Admin-triggered retrain + evaluate (service-interface only)
+- [x] E4-S3-T1 — Categorization service interface + FastAPI client
+- [x] E4-S3-T2 — Wire Ingest → Categorization trigger
+- [ ] E4-S3-T3 — Categorization retry job (every 30 min) — **blocked, see close-out note below**
+- [ ] E4-S3-T4 — ML retraining weekly job — **blocked, see close-out note below**
+- [ ] E4-S3-T5 — Admin-triggered retrain + evaluate (service-interface only) — partial: the
+      Required Test (ArchUnit boundary check, `CategorizationBoundaryTest`) is done; the two
+      interface methods (`triggerRetrain()`, `getAccuracyMetrics()`) are not yet added — see
+      close-out note below
+
+### Epic 4 close-out — E4-S3-T3/T4/T5 blocked on a pre-existing cross-user RLS gap
+
+E4-S1, E4-S2, and E4-S3-T1/T2 are complete and tested (FastAPI pytest suite green;
+Spring Boot unit tests green, including a new ArchUnit test proving only
+`com.spendwise.categorization` depends on `MlClient`). E4-S3-T3 (categorization retry
+job) and E4-S3-T4 (ML retraining weekly job) were **not implemented** — both require a
+`@Scheduled` job to read across *all* users' data (uncategorized transactions;
+`ml_corrections`), and the schema has no mechanism for that today:
+
+- Every RLS-protected table (`transactions`, `ml_corrections`, `users`, ...) has `FORCE
+  ROW LEVEL SECURITY` (`V5__row_level_security.sql`), and Spring Boot connects as the
+  non-superuser `spendwise_app` role specifically so it can't bypass that. Every query
+  requires `SELECT set_config('app.current_user_id', ...)` first, scoping it to exactly
+  one user. There is currently no way for the app's DB connection to read more than one
+  user's rows in a single query, or even to enumerate user ids to loop over.
+- This is not a gap I introduced — `V5__row_level_security.sql`'s own header comment
+  already flags it: *"The Admin module (Epic 11) needs cross-user reads ... how that
+  coexists with FORCE RLS on these tables is an open question deferred to Epic 11, not
+  resolved by this migration."* `docs/architecture.md`'s Background Jobs table describes
+  every scheduled job as system-wide ("for all users"), so this actually blocks Epic 5's
+  alert evaluator and Epic 8's recommendation generator too, not just Epic 4 — it's a
+  cross-cutting gap, first surfaced here because E4-S3-T3/T4 are the earliest scheduled,
+  cross-user jobs in the build order.
+- E4-S3-T5's `triggerRetrain()` hits the same wall (it needs the same cross-user
+  `ml_corrections` read as T4). `getAccuracyMetrics()` would not be blocked (`GET
+  /evaluate` needs no per-user backend data at all — it evaluates against the FastAPI
+  service's own labeled dataset), but wasn't added yet either, to avoid extending
+  `CategorizationService`'s public interface twice for the same story.
+
+Flagged to the project owner rather than inventing a bypass mechanism (a new DB role, a
+`SECURITY DEFINER` function, a per-user-loop workaround) unilaterally, since it's a
+security-relevant schema decision the migration itself already deferred to Epic 11.
+Epic 4 was paused here pending that decision — see the conversation this session for the
+full writeup.
 
 ## Epic 5 — [Budget & Alerts](../epics/epic-05-budget-and-alerts.md)
 
@@ -277,5 +315,5 @@ actually exercise `integrationTest` end-to-end.
 
 ---
 
-**Progress: 21 / 125 tasks complete.** Update this line's count as you check items off (or
+**Progress: 23 / 125 tasks complete.** Update this line's count as you check items off (or
 leave it — it's a convenience, not a requirement).

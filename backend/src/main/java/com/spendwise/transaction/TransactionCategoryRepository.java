@@ -53,4 +53,44 @@ public class TransactionCategoryRepository {
                 transactionId,
                 userId);
     }
+
+    /**
+     * Writes an ML-assigned category (E4-S3-T1) — the Categorization module's only write path
+     * into this table, called after a confident {@code /predict} response. Never overwrites a
+     * user's own correction: {@code DO UPDATE ... WHERE transaction_categories.assigned_by =
+     * 'ml'} so a stale retry-job invocation can't clobber a manual override that landed in the
+     * meantime. No-op if {@code transactionId} isn't owned by {@code userId}.
+     */
+    public void upsertMlAssignment(UUID userId, UUID transactionId, int categoryId, double confidence) {
+        rlsSession.setCurrentUser(userId);
+        jdbcTemplate.update(
+                "INSERT INTO transaction_categories (transaction_id, category_id, confidence_score, assigned_by, assigned_at) "
+                        + "SELECT ?, ?, ?, 'ml', NOW() "
+                        + "WHERE EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?) "
+                        + "ON CONFLICT (transaction_id) DO UPDATE SET "
+                        + "category_id = EXCLUDED.category_id, confidence_score = EXCLUDED.confidence_score, "
+                        + "assigned_by = 'ml', assigned_at = NOW() "
+                        + "WHERE transaction_categories.assigned_by = 'ml'",
+                transactionId,
+                categoryId,
+                confidence,
+                transactionId,
+                userId);
+    }
+
+    /** Whether a category (ML or user) has already been assigned — E4-S3-T3's retry job target. */
+    public boolean hasAssignment(UUID userId, UUID transactionId) {
+        rlsSession.setCurrentUser(userId);
+        return jdbcTemplate
+                .query(
+                        "SELECT 1 FROM transaction_categories tc "
+                                + "JOIN transactions t ON t.id = tc.transaction_id "
+                                + "WHERE tc.transaction_id = ? AND t.user_id = ?",
+                        (rs, rowNum) -> true,
+                        transactionId,
+                        userId)
+                .stream()
+                .findFirst()
+                .orElse(false);
+    }
 }

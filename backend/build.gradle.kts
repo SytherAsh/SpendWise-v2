@@ -58,6 +58,11 @@ dependencies {
     testImplementation("org.springframework.security:spring-security-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
+    // Module-boundary test (E4-S3-T5): asserts only com.spendwise.categorization depends on
+    // MlClient, so "FastAPI is called only from the Categorization module" (CLAUDE.md) stays
+    // enforced by a test, not just code review.
+    testImplementation("com.tngtech.archunit:archunit-junit5:1.3.0")
+
     "integrationTestImplementation"("org.springframework.boot:spring-boot-testcontainers")
     "integrationTestImplementation"("org.testcontainers:junit-jupiter")
     "integrationTestImplementation"("org.testcontainers:postgresql")

@@ -37,9 +37,9 @@ class TransactionServiceImplTest {
         given(transactionRepository.existsBySecondaryKey(userId, "swiggy@okicici", data.amount(), data.transactionDate()))
                 .willReturn(true);
 
-        TransactionInsertOutcome outcome = service.persistFromIngest(userId, data);
+        Optional<Transaction> outcome = service.persistFromIngest(userId, data);
 
-        assertThat(outcome).isEqualTo(TransactionInsertOutcome.DUPLICATE);
+        assertThat(outcome).isEmpty();
         verify(transactionRepository, never()).insert(any(), any());
     }
 
@@ -59,9 +59,9 @@ class TransactionServiceImplTest {
         NewTransactionData data = data(null, "txn_c");
         given(transactionRepository.insert(eq(userId), any())).willThrow(new DuplicateKeyException("dup"));
 
-        TransactionInsertOutcome outcome = service.persistFromIngest(userId, data);
+        Optional<Transaction> outcome = service.persistFromIngest(userId, data);
 
-        assertThat(outcome).isEqualTo(TransactionInsertOutcome.DUPLICATE);
+        assertThat(outcome).isEmpty();
     }
 
     @Test
@@ -82,9 +82,9 @@ class TransactionServiceImplTest {
                 TransactionSource.MANUAL); // deliberately wrong source in the input — must be overridden
         given(transactionRepository.insert(eq(userId), any())).willReturn(sampleTransaction());
 
-        TransactionInsertOutcome outcome = service.persistFromIngest(userId, data);
+        Optional<Transaction> outcome = service.persistFromIngest(userId, data);
 
-        assertThat(outcome).isEqualTo(TransactionInsertOutcome.CREATED);
+        assertThat(outcome).isPresent();
         org.mockito.ArgumentCaptor<NewTransactionData> captor = org.mockito.ArgumentCaptor.forClass(NewTransactionData.class);
         verify(transactionRepository).insert(eq(userId), captor.capture());
         assertThat(captor.getValue().source()).isEqualTo(TransactionSource.SMS);

@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -29,22 +30,21 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional
-    public TransactionInsertOutcome persistFromIngest(UUID userId, NewTransactionData data) {
+    public Optional<Transaction> persistFromIngest(UUID userId, NewTransactionData data) {
         // Secondary dedup (docs/database.md) — only meaningful when upi_id is present; runs
         // before the insert attempt so a secondary-key duplicate never even reaches the DB.
         if (data.upiId() != null
                 && transactionRepository.existsBySecondaryKey(userId, data.upiId(), data.amount(), data.transactionDate())) {
-            return TransactionInsertOutcome.DUPLICATE;
+            return Optional.empty();
         }
         try {
             // source is always forced to SMS here regardless of the request body's "source"
             // field — /ingest/transactions is the Android-app-only path (E3-S1-T2 DoD).
             NewTransactionData ingestData = withSource(data, TransactionSource.SMS);
-            transactionRepository.insert(userId, ingestData);
-            return TransactionInsertOutcome.CREATED;
+            return Optional.of(transactionRepository.insert(userId, ingestData));
         } catch (DuplicateKeyException e) {
             // Primary dedup — idx_transactions_unique_dedup is the authoritative guard.
-            return TransactionInsertOutcome.DUPLICATE;
+            return Optional.empty();
         }
     }
 
@@ -102,6 +102,18 @@ public class TransactionServiceImpl implements TransactionService {
         }
         transactionCategoryRepository.upsertUserAssignment(userId, transactionId, categoryId);
         mlCorrectionRepository.insert(userId, transactionId, oldCategoryId, categoryId);
+    }
+
+    @Override
+    @Transactional
+    public void assignMlCategory(UUID userId, UUID transactionId, int categoryId, double confidence) {
+        transactionCategoryRepository.upsertMlAssignment(userId, transactionId, categoryId, confidence);
+    }
+
+    @Override
+    @Transactional
+    public boolean isCategorized(UUID userId, UUID transactionId) {
+        return transactionCategoryRepository.hasAssignment(userId, transactionId);
     }
 
     private static NewTransactionData withSource(NewTransactionData data, TransactionSource source) {
