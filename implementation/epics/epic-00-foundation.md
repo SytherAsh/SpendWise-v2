@@ -148,6 +148,7 @@ instance (local Docker or Supabase) and querying `information_schema` for expect
 - **Estimated Complexity:** Medium
 - **Depends on:** E0-S2-T2
 - **Grounded in:** `docs/database.md` `transactions`, `categories`, `transaction_categories` sections; `docs/requirements.md` Transaction Categories list.
+- **Amended (2026-07-02):** `categories` extended from 10 to 12 rows by migration `V7__add_medical_and_fees_categories.sql` (Medical, Fees & Debt). This task's original deliverable (V2, 10 rows) is unchanged as a historical record; current seed count is 12 — see `docs/database.md`.
 
 #### E0-S2-T4 — Migration: budgets, alerts, EMIs
 

@@ -123,8 +123,18 @@ When adding parser support for a new bank or payment app:
 
 ## Adding a New Category
 
-1. Add the category row to the `categories` table seed script
-2. Update `docs/requirements.md` with the new category name
-3. Update the ML training pipeline to include the new label
+1. Add the category via an additive Flyway migration (don't edit an already-run migration's seed data)
+2. Update `docs/requirements.md`, `docs/database.md`, and `docs/api.md` with the new category
+3. Update the ML training pipeline (`ml/api/categories.py` and `ml/labeling/`) to include the new label
 4. Re-run model evaluation to confirm accuracy is not degraded
 5. Update UI category list in both Android and Next.js
+6. Update backend tests that assert the category count or seed list (schema integration tests, `GET /categories` tests)
+7. Follow the canonical-value-change process below to catch anything item 1-6 missed
+
+## Changing a Canonical/Shared Value
+
+Applies to any change to a value referenced in more than one place: a category count, an enum's member list, a shared constant, a module boundary, a secret name — not just categories.
+
+1. Before marking the task done, grep the **whole repo** (backend, ml, android, frontend, docs, implementation/ — not just the files you remember touching) for the old value or name.
+2. Classify every hit: fix code and tests directly; for a frozen doc, propose the edit and get explicit approval before touching it; for a historical/completed record (e.g. a finished epic task's Definition of Done), append a dated amendment note rather than rewriting the original text.
+3. Run the test suite(s) that reference the changed value locally before committing — don't rely on CI to surface it first.

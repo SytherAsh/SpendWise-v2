@@ -20,7 +20,7 @@ forever. That compounding rule store is `knowledge_base/`.
 ```
 ml/labeling/
 ├── README.md                  this file
-├── CATEGORY_GUIDELINES.md     definitions + boundary calls for the 10 categories
+├── CATEGORY_GUIDELINES.md     definitions + boundary calls for the 12 categories
 ├── knowledge_base/            reusable, committed to git
 │   ├── SCHEMA.md
 │   ├── merchant_rules.csv     recipient/UPI pattern -> category (feeds the ML pipeline)

@@ -15,7 +15,7 @@ One row per known recipient/UPI pattern. Matched first, against
 |---|---|
 | `pattern` | Substring to match, case-insensitive. |
 | `match_field` | `recipient_name`, `upi_id`, or `both`. |
-| `category` | One of the 10 categories in `categories.py`. |
+| `category` | One of the 12 categories in `categories.py`. |
 | `source_dataset` | Which dataset first produced this rule (provenance). |
 | `added_date` | ISO date the rule was added. |
 
@@ -32,7 +32,7 @@ remarks field carries a merchant hint that the recipient name doesn't.
 | Column | Meaning |
 |---|---|
 | `pattern` | Substring to match, case-insensitive, against `note`. |
-| `category` | One of the 10 categories. |
+| `category` | One of the 12 categories. |
 | `source_dataset` | Provenance. |
 | `added_date` | ISO date added. |
 
