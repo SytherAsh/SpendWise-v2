@@ -125,9 +125,11 @@ With items 1–2 set, Epic 0's intent is fully satisfied for a solo workflow.
 
 ## Epic 3 — [Ingestion & Transaction Management](../epics/epic-03-ingestion-and-transactions.md)
 
-- [ ] E3-S1-T1 — Dual-auth guard for `/ingest/transactions`
-- [ ] E3-S1-T2 — Batch persistence with two-layer dedup
-- [ ] E3-S1-T3 — `sms_raw_text` response-exclusion enforcement
+- [x] E3-S1-T1 — Dual-auth guard for `/ingest/transactions`
+- [x] E3-S1-T2 — Batch persistence with two-layer dedup
+- [x] E3-S1-T3 — `sms_raw_text` response-exclusion enforcement (DTO layer landed here;
+      the black-box integration test proving exclusion end-to-end is added with
+      E3-S2-T1/T2, the first GET endpoints to test it against — see close-out note)
 - [ ] E3-S2-T1 — `GET /transactions` (cursor pagination + filters)
 - [ ] E3-S2-T2 — `GET /transactions/:id`
 - [ ] E3-S2-T3 — `POST /transactions` (manual entry)

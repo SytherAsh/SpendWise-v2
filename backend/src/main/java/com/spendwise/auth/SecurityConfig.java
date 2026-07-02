@@ -11,18 +11,22 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
- * Two fully independent {@link SecurityFilterChain}s (E1-S1-T7 + E1-S2-T1):
+ * Two of the three {@link SecurityFilterChain}s in the app (E1-S1-T7 + E1-S2-T1) — the third,
+ * {@code com.spendwise.ingest.IngestSecurityConfig}'s {@code @Order(2)} chain for {@code
+ * /api/v1/ingest/**} (E3-S1-T1), sits between these two:
  *
  * <ol>
  *   <li>{@code adminFilterChain} — matches only {@code /api/v1/admin/**}, guarded by {@link
  *       AdminJwtAuthFilter} ({@code ADMIN_JWT_SECRET}). Given {@code @Order(1)}, so it always
- *       evaluates before the default chain for admin paths.
+ *       evaluates before every other chain for admin paths.
  *   <li>{@code defaultFilterChain} — everything else, guarded by {@link UserJwtAuthFilter}
  *       ({@code JWT_SECRET}). Permits the public {@code /auth/*} endpoints and {@code
- *       /health}; every other {@code /api/v1/**} route requires a valid user JWT.
+ *       /health}; every other {@code /api/v1/**} route requires a valid user JWT. Given {@code
+ *       @Order(3)} (last) so its catch-all {@code securityMatcher} never shadows the ingest
+ *       chain's more specific one.
  * </ol>
  *
- * Neither chain's filter delegates to the other's validation logic — see each filter's
+ * No two chains' filters delegate to each other's validation logic — see each filter's
  * class-level note.
  */
 @Configuration
@@ -42,7 +46,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Order(2)
+    @Order(3)
     public SecurityFilterChain defaultFilterChain(HttpSecurity http, UserJwtService userJwtService) throws Exception {
         http.csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
