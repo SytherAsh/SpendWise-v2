@@ -49,12 +49,12 @@ env/
 .pytest_cache/
 .mypy_cache/
 
-# ML artifacts
-ml/models/*.pkl
-ml/models/*.joblib
-ml/models/*.h5
+# ML training data (real personal bank statement data — never committed).
+# knowledge_base/, scripts/, and docs under ml/labeling/ ARE committed —
+# only the raw/working data under ml/labeling/datasets/ is excluded.
 ml/data/*.xlsx
 ml/data/*.csv
+ml/labeling/datasets/
 
 # Android
 android/local.properties

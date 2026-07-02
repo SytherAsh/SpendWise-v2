@@ -61,18 +61,18 @@ cd backend
 
 ### Model Evaluation Script
 
-Runs against the 3-year labeled bank statement dataset. Must be re-run after every retraining cycle.
+Runs against `ml/data/spendwise_labeled.xlsx` (1,810 labeled transactions from a 4-year SBI bank statement plus manual/interview labeling — see `ml/labeling/`). Must be re-run after every retraining cycle.
 
 ```bash
 cd ml
-python evaluation/evaluate.py --data data/spendwise2k26.xlsx
+python evaluation/evaluate.py --data data/spendwise_labeled.xlsx
 ```
 
 Output metrics:
 
 - Overall accuracy
 - Per-category: Precision, Recall, F1-score
-- Confusion matrix (10×10 categories)
+- Confusion matrix (12×12 categories)
 - Confidence score distribution
 
 The script saves a report to `ml/evaluation/reports/` with a timestamp.
@@ -82,7 +82,7 @@ The script saves a report to `ml/evaluation/reports/` with a timestamp.
 ```bash
 cd ml
 pytest tests/ -v
-python evaluation/evaluate.py --data data/spendwise2k26.xlsx
+python evaluation/evaluate.py --data data/spendwise_labeled.xlsx
 ```
 
 ---

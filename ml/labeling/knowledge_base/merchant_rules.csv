@@ -1,0 +1,407 @@
+pattern,match_field,category,source_dataset,added_date
+Compass,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+PHONE_TRANSFER,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PRACHI S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+JULFIKAR,recipient_name,Groceries,spendwise_4yr_sbi_statement,2026-07-02
+SNOW CRE,recipient_name,Groceries,spendwise_4yr_sbi_statement,2026-07-02
+SNOW_CRE,recipient_name,Groceries,spendwise_4yr_sbi_statement,2026-07-02
+SUNIL SH,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+Mr Vihaa,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+AASHAY M,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SHUBHAM,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Pratham,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+IRCTC UTS,recipient_name,Travel,spendwise_4yr_sbi_statement,2026-07-02
+SHIVSAGA,recipient_name,Groceries,spendwise_4yr_sbi_statement,2026-07-02
+Indian R,recipient_name,Travel,spendwise_4yr_sbi_statement,2026-07-02
+SAMEER B,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PINAKIN,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+TANISH NX,recipient_name,Cosmetics,spendwise_4yr_sbi_statement,2026-07-02
+Rapido,recipient_name,Travel,spendwise_4yr_sbi_statement,2026-07-02
+BIKANER,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+BHARTI A,recipient_name,Subscriptions,spendwise_4yr_sbi_statement,2026-07-02
+Airtel,recipient_name,Subscriptions,spendwise_4yr_sbi_statement,2026-07-02
+DILIP KU,recipient_name,Medical,spendwise_4yr_sbi_statement,2026-07-02
+Mayank M,recipient_name,Medical,spendwise_4yr_sbi_statement,2026-07-02
+PRADHAN,recipient_name,Medical,spendwise_4yr_sbi_statement,2026-07-02
+UNKNOWN,recipient_name,Miscellaneous,spendwise_4yr_sbi_statement,2026-07-02
+VINAYAK,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Daily Fr,recipient_name,Groceries,spendwise_4yr_sbi_statement,2026-07-02
+ALPHA VI,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Miss ALP,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ROPPEN T,recipient_name,Travel,spendwise_4yr_sbi_statement,2026-07-02
+Roppen T,recipient_name,Travel,spendwise_4yr_sbi_statement,2026-07-02
+Mr Yash,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+JUMBO KI,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+SHLOK SA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+RESTAURA,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+ADITI SH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+DREAM LA,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+ASIM HEM,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Minhaj A,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+PRANAV S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PULKIT M,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mohammad,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+PRAMOD A,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+PARIJATH,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+KARTIK,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SOHAM KA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Shivkuma,recipient_name,Groceries,spendwise_4yr_sbi_statement,2026-07-02
+MANSAROV,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+DIP NILE,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mumbai M,recipient_name,Travel,spendwise_4yr_sbi_statement,2026-07-02
+SAKSHI S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ANUSHKA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+NINAD SA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MAYUR MA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mayur Ra,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Atharva,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ATHARV V,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Atharv V,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+atharvah,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SNEHA DI,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SNEH BAGDI,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+slice sm,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+NETFLIX,recipient_name,Subscriptions,spendwise_4yr_sbi_statement,2026-07-02
+JioCinema,recipient_name,Subscriptions,spendwise_4yr_sbi_statement,2026-07-02
+Spotify,recipient_name,Subscriptions,spendwise_4yr_sbi_statement,2026-07-02
+SPOTIFY,recipient_name,Subscriptions,spendwise_4yr_sbi_statement,2026-07-02
+WWW AIRT,recipient_name,Subscriptions,spendwise_4yr_sbi_statement,2026-07-02
+ZOMATO L,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+ZOMATO,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+Zomato O,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+SWIGGY,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+METRO SW,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+METRO BO,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+iSTANBUL,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+MC DONALDS,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+Burger K,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+KFC,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+TRENT HY,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02
+Bombay B,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02
+Bombay S,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02
+Amazon I,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02
+Zudio CF,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02
+GoaMiles,recipient_name,Travel,spendwise_4yr_sbi_statement,2026-07-02
+Dream11,recipient_name,Entertainment,spendwise_4yr_sbi_statement,2026-07-02
+DMART AV,recipient_name,Groceries,spendwise_4yr_sbi_statement,2026-07-02
+7 ELEVEN,recipient_name,Groceries,spendwise_4yr_sbi_statement,2026-07-02
+Naturals,recipient_name,Cosmetics,spendwise_4yr_sbi_statement,2026-07-02
+LOOKS BE,recipient_name,Cosmetics,spendwise_4yr_sbi_statement,2026-07-02
+Boat,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02
+BOATLIFE,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02
+Timex Fa,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02
+IMAGICAA,recipient_name,Entertainment,spendwise_4yr_sbi_statement,2026-07-02
+HARSHITA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SATISHPR,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Param An,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+GAURAMMA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Vishal O,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Vaishnav,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Jiten Is,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PRAVEEN,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ANANT CA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+RUCHA NI,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+DIGAMBER,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+KEWAL BI,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mangalde,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ARCHANA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SHINDE R,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+NITESH K,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SANTOSH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MAYANK R,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Sonu,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+NAIM SHA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+VIKASH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ASHISH A,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+INDRESH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+AJAY RAD,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+BHANU CH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PRAVIN P,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+aashayj2,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SUNITA U,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Vikash,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ASHARAF P,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+FATIMA I,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SUBHAN S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+KANAUJIY,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SAWANT S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+BHASKAR,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mahavitr,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Vendiman,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SIDDHART,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+POONAM D,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Sanket E,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+BRIJESH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+VIRENDRA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SANGEPU,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+NIJAAM,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+IIT Madras,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+KULDEEP,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+VENKATES,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MAYA BHA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+HOTEL SH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ADITYA B,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MAHENDRA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ANSARSOM,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MD AHAMA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Google P,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Google Pay,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+NEHA NIT,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+DEVARAM,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+NETRAM E,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+DEVESH O,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+NAGDEV U,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+VINOD KU,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Alayna C,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PRADEEP,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PAYTM TR,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SHRIHARI,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PRATU BH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SANDEEP,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SANJANA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Gujarat,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Shaan  A,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SEJAL SI,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SAI RAJ,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SHETH NI,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MOBIKWIK,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SHUSHMA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+GUDLA RU,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+GUPTA GE,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+NIMISH B,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+New Idea,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MANGESH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+KIRTI BO,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PRATIMA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+KIRAN SH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PRABIR M,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+JAVED RA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Santosh,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MMO Andh,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mr TUFAN,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Kamlesh,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Krishna,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mr BALIN,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+CHUNNILA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SAHEBRAJ,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Manglore,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+UMESH S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+NAAZ ANI,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Paytm Me,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+CAKEDINE,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Relish r,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+KGN JUIC,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+HITESH S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+RAVI MUT,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SHAHBAZ,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MD AHAYA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ANKIT DH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SAI FAST,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+FUNTER S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+JOEYS PI,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mr Dharm,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mr MITHI,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+VINAY SA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+YADAV RA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+DIMPLE S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Shree Kr,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Prashant,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Harsh Ba,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Master A,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+AKASH AN,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+DHANESH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+NAYAAB S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ASHISHMA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MOHD   R,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PRANJAL,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PARNIKA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+shloksm2,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+KRISHNAM,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Nirankar,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Master T,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SAFIKUL,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+VIKRAM U,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+YASH JIG,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Sahidul,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MAMTA RA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SINGH DALU,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SHANTILA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+R P AGAR,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Raychand,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+YADAV SA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SAMITA S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ANIKET S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SAI RADH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+HARSH BA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+GOOGLEPAY,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+DEEPANSH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Tungares,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Sahani c,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+TECH ANA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Anytime,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+GIRISH N,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ROHIT MA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MANASI N,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SANU KUM,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+GROUPON,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+CHITRA C,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+POOJA NA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Aakash P,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ALLI IRF,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Swayam N,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+KRISHNAP,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+APPASAHE,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ANAS,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PRANAV R,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+RAHUL  Y,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+FANISH F,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+KAYUM AL,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SANJAY A,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mr RAVIK,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+GAUTAM K,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mystery,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mrs USHA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+RAMDARAS,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+JATKHEMRA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+FARIYAD,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Manis Cafe,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mahadev,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PRAMILA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ASHOK RA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+DINESH K,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Md  Ajma,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+CHEQUE   CSB    400047008-100116 400002538,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mr Ramhe,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+JITENDRA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SATISH S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+RAVI   T,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+HARSHAV,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+HOTEL UL,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+DHATRI M,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+GUNJA UM,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+JAGRUT S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+AMEETAEN,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Tofeek,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MUDASSWI,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Andheri,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+RAZORPAY,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+KAISH ALI,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+DIPALI S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+AKASH PA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+AbuTurab,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mobikwik,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+DEEPAK J,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+nayak983,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+KUNAL PA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Sanjay S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+BHAVIK B,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Anita Su,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PJSB PRA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SAINATH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ADARSH T,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Gauramma,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+AMALESH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+AFTAB GO,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Misba Mu,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Shivshan,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+REV,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ABHIJIT,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+the barg,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MUKESH P,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+JAGAT AJ,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Saad Dhu,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+VINODKUM,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MANOJ KU,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ABU TURA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MMRDA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SURESH K,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Sunil Ya,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PATEL SU,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+LOURDES,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+GAURESH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SHARVI S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Megharaj,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+RISHABH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SBIMOPS,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+DWARKESH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+AJAY P,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mr RAM A,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+KUNAL RA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+VAIBHAV,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Karani t,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SHREYA S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+AKSHAY A,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mahrun,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SHIVAM G,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Rajendra,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+RAMESH K,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ABHIMANY,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+OMANSH S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MAH MUM,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Sahil,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ADITYA S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SURYANSH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+TAHIR TA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mohd  Sa,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+ASLAM HA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MIHIR YO,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+JOHED MA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+CHANDAN,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+PAPPU KU,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+KARU NAR,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MADHAV G,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mr. YASH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MAHAVIRK,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+BAIJNATH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+SUNIL MU,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+NAVYA JAIN,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MITKUMAR,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+DINESH D,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Bharat B,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MANGLE S,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+NAROTE A,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Shri Kri,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+INNAVIL,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+KRATIKAN,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Harshal,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Miss PRA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+NEHA ARYA,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+DIYA MAH,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+JAYKUMAR,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+KISHORAR,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Vartak C,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Mrs GUNJ,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Sidhart,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Dayaram,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+OM STATI,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+Manis Cafe,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+Relish r,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+JOEYS PI,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+Vartak c,recipient_name,Fees & Debt,spendwise_4yr_sbi_statement,2026-07-02
+LOOX NX,recipient_name,Cosmetics,spendwise_4yr_sbi_statement,2026-07-02
+CLUCKIN,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+Cluckin,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+VARIETY,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02
+KIRTICOLL,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02
+White Ha,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02
+WHITE HA,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02
+Geeta Cl,recipient_name,Medical,spendwise_4yr_sbi_statement,2026-07-02
+AAPLA BA,recipient_name,Groceries,spendwise_4yr_sbi_statement,2026-07-02
+SAI DIAG,recipient_name,Medical,spendwise_4yr_sbi_statement,2026-07-02
+BIGTREE,recipient_name,Entertainment,spendwise_4yr_sbi_statement,2026-07-02
+AWS India,recipient_name,Subscriptions,spendwise_4yr_sbi_statement,2026-07-02
+HARDCAST,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+OM SAI T,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+vihaansh,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+NAMO PHA,recipient_name,Medical,spendwise_4yr_sbi_statement,2026-07-02
+Amar fas,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+alpharan,recipient_name,Transfers,spendwise_4yr_sbi_statement,2026-07-02
+MANOEUVR,recipient_name,Fees & Debt,spendwise_4yr_sbi_statement,2026-07-02
+TANISH N,recipient_name,Cosmetics,spendwise_4yr_sbi_statement,2026-07-02
+Jodhpur,recipient_name,Food / Dine Out,spendwise_4yr_sbi_statement,2026-07-02
+YES BOSS,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02
+THE DERM,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02
+THEDERMACO,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02
+DISTRICT,recipient_name,Entertainment,spendwise_4yr_sbi_statement,2026-07-02
+POWER LOOK,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02
+DASCO SH,recipient_name,Shopping,spendwise_4yr_sbi_statement,2026-07-02

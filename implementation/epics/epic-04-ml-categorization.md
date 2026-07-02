@@ -57,10 +57,10 @@ backend** and should start as soon as Epic 0 lands, in parallel with Epic 3. Onl
 - **Expected Deliverable:** `ml/training/train.py` script; committed model artifact at
   `MODEL_PATH` (per `docs/deployment.md` — model is version-controlled, no external store at MVP).
 - **Definition of Done:** Running `python training/train.py --output models/` reproducibly
-  produces a loadable model artifact; the 10 categories from `docs/requirements.md` are the
+  produces a loadable model artifact; the 12 categories from `docs/requirements.md` are the
   full label set.
 - **Required Tests:** A test that loads the committed artifact and confirms it predicts one
-  of the 10 valid `category_id`s for a known-good sample input.
+  of the 12 valid `category_id`s for a known-good sample input.
 - **Estimated Complexity:** Large
 - **Depends on:** E4-S2-T1
 - **Grounded in:** `docs/decisions.md` ADR-003, ADR-004; `docs/deployment.md` "Model artifacts" note; `docs/requirements.md` Transaction Categories.
@@ -96,9 +96,9 @@ backend** and should start as soon as Epic 0 lands, in parallel with Epic 3. Onl
 - **Objective:** Produce accuracy metrics against the labeled dataset, re-runnable after
   every retrain.
 - **Expected Deliverable:** `/evaluate` endpoint plus `ml/evaluation/evaluate.py` CLI script
-  producing overall accuracy, per-category precision/recall/F1, a 10×10 confusion matrix,
+  producing overall accuracy, per-category precision/recall/F1, a 12×12 confusion matrix,
   and confidence score distribution, saved as a timestamped report under `ml/evaluation/reports/`.
-- **Definition of Done:** Running `python evaluation/evaluate.py --data data/spendwise2k26.xlsx`
+- **Definition of Done:** Running `python evaluation/evaluate.py --data data/spendwise_labeled.xlsx`
   produces a report file; `/evaluate` returns the same metrics as JSON.
 - **Required Tests:** `pytest` asserting the script produces a report file with all required
   metric sections present.
