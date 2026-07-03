@@ -1,10 +1,11 @@
 import { PageHeader } from "@/components/shared/ui";
+import { TransactionsBrowser } from "@/components/transactions/TransactionsBrowser";
 
 export default function TransactionsPage() {
   return (
     <>
-      <PageHeader title="Transactions" />
-      <p className="text-sm text-neutral-500">Coming in E10-S2-T2.</p>
+      <PageHeader title="Transactions" subtitle="Browse, filter, and re-categorize your transactions" />
+      <TransactionsBrowser />
     </>
   );
 }
