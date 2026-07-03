@@ -429,9 +429,62 @@ real service":
 
 ## Epic 6 — [EMI & Recurring Payment Detection](../epics/epic-06-emi-and-recurring.md)
 
-- [ ] E6-S1-T1 — Rolling-window grouping + tolerance matching
-- [ ] E6-S2-T1 — Wire detection into the alert evaluator
-- [ ] E6-S2-T2 — Confirm-as-subscription / dismiss flow
+- [x] E6-S1-T1 — Rolling-window grouping + tolerance matching
+- [x] E6-S2-T1 — Wire detection into the alert evaluator
+- [x] E6-S2-T2 — Confirm-as-subscription / dismiss flow
+
+### Epic 6 close-out
+
+Implemented as specified across three story commits (E6-S1, E6-S2-T1, E6-S2-T2), following a
+handoff review that resolved several spec ambiguities with the project owner before any code
+was written:
+
+**E6-S1 (`RecurringPaymentDetector`):** pure static logic in `com.spendwise.alerts`, no
+Spring/DB dependency, unit-tested standalone per the epic's own parallelization note. Two rules
+the epic explicitly left for implementation to define, resolved with the project owner
+up front:
+- **Amount tolerance** ("within ±10% of each other") is anchored to each cluster's own minimum
+  (`max ≤ min × 1.10`), not pairwise-chained — chaining (100→110→121) would let the effective
+  band drift past 10% across a long chain.
+- **`emis` exclusion** uses the most conservative rule available: a transaction is excluded only
+  if its id is an active `emis` row's `source_transaction_id` (exact match). No label/amount
+  correlation is attempted for manually-entered EMIs — a fuzzy match risks silently hiding a
+  legitimate alert, which is worse than an occasional redundant one. Per the project owner: "if
+  confidence is insufficient, do not auto-classify a transaction as an EMI."
+
+**E6-S2-T1 (wired into `AlertEvaluatorJob`):** reuses the existing 30-minute schedule (per the
+epic's own text and `docs/decisions.md` ADR-011's scheduled-over-event-driven reasoning) as a
+second cross-user pass, independent of the budget-evaluation loop since it iterates a different
+user set. Two new `spendwise_jobs`-backed bulk reads were added, mirroring
+`findAllSpendForMonth`/`findAllUncategorized`: `TransactionService.findAllForRecurringDetection`
+and `EmiService.findAllActiveSourceTransactionIds`. Suppression is **calendar-month scoped**
+(not indefinite), keyed on merchant identity + an amount band rather than `category_id` — an
+explicit project-owner decision so a still-recurring charge surfaces again in a later month even
+if this month's alert was dismissed without being confirmed. Always `MEDIUM` priority — an
+explicit project-owner decision (in-app only, never pushed/emailed), since `docs/requirements.md`
+never assigned this alert type a tier.
+
+**E6-S2-T2 (confirm/dismiss):** `POST /alerts/:id/confirm` creates the linked EMI
+(`EmiService.createFromDetection`) and marks the alert read; `due_day` is left `null` rather
+than inferred from the transaction date (project-owner decision — the user sets it afterwards
+via the existing `PUT /emis/:id`). Idempotent via a find-before-insert check plus a
+`DuplicateKeyException` fallback for the race case, so a double-confirm returns the
+already-linked EMI rather than violating `idx_emis_source_txn` or 500ing. Dismiss needed no new
+endpoint — it reuses `PUT /alerts/:id/read` directly. This story extends Alerts→Transaction from
+read-only to read/write (EMI creation); `docs/architecture.md`'s dependency table was updated
+*before* this code was written, per explicit project-owner sign-off, mirroring how Epic 5's own
+table gaps were resolved.
+
+**Verification honesty note:** the full unit suite (`./gradlew test`) passes, including all new
+`RecurringPaymentDetectorTest` (7), `AlertEvaluatorJobTest` (+3), `AlertsServiceImplTest` (+5),
+and `EmiServiceImplTest` (+3) cases. Three new integration tests were written
+(`RecurringPaymentEvaluatorIntegrationTest`'s detect-then-rerun-no-duplicate case, and
+`AlertControllerIntegrationTest`'s confirm/double-confirm and dismiss cases) and confirmed to
+**compile** against the `integrationTest` source set, but — unlike Epic 5's session — Docker was
+not available in this session, so `./gradlew integrationTest` itself was never run. **Status:
+implemented and unit-verified; the three new integration tests are compiled-but-unexecuted and
+should be run against real Testcontainers Postgres before this epic is considered fully
+verified.**
 
 ## Epic 7 — [Analytics & Export](../epics/epic-07-analytics-and-export.md)
 

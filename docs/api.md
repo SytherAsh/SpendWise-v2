@@ -91,7 +91,8 @@ Authorization: Bearer <access_token>
 | Method | Path | Description | Auth |
 | --- | --- | --- | --- |
 | GET | `/alerts` | List alerts for user (paginated, cursor-based); supports optional filter: `is_read` | User |
-| PUT | `/alerts/:id/read` | Mark alert as read | User |
+| PUT | `/alerts/:id/read` | Mark alert as read (also serves as "dismiss" for a `recurring_payment` alert — no EMI is created) | User |
+| POST | `/alerts/:id/confirm` | Confirm a `recurring_payment` alert as a tracked subscription — creates an `emis` row linked to the alert's representative transaction and marks the alert read (E6-S2-T2). 400 if the alert isn't type `recurring_payment`. Idempotent: confirming the same alert twice returns the already-created EMI rather than erroring. | User |
 
 ### `/recommendations` — Savings Recommendations
 
