@@ -93,3 +93,8 @@ app:
     # "Weekly (configurable)" per docs/architecture.md's Background Jobs table —
     # default fires Sunday 03:00 server time (cron: sec min hour day month weekday).
     retrain-cron: ${ML_RETRAIN_CRON:0 0 3 * * SUN}
+  llm:
+    # CLAUDE.md: "No vendor has been selected. Do not hardcode any LLM SDK into business
+    # logic." Only "stub" exists today (LlmConfig) — a real provider is a future addition,
+    # not this epic's scope. Same env-var-default pattern as app.ml.* above.
+    provider: ${LLM_PROVIDER:stub}
