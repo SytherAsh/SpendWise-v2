@@ -1,5 +1,7 @@
 package com.spendwise.alerts;
 
+import com.spendwise.transaction.Emi;
+import com.spendwise.transaction.EmiService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,9 +21,11 @@ public class AlertsServiceImpl implements AlertsService {
     private static final BigDecimal TOLERANCE_MULTIPLIER = BigDecimal.valueOf(110, 2); // 1.10
 
     private final AlertRepository alertRepository;
+    private final EmiService emiService;
 
-    public AlertsServiceImpl(AlertRepository alertRepository) {
+    public AlertsServiceImpl(AlertRepository alertRepository, EmiService emiService) {
         this.alertRepository = alertRepository;
+        this.emiService = emiService;
     }
 
     @Override
@@ -71,5 +75,25 @@ public class AlertsServiceImpl implements AlertsService {
     public void markRead(UUID userId, UUID alertId) {
         alertRepository.findById(userId, alertId).orElseThrow(AlertNotFoundException::new);
         alertRepository.markRead(userId, alertId);
+    }
+
+    @Override
+    @Transactional
+    public Emi confirmRecurringPayment(UUID userId, UUID alertId) {
+        Alert alert = alertRepository.findById(userId, alertId).orElseThrow(AlertNotFoundException::new);
+        if (alert.type() != AlertType.RECURRING_PAYMENT) {
+            throw new InvalidAlertConfirmationException();
+        }
+        Map<String, Object> payload = alert.payload();
+        String label = (String) payload.get("merchant_label");
+        // payload round-trips through JSON (see AlertRepository#toJson/#fromJson), so the
+        // representative_amount Jackson handed back here is a Double, not a BigDecimal — parse
+        // via toString() rather than casting.
+        BigDecimal amount = new BigDecimal(payload.get("representative_amount").toString());
+        UUID sourceTransactionId = UUID.fromString((String) payload.get("representative_transaction_id"));
+
+        Emi emi = emiService.createFromDetection(userId, label, amount, sourceTransactionId);
+        alertRepository.markRead(userId, alertId);
+        return emi;
     }
 }

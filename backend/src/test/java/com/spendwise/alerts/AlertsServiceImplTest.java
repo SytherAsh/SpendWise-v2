@@ -1,5 +1,7 @@
 package com.spendwise.alerts;
 
+import com.spendwise.transaction.Emi;
+import com.spendwise.transaction.EmiService;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -23,7 +25,8 @@ import static org.mockito.Mockito.verify;
 class AlertsServiceImplTest {
 
     private final AlertRepository alertRepository = mock(AlertRepository.class);
-    private final AlertsServiceImpl service = new AlertsServiceImpl(alertRepository);
+    private final EmiService emiService = mock(EmiService.class);
+    private final AlertsServiceImpl service = new AlertsServiceImpl(alertRepository, emiService);
     private final UUID userId = UUID.randomUUID();
 
     @Test
@@ -128,6 +131,45 @@ class AlertsServiceImplTest {
 
         assertThat(result).isPresent();
         assertThat(result.get().priority()).isEqualTo(AlertPriority.MEDIUM);
+    }
+
+    @Test
+    void confirmThrowsForANonRecurringPaymentAlert() {
+        UUID alertId = UUID.randomUUID();
+        given(alertRepository.findById(userId, alertId)).willReturn(Optional.of(sampleAlert(AlertType.CATEGORY_OVERSPEND, AlertPriority.HIGH)));
+
+        assertThrows(InvalidAlertConfirmationException.class, () -> service.confirmRecurringPayment(userId, alertId));
+        verify(emiService, never()).createFromDetection(any(), any(), any(), any());
+    }
+
+    @Test
+    void confirmThrowsNotFoundForMissingOrForeignAlert() {
+        UUID alertId = UUID.randomUUID();
+        given(alertRepository.findById(userId, alertId)).willReturn(Optional.empty());
+
+        assertThrows(AlertNotFoundException.class, () -> service.confirmRecurringPayment(userId, alertId));
+    }
+
+    @Test
+    void confirmCreatesTheLinkedEmiAndMarksTheAlertRead() {
+        UUID alertId = UUID.randomUUID();
+        UUID sourceTransactionId = UUID.randomUUID();
+        // Payload values are Double/String here, not BigDecimal/UUID — mirroring what
+        // AlertRepository#fromJson actually hands back after a JSON round-trip.
+        Map<String, Object> payload = Map.of(
+                "merchant_key", "netflix@okicici",
+                "merchant_label", "Netflix",
+                "representative_amount", 199.0,
+                "representative_transaction_id", sourceTransactionId.toString());
+        Alert alert = new Alert(alertId, userId, AlertType.RECURRING_PAYMENT, AlertPriority.MEDIUM, Instant.now(), null, false, payload);
+        given(alertRepository.findById(userId, alertId)).willReturn(Optional.of(alert));
+        Emi createdEmi = new Emi(UUID.randomUUID(), userId, "Netflix", BigDecimal.valueOf(199.0), null, true, true, sourceTransactionId);
+        given(emiService.createFromDetection(userId, "Netflix", BigDecimal.valueOf(199.0), sourceTransactionId)).willReturn(createdEmi);
+
+        Emi result = service.confirmRecurringPayment(userId, alertId);
+
+        assertThat(result).isEqualTo(createdEmi);
+        verify(alertRepository).markRead(userId, alertId);
     }
 
     private Alert sampleAlert(AlertType type, AlertPriority priority) {

@@ -77,6 +77,33 @@ public class EmiRepository {
                 .findFirst();
     }
 
+    /** Idempotency lookup for the confirm flow (E6-S2-T2) — {@code idx_emis_source_txn} is unique per transaction. */
+    public Optional<Emi> findBySourceTransactionId(UUID userId, UUID sourceTransactionId) {
+        rlsSession.setCurrentUser(userId);
+        return jdbcTemplate
+                .query("SELECT * FROM emis WHERE user_id = ? AND source_transaction_id = ?", ROW_MAPPER, userId, sourceTransactionId)
+                .stream()
+                .findFirst();
+    }
+
+    /**
+     * Confirm flow (E6-S2-T2) — {@code due_day} is always {@code NULL} rather than inferred from
+     * the source transaction's date; the user can set it afterwards via {@code PUT /emis/:id}.
+     */
+    public Emi insertFromDetection(UUID userId, String label, BigDecimal amount, UUID sourceTransactionId) {
+        rlsSession.setCurrentUser(userId);
+        UUID id = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO emis (id, user_id, label, amount, due_day, detected_from_sms, is_active, source_transaction_id) "
+                        + "VALUES (?, ?, ?, ?, NULL, TRUE, TRUE, ?)",
+                id,
+                userId,
+                label,
+                amount,
+                sourceTransactionId);
+        return new Emi(id, userId, label, amount, null, true, true, sourceTransactionId);
+    }
+
     /** Never hard-deletes — updates label/amount/due_day only (E3-S3-T2 DoD). */
     public void update(UUID userId, UUID id, String label, BigDecimal amount, Integer dueDay) {
         rlsSession.setCurrentUser(userId);

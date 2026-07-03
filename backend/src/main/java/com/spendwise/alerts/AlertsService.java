@@ -1,5 +1,7 @@
 package com.spendwise.alerts;
 
+import com.spendwise.transaction.Emi;
+
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Optional;
@@ -41,4 +43,16 @@ public interface AlertsService {
      * @throws AlertNotFoundException if absent or owned by a different user
      */
     void markRead(UUID userId, UUID alertId);
+
+    /**
+     * Confirm-as-subscription flow (E6-S2-T2) — creates (or, on a second confirm of the same
+     * group, returns the already-created) EMI linked to the alert's representative transaction,
+     * via {@code EmiService.createFromDetection}, and marks the alert read. Dismiss reuses {@link
+     * #markRead} directly rather than a dedicated method — no EMI is created either way, so
+     * dismiss needs nothing beyond the existing mark-read behavior.
+     *
+     * @throws AlertNotFoundException if absent or owned by a different user
+     * @throws InvalidAlertConfirmationException if the alert is not of type {@code recurring_payment}
+     */
+    Emi confirmRecurringPayment(UUID userId, UUID alertId);
 }

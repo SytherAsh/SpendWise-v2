@@ -2,9 +2,11 @@ package com.spendwise.alerts;
 
 import com.spendwise.alerts.dto.AlertListResponse;
 import com.spendwise.alerts.dto.AlertResponse;
+import com.spendwise.transaction.dto.EmiResponse;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -43,5 +45,15 @@ public class AlertController {
     @PutMapping("/{id}/read")
     public void markRead(@AuthenticationPrincipal UUID userId, @PathVariable UUID id) {
         alertsService.markRead(userId, id);
+    }
+
+    /**
+     * E6-S2-T2 — confirm-as-subscription. Dismiss has no dedicated endpoint: it reuses {@code PUT
+     * /alerts/:id/read} directly (docs/api.md "/alerts"), since dismissing a recurring_payment
+     * alert needs nothing beyond the existing mark-read behavior.
+     */
+    @PostMapping("/{id}/confirm")
+    public EmiResponse confirm(@AuthenticationPrincipal UUID userId, @PathVariable UUID id) {
+        return EmiResponse.from(alertsService.confirmRecurringPayment(userId, id));
     }
 }

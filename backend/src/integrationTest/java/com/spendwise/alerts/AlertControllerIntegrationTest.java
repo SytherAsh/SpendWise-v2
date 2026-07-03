@@ -18,6 +18,11 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -98,11 +103,90 @@ class AlertControllerIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
+    @Test
+    void confirmCreatesTheLinkedEmiAndSecondConfirmIsANoOp() throws Exception {
+        Session session = loginPhone("+919100000093");
+        UUID sourceTransactionId = insertTransactionDirectly(session.userId(), "netflix@okicici", "Netflix", "199.00");
+        Alert alert = seedRecurringPaymentAlert(session.userId(), "netflix@okicici", "Netflix", sourceTransactionId);
+
+        ResponseEntity<Map> firstConfirm = restTemplate.exchange(
+                baseUrl() + "/alerts/" + alert.id() + "/confirm", HttpMethod.POST, new HttpEntity<>(session.headers()), Map.class);
+        assertThat(firstConfirm.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(firstConfirm.getBody().get("detectedFromSms")).isEqualTo(true);
+        assertThat(firstConfirm.getBody().get("sourceTransactionId")).isEqualTo(sourceTransactionId.toString());
+        assertThat(firstConfirm.getBody().get("isActive")).isEqualTo(true);
+        String emiId = (String) firstConfirm.getBody().get("id");
+        assertThat(countEmisForSourceTransaction(sourceTransactionId)).isEqualTo(1);
+
+        ResponseEntity<Map> secondConfirm = restTemplate.exchange(
+                baseUrl() + "/alerts/" + alert.id() + "/confirm", HttpMethod.POST, new HttpEntity<>(session.headers()), Map.class);
+        assertThat(secondConfirm.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(secondConfirm.getBody().get("id")).isEqualTo(emiId);
+        assertThat(countEmisForSourceTransaction(sourceTransactionId)).isEqualTo(1);
+    }
+
+    @Test
+    void dismissMarksReadWithoutCreatingAnEmi() throws Exception {
+        Session session = loginPhone("+919100000094");
+        UUID sourceTransactionId = insertTransactionDirectly(session.userId(), "spotify@okhdfc", "Spotify", "119.00");
+        Alert alert = seedRecurringPaymentAlert(session.userId(), "spotify@okhdfc", "Spotify", sourceTransactionId);
+
+        ResponseEntity<Void> dismiss = restTemplate.exchange(
+                baseUrl() + "/alerts/" + alert.id() + "/read", HttpMethod.PUT, new HttpEntity<>(session.headers()), Void.class);
+
+        assertThat(dismiss.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(countEmisForSourceTransaction(sourceTransactionId)).isEqualTo(0);
+    }
+
+    @Test
+    void confirmingANonRecurringPaymentAlertReturns400() {
+        Session session = loginPhone("+919100000095");
+        Alert alert = seedAlert(session.userId(), AlertType.CATEGORY_OVERSPEND, 5);
+
+        ResponseEntity<Map> response = restTemplate.exchange(
+                baseUrl() + "/alerts/" + alert.id() + "/confirm", HttpMethod.POST, new HttpEntity<>(session.headers()), Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
     private Alert seedAlert(UUID userId, AlertType type, Integer categoryId) {
         Map<String, Object> payload = categoryId == null ? Map.of() : Map.of("category_id", categoryId);
         return alertsService
                 .recordIfNotAlreadyTriggeredThisMonth(userId, type, categoryId, AlertPriority.HIGH, payload)
                 .orElseThrow();
+    }
+
+    private Alert seedRecurringPaymentAlert(UUID userId, String merchantKey, String merchantLabel, UUID sourceTransactionId) {
+        Map<String, Object> payload = Map.of(
+                "merchant_key", merchantKey,
+                "merchant_label", merchantLabel,
+                "representative_amount", BigDecimal.valueOf(199),
+                "representative_transaction_id", sourceTransactionId.toString());
+        return alertsService
+                .recordRecurringPaymentIfNotAlreadyTriggeredThisMonth(userId, merchantKey, BigDecimal.valueOf(199), payload)
+                .orElseThrow();
+    }
+
+    private UUID insertTransactionDirectly(UUID userId, String upiId, String recipientName, String amount) throws Exception {
+        UUID id = UUID.randomUUID();
+        try (Connection connection = DriverManager.getConnection(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+                Statement statement = connection.createStatement()) {
+            statement.execute("INSERT INTO transactions (id, user_id, transaction_date, debit, credit, amount, "
+                    + "transaction_mode, dr_cr_indicator, transaction_id, recipient_name, bank, upi_id, note, source, parsed_at) "
+                    + "VALUES ('" + id + "', '" + userId + "', NOW(), " + amount + ", 0, -" + amount + ", 'UPI', 'DR', '" + UUID.randomUUID()
+                    + "', '" + recipientName + "', 'ICICI', '" + upiId + "', NULL, 'sms', NOW())");
+        }
+        return id;
+    }
+
+    private int countEmisForSourceTransaction(UUID sourceTransactionId) throws Exception {
+        try (Connection connection = DriverManager.getConnection(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+                Statement statement = connection.createStatement();
+                ResultSet rs = statement.executeQuery(
+                        "SELECT COUNT(*) AS cnt FROM emis WHERE source_transaction_id = '" + sourceTransactionId + "'")) {
+            rs.next();
+            return rs.getInt("cnt");
+        }
     }
 
     private Map<?, ?> findAlert(ResponseEntity<Map> list, UUID alertId) {

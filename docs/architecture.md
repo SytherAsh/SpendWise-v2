@@ -70,7 +70,7 @@ SpendWise is built as a **modular monolith** for the MVP. The codebase is organi
 | **Ingest** | Transaction (persist), Categorization (trigger), User (device API key validation only), Auth (reuses the user-JWT filter/service for session validation only) | Any other module |
 | **Categorization** | Transaction (update category) | Any module except Transaction |
 | **Budget** | Transaction (read-only — spend data for progress/suggestions) | Any other module |
-| **Alerts** | Transaction (read spend; read EMIs for recurring-payment detection), Budget (read limits), User (read-only: `email`, `fcm_token`, `alert_channels` preference — dispatch target lookup) | Recommendations, Chatbot, Ingest |
+| **Alerts** | Transaction (read spend; read EMIs for recurring-payment detection; **write** — create an EMI from a confirmed recurring-payment alert, E6-S2-T2), Budget (read limits), User (read-only: `email`, `fcm_token`, `alert_channels` preference — dispatch target lookup) | Recommendations, Chatbot, Ingest |
 | **Recommendations** | Analytics (read aggregations) | Alerts, Chatbot, Ingest, Categorization |
 | **Chatbot** | Transaction (read history), Analytics (read summaries) | Any module that writes data |
 | **Analytics** | Reads from all modules *(read-only)* | *(must not call any write methods on any module)* |
