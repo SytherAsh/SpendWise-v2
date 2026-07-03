@@ -57,6 +57,11 @@ dependencies {
     // tokens (E1-S1-T1). Never used to trust a client-asserted identity.
     implementation("com.google.firebase:firebase-admin:9.4.1")
 
+    // Analytics' PDF export (E7-S2-T2) — a plain library, not a hosted service, so it's
+    // free-tier compatible. LGPL/MPL-licensed (fork of pre-AGPL iText 4), chosen over iText 7
+    // specifically to avoid AGPL's network-use copyleft obligation for a hosted service.
+    implementation("com.github.librepdf:openpdf:2.2.2")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
