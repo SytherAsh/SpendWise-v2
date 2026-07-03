@@ -30,6 +30,17 @@ class AnalyticsServiceImplTest {
     private static final OverallTotals ZERO_TOTALS = new OverallTotals(BigDecimal.ZERO, BigDecimal.ZERO);
 
     @Test
+    void findAllCategorySpendForMonthDelegatesDirectlyToTheRepository() {
+        List<CategoryMonthSpend> expected =
+                List.of(new CategoryMonthSpend(userId, 1, "Food", BigDecimal.valueOf(3200)));
+        given(analyticsRepository.findAllCategorySpendForMonth(7, 2026)).willReturn(expected);
+
+        List<CategoryMonthSpend> result = service.findAllCategorySpendForMonth(7, 2026);
+
+        assertThat(result).isEqualTo(expected);
+    }
+
+    @Test
     void summaryThrowsWhenFromOrToIsMissing() {
         assertThrows(InvalidAnalyticsQueryException.class, () -> service.summary(userId, null, Instant.now()));
         assertThrows(InvalidAnalyticsQueryException.class, () -> service.summary(userId, Instant.now(), null));

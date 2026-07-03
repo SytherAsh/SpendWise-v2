@@ -1,6 +1,7 @@
 package com.spendwise.analytics;
 
 import com.spendwise.common.db.RlsSession;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -22,17 +23,21 @@ import java.util.UUID;
  *
  * <p>Callers must invoke these from within a {@code @Transactional} method (see {@link
  * AnalyticsServiceImpl}) so the RLS session variable and the query that depends on it share one
- * connection.
+ * connection. The one exception is {@link #findAllCategorySpendForMonth}, which reads via the
+ * {@code spendwise_jobs} role (BYPASSRLS) instead — see its own javadoc.
  */
 @Repository
 public class AnalyticsRepository {
 
     private final JdbcTemplate jdbcTemplate;
     private final RlsSession rlsSession;
+    private final JdbcTemplate jobsJdbcTemplate;
 
-    public AnalyticsRepository(JdbcTemplate jdbcTemplate, RlsSession rlsSession) {
+    public AnalyticsRepository(
+            JdbcTemplate jdbcTemplate, RlsSession rlsSession, @Qualifier("jobsJdbcTemplate") JdbcTemplate jobsJdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
         this.rlsSession = rlsSession;
+        this.jobsJdbcTemplate = jobsJdbcTemplate;
     }
 
     /** Inclusive both ends, matching {@code TransactionRepository.listPage}'s existing from/to convention. */
@@ -124,5 +129,30 @@ public class AnalyticsRepository {
                 userId,
                 Timestamp.from(from),
                 Timestamp.from(to));
+    }
+
+    /**
+     * Cross-user (E8-S2-T1) — every user's per-category spend, with category name, for one
+     * calendar month, in one bulk read via the {@code spendwise_jobs} role — mirrors {@code
+     * TransactionRepository.findAllSpendForMonth}'s exact shape (duplicated rather than called
+     * through {@code TransactionService}, since Analytics never depends on another module's
+     * repository — see {@code AnalyticsBoundaryTest}). Backs the Recommendation generator job;
+     * never called from a per-request path, so no {@link RlsSession#setCurrentUser} call here.
+     */
+    public List<CategoryMonthSpend> findAllCategorySpendForMonth(int month, int year) {
+        return jobsJdbcTemplate.query(
+                "SELECT t.user_id, tc.category_id, c.name AS category_name, SUM(t.debit) AS total_spent "
+                        + "FROM transactions t "
+                        + "JOIN transaction_categories tc ON tc.transaction_id = t.id "
+                        + "JOIN categories c ON c.id = tc.category_id "
+                        + "WHERE EXTRACT(MONTH FROM t.transaction_date) = ? AND EXTRACT(YEAR FROM t.transaction_date) = ? "
+                        + "AND t.debit > 0 GROUP BY t.user_id, tc.category_id, c.name",
+                (rs, rowNum) -> new CategoryMonthSpend(
+                        UUID.fromString(rs.getString("user_id")),
+                        rs.getInt("category_id"),
+                        rs.getString("category_name"),
+                        rs.getBigDecimal("total_spent")),
+                month,
+                year);
     }
 }

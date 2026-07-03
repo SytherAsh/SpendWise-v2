@@ -26,4 +26,11 @@ public interface AnalyticsService {
 
     /** Unpaginated rows for CSV/PDF export. @throws InvalidAnalyticsQueryException if {@code from}/{@code to} are missing or {@code from} is after {@code to} */
     List<AnalyticsExportRow> exportRows(UUID userId, Instant from, Instant to);
+
+    /**
+     * Cross-user (E8-S2-T1) — every user's per-category spend for one calendar month, backing the
+     * Recommendation generator job. Bypasses RLS via the {@code spendwise_jobs} role, same pattern
+     * as {@code TransactionService.findAllSpendForMonth}; never called from a per-request path.
+     */
+    List<CategoryMonthSpend> findAllCategorySpendForMonth(int month, int year);
 }

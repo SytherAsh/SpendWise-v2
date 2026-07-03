@@ -69,6 +69,13 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         return analyticsRepository.findAllForExport(userId, from, to);
     }
 
+    @Override
+    public List<CategoryMonthSpend> findAllCategorySpendForMonth(int month, int year) {
+        // No @Transactional / RlsSession here -- reads via the spendwise_jobs DataSource
+        // (BYPASSRLS), mirroring TransactionServiceImpl.findAllSpendForMonth.
+        return analyticsRepository.findAllCategorySpendForMonth(month, year);
+    }
+
     /** {@code [inclusiveStart, exclusiveEnd)} loaded as an inclusive query by subtracting 1ms off the end. */
     private ComparisonPeriod loadPeriod(UUID userId, LocalDate inclusiveStart, LocalDate exclusiveEnd) {
         Instant from = inclusiveStart.atStartOfDay(ZoneOffset.UTC).toInstant();
