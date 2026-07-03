@@ -387,11 +387,19 @@ deployment.md addendum.
 **E5-S4 (Alerts API):** standard cursor pagination mirroring `/transactions`, default page size
 20 (docs/api.md's own Pagination-section example, not an explicit mandate elsewhere).
 
-**Verification caveat (same as every prior epic in this environment):** unit tests are green
-(`./gradlew test`). New integration tests (`BudgetControllerIntegrationTest`,
-`AlertControllerIntegrationTest`) compile clean but are **unexecuted** — Docker is unavailable
-in this environment, consistent with every integration test in this repo per Epic 3/4's
-close-out notes.
+**Verification — confirmed green against real Docker (2026-07-03):** unit tests
+(`./gradlew test`) and the full integration suite (`./gradlew integrationTest`, real
+Testcontainers Postgres) both pass. `BudgetControllerIntegrationTest` (5/5) and
+`AlertControllerIntegrationTest` (3/3) — this epic's new suites — passed on the first run.
+The first full-suite run showed 2 unrelated failures (`AuthControllerIntegrationTest`,
+`CategorizationJobsIntegrationTest`, both pre-existing from Epic 1/4), each a Testcontainers
+`ContainerLaunchException: Timed out waiting for log output matching '.*database system is
+ready to accept connections.*'` — container-startup flakiness from ~15 Postgres containers
+launching back-to-back within 12.5 minutes, not a code defect. Re-running just those two
+classes in isolation passed cleanly (9/9 and 2/2), confirming it was resource contention, not
+a regression. Unlike every prior epic in this repo's history, Docker was available this
+session, so this is the first epic verified against real Testcontainers end-to-end rather than
+compiled-but-unexecuted.
 
 ## Epic 6 — [EMI & Recurring Payment Detection](../epics/epic-06-emi-and-recurring.md)
 
