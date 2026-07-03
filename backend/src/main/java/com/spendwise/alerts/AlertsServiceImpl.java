@@ -3,6 +3,8 @@ package com.spendwise.alerts;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
@@ -13,6 +15,8 @@ import java.util.UUID;
 
 @Service
 public class AlertsServiceImpl implements AlertsService {
+
+    private static final BigDecimal TOLERANCE_MULTIPLIER = BigDecimal.valueOf(110, 2); // 1.10
 
     private final AlertRepository alertRepository;
 
@@ -29,6 +33,19 @@ public class AlertsServiceImpl implements AlertsService {
             return Optional.empty();
         }
         return Optional.of(alertRepository.insert(userId, type, priority, payload));
+    }
+
+    @Override
+    @Transactional
+    public Optional<Alert> recordRecurringPaymentIfNotAlreadyTriggeredThisMonth(
+            UUID userId, String merchantKey, BigDecimal representativeAmount, Map<String, Object> payload) {
+        Instant startOfMonth = YearMonth.now().atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        BigDecimal amountLow = representativeAmount.divide(TOLERANCE_MULTIPLIER, 4, RoundingMode.HALF_UP);
+        BigDecimal amountHigh = representativeAmount.multiply(TOLERANCE_MULTIPLIER);
+        if (alertRepository.existsSinceForMerchant(userId, startOfMonth, merchantKey, amountLow, amountHigh)) {
+            return Optional.empty();
+        }
+        return Optional.of(alertRepository.insert(userId, AlertType.RECURRING_PAYMENT, AlertPriority.MEDIUM, payload));
     }
 
     @Override

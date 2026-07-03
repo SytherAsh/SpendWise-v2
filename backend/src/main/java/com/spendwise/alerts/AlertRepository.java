@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -77,6 +78,31 @@ public class AlertRepository {
                     type.dbValue(),
                     Timestamp.from(since));
         }
+        return count != null && count > 0;
+    }
+
+    /**
+     * Suppression check for {@code recurring_payment} alerts (E6-S2-T1) — same calendar-month
+     * scoping as {@link #existsSince}, but keyed on merchant identity + an amount band instead of
+     * {@code categoryId}, since recurring payments have no category. {@code amountLow}/{@code
+     * amountHigh} bound the representative amount of an equivalent already-alerted group (see
+     * {@code AlertsServiceImpl#recordRecurringPaymentIfNotAlreadyTriggeredThisMonth}); a merchant
+     * whose amount shifts outside that band is treated as a genuinely different recurring charge
+     * and is not suppressed.
+     */
+    public boolean existsSinceForMerchant(
+            UUID userId, Instant since, String merchantKey, BigDecimal amountLow, BigDecimal amountHigh) {
+        rlsSession.setCurrentUser(userId);
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM alerts WHERE user_id = ? AND type = ?::alert_type AND triggered_at >= ? "
+                        + "AND payload->>'merchant_key' = ? AND (payload->>'representative_amount')::numeric BETWEEN ? AND ?",
+                Integer.class,
+                userId,
+                AlertType.RECURRING_PAYMENT.dbValue(),
+                Timestamp.from(since),
+                merchantKey,
+                amountLow,
+                amountHigh);
         return count != null && count > 0;
     }
 

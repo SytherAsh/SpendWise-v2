@@ -2,6 +2,7 @@ package com.spendwise.alerts;
 
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -103,6 +104,30 @@ class AlertsServiceImplTest {
         service.list(userId, 20, null, true);
 
         verify(alertRepository).findPage(userId, true, null, null, 21);
+    }
+
+    @Test
+    void suppressesARecurringPaymentAlertForTheSameMerchantAndAmountBandThisMonth() {
+        given(alertRepository.existsSinceForMerchant(eq(userId), any(), eq("netflix@okicici"), any(), any())).willReturn(true);
+
+        Optional<Alert> result = service.recordRecurringPaymentIfNotAlreadyTriggeredThisMonth(
+                userId, "netflix@okicici", BigDecimal.valueOf(199), Map.of("merchant_key", "netflix@okicici"));
+
+        assertThat(result).isEmpty();
+        verify(alertRepository, never()).insert(any(), any(), any(), any());
+    }
+
+    @Test
+    void recordsANewRecurringPaymentAlertAtMediumPriorityWhenNoneAlreadyTriggeredThisMonth() {
+        given(alertRepository.existsSinceForMerchant(eq(userId), any(), eq("netflix@okicici"), any(), any())).willReturn(false);
+        given(alertRepository.insert(eq(userId), eq(AlertType.RECURRING_PAYMENT), eq(AlertPriority.MEDIUM), any()))
+                .willReturn(sampleAlert(AlertType.RECURRING_PAYMENT, AlertPriority.MEDIUM));
+
+        Optional<Alert> result = service.recordRecurringPaymentIfNotAlreadyTriggeredThisMonth(
+                userId, "netflix@okicici", BigDecimal.valueOf(199), Map.of("merchant_key", "netflix@okicici"));
+
+        assertThat(result).isPresent();
+        assertThat(result.get().priority()).isEqualTo(AlertPriority.MEDIUM);
     }
 
     private Alert sampleAlert(AlertType type, AlertPriority priority) {

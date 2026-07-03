@@ -2,6 +2,8 @@ package com.spendwise.alerts;
 
 import com.spendwise.budget.Budget;
 import com.spendwise.budget.BudgetService;
+import com.spendwise.transaction.EmiService;
+import com.spendwise.transaction.RecurringCandidateTransaction;
 import com.spendwise.transaction.TransactionService;
 import com.spendwise.transaction.UserCategorySpend;
 import org.slf4j.Logger;
@@ -10,10 +12,13 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -34,24 +39,37 @@ import java.util.stream.Collectors;
  * Persisting a resulting alert (via {@link AlertsService}) and dispatching it (via {@link
  * AlertDispatchService}) both then re-scope to one user at a time through the normal RLS-enforced
  * path, exactly like {@code CategorizationService#categorize} does for the retry job.
+ *
+ * <p>Also runs {@link RecurringPaymentDetector} (E6-S2-T1) on the same 30-minute cadence, per the
+ * epic's own text ("reusing the existing 30-minute schedule is the simplest option, since
+ * recurring detection is not time-critical") — the same reasoning `docs/decisions.md` ADR-011
+ * already gives for keeping the threshold rules scheduled rather than event-driven. It's a
+ * separate pass over a separate cross-user bulk read ({@link
+ * TransactionService#findAllForRecurringDetection}, {@link EmiService#findAllActiveSourceTransactionIds})
+ * rather than reusing the budget-evaluation loop above, since it iterates a different user set
+ * (any user with recent transactions, not just those with a budget).
  */
 @Component
 public class AlertEvaluatorJob {
 
     private static final Logger log = LoggerFactory.getLogger(AlertEvaluatorJob.class);
+    private static final long RECURRING_LOOKBACK_DAYS = 60;
 
     private final BudgetService budgetService;
     private final TransactionService transactionService;
+    private final EmiService emiService;
     private final AlertsService alertsService;
     private final AlertDispatchService alertDispatchService;
 
     public AlertEvaluatorJob(
             BudgetService budgetService,
             TransactionService transactionService,
+            EmiService emiService,
             AlertsService alertsService,
             AlertDispatchService alertDispatchService) {
         this.budgetService = budgetService;
         this.transactionService = transactionService;
+        this.emiService = emiService;
         this.alertsService = alertsService;
         this.alertDispatchService = alertDispatchService;
     }
@@ -95,6 +113,50 @@ public class AlertEvaluatorJob {
                 // One user's failure (e.g. a dispatch error that somehow escaped
                 // AlertDispatchService's own no-throw contract) must not stop the rest.
                 log.warn("Alert evaluation failed for user {}: {}", userId, e.getMessage());
+            }
+        }
+
+        evaluateRecurringPayments();
+    }
+
+    /**
+     * Separate cross-user pass (E6-S2-T1) — iterates every user with a debit transaction in the
+     * lookback window, not just users with a budget, so it runs independently of the loop above.
+     */
+    private void evaluateRecurringPayments() {
+        List<RecurringCandidateTransaction> candidates;
+        Set<UUID> excludedTransactionIds;
+        try {
+            Instant since = Instant.now().minus(RECURRING_LOOKBACK_DAYS, ChronoUnit.DAYS);
+            candidates = transactionService.findAllForRecurringDetection(since);
+            excludedTransactionIds = emiService.findAllActiveSourceTransactionIds();
+        } catch (RuntimeException e) {
+            // Same contract as the bulk lookup above — a transient failure here must not crash
+            // the scheduler thread; the next scheduled run retries.
+            log.warn("Recurring-payment evaluator's bulk lookup failed: {}", e.getMessage());
+            return;
+        }
+
+        Map<UUID, List<RecurringCandidateTransaction>> candidatesByUser =
+                candidates.stream().collect(Collectors.groupingBy(RecurringCandidateTransaction::userId));
+
+        for (Map.Entry<UUID, List<RecurringCandidateTransaction>> entry : candidatesByUser.entrySet()) {
+            UUID userId = entry.getKey();
+            try {
+                for (RecurringGroup group : RecurringPaymentDetector.detect(entry.getValue(), excludedTransactionIds)) {
+                    Map<String, Object> payload = Map.of(
+                            "merchant_key", group.merchantKey(),
+                            "merchant_label", group.merchantLabel(),
+                            "representative_amount", group.representativeAmount(),
+                            "representative_transaction_id", group.representativeTransactionId().toString(),
+                            "transaction_count", group.transactionIds().size());
+                    // Always MEDIUM priority (in-app only) — never dispatched via
+                    // AlertDispatchService, mirroring the approaching-limit rule above.
+                    alertsService.recordRecurringPaymentIfNotAlreadyTriggeredThisMonth(
+                            userId, group.merchantKey(), group.representativeAmount(), payload);
+                }
+            } catch (RuntimeException e) {
+                log.warn("Recurring-payment evaluation failed for user {}: {}", userId, e.getMessage());
             }
         }
     }
