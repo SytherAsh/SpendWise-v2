@@ -1,10 +1,11 @@
 import { PageHeader } from "@/components/shared/ui";
+import { SettingsForm } from "@/components/settings/SettingsForm";
 
 export default function SettingsPage() {
   return (
     <>
-      <PageHeader title="Settings" />
-      <p className="text-sm text-neutral-500">Coming in E10-S2-T7.</p>
+      <PageHeader title="Settings" subtitle="Manage your alert channels, payment apps, and account" />
+      <SettingsForm />
     </>
   );
 }
