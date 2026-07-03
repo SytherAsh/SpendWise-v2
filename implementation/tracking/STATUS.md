@@ -648,17 +648,117 @@ worth noting since two consecutive sessions have now hit a different Docker-avai
 
 ## Epic 9 — [Android App UI](../epics/epic-09-android-app-ui.md)
 
-- [ ] E9-S1-T1 — Sign-up screen (Phone OTP / Google login)
-- [ ] E9-S1-T2 — Consent screen
-- [ ] E9-S1-T3 — SMS + notification permission flow
-- [ ] E9-S1-T4 — Onboarding questionnaire + optional bank statement upload
-- [ ] E9-S1-T5 — Backfill trigger, foreground service start, land on dashboard
-- [ ] E9-S2-T1 — Dashboard screen
-- [ ] E9-S2-T2 — Transactions screen
-- [ ] E9-S2-T3 — Budget screen
-- [ ] E9-S2-T4 — EMI/Subscriptions screen
-- [ ] E9-S2-T5 — Chatbot screen
-- [ ] E9-S2-T6 — Settings screen
+- [x] E9-S1-T1 — Sign-up screen (Phone OTP / Google login)
+- [x] E9-S1-T2 — Consent screen
+- [x] E9-S1-T3 — SMS + notification permission flow
+- [x] E9-S1-T4 — Onboarding questionnaire + optional bank statement upload
+      (upload UI built against the documented contract; the backend endpoint
+      does not exist — see close-out gap note)
+- [x] E9-S1-T5 — Backfill trigger, foreground service start, land on dashboard
+- [x] E9-S2-T1 — Dashboard screen
+- [x] E9-S2-T2 — Transactions screen
+- [x] E9-S2-T3 — Budget screen
+- [x] E9-S2-T4 — EMI/Subscriptions screen
+- [x] E9-S2-T5 — Chatbot screen
+- [x] E9-S2-T6 — Settings screen
+
+### Epic 9 close-out
+
+Built as the first substantial work in `android/`'s UI module (until now a bare
+`AppCompatActivity` placeholder), on top of Epic 2's headless SMS/Parser/Sync/Storage
+packages, which were reused as-is (`SmsInboxBackfill`, `SmsForegroundService`,
+`SyncScheduler`, `DeviceSessionStore`). A handoff review preceded any code: prerequisites
+re-verified against git tags + this file (E1/E3/E5/E6/E7/E8 all complete, so every E9
+story was unblocked per `DEPENDENCY-GRAPH.md`'s per-story table), and four
+expensive-to-reverse architecture choices were resolved with the project owner up front:
+**Jetpack Compose** (Material 3, bottom nav with 5 tabs + Settings via top bar),
+**Retrofit + OkHttp + kotlinx.serialization**, **Hilt**, and
+**EncryptedSharedPreferences** for token storage.
+
+**Prerequisite gap found at handoff (same category as Epic 5's FCM-token gap):**
+`POST /users/me/bank-statement` is documented in `docs/api.md` and assumed by E9-S1-T4
+("assumed available by this point"), but **was never implemented server-side** — no epic
+owns it. Project-owner decision (2026-07-04): build the upload UI against the documented
+contract with a soft-failure path ("upload isn't available yet — you can skip"), and
+record the missing backend endpoint here as a known gap needing a home (it involves
+server-side PDF parsing; roadmap/Epic-12 scoping call for the owner).
+
+**Firebase (real project, first time in this repo's history):** the backend requires a
+**Firebase ID token** for both auth paths (`OtpVerifyRequest(phone, idToken)` /
+`GoogleLoginRequest(idToken)` — OTP SMS delivery itself happens client-side via the
+Firebase SDK; `/auth/otp/send` is only the rate-limit backstop). The owner created project
+`spendwise-21f03`, registered `com.spendwise` with the debug-keystore SHA-1/SHA-256, and
+enabled Phone + Google providers. `android/app/google-services.json` is present locally
+but **gitignored** (pre-existing `.gitignore` entry, respected) — so the Google Services
+Gradle plugin is applied **conditionally on the file's presence**, and the
+`default_web_client_id` resource is resolved by name at runtime rather than via `R.string`.
+Both build paths verified: with the file (full local build) and without it (CI's checkout).
+Release-keystore fingerprints are still to be added at Epic 12 (Firebase App Distribution).
+
+**Toolchain (AGP 9.2.1 built-in Kotlin, embedded KGP 2.2.20):** Compose requires
+`org.jetbrains.kotlin.plugin.compose` (version-locked to the embedded Kotlin, 2.2.20, as
+is `plugin.serialization`); Hilt + KSP must be declared in the same Gradle scope
+(dagger#3965) — KSP's version declaration moved to the root build file. `compileSdk` was
+raised 36→37, required by androidx.hilt 1.4.0 / androidx.lifecycle 2.11.0 AAR metadata
+(AGP auto-provisioned the platform).
+
+**E9-S1 (onboarding wizard):** linear NavHost graph resuming at the first incomplete step
+on relaunch (JWT → device key → SMS permission → questionnaire flag → backfill flag, each
+persisted in `DeviceSessionStore`). Consent (ADR-005 all-or-nothing) renders the
+`ConsentText` constants that also compose the `FULL_TEXT` snapshot POSTed to
+`/users/me/onboarding` — single source of truth, pinned by unit test; the returned raw
+device API key is stored immediately (its only occurrence, per docs/api.md). SMS denial is
+a hard-blocking screen with a settings deep link re-checked on resume; notification denial
+proceeds (alerts in-app only). Backfill reuses `SmsInboxBackfill.create(context)` then
+starts the foreground service + periodic sync and lands on the dashboard.
+
+**E9-S2 (six screens):** Dashboard composes 4 endpoints with independently-failing
+sections (alerts panel with dismiss + recurring-payment confirm-as-subscription,
+recommendations feed with dismiss, tappable budget-progress rows drilling into the
+category-filtered transaction list, and a hand-drawn Canvas 30-day trend line — no
+charting library). Transactions: cursor pagination (server default 50/page) with
+filter-generation guards against stale in-flight pages, category filter chips, detail
+view, immediate-reflection category correction (optimistic update; corrections write to
+`ml_corrections` server-side). Budget: progress bars + edit dialog pre-filled from
+`/budgets/suggestions` when available. EMI: edit (PUT) / deactivate (PATCH, record
+retained). Chatbot: session list ordered by `last_active_at`, thread with full history
+reload (server owns persistence — survives app restarts by construction). Settings:
+push/email alert-channel toggles (partial-update PUT), CSV/PDF export via the Analytics
+endpoints downloaded to cache and handed to the share sheet (new `FileProvider`), privacy
+policy link (placeholder URL constant — hosting it is a roadmap/E12 item), logout
+(best-effort server revocation, local clear always).
+
+**Token/session infra:** `DeviceSessionStore` migrated to `EncryptedSharedPreferences`
+(one-time copy from Epic 2's plain prefs, then wiped; constructor accepts any
+`SharedPreferences` so Robolectric tests — no Keystore — use a plain instance). A single
+OkHttp client carries the SpendWise JWT (never the Firebase token — CLAUDE.md auth
+pattern) via an interceptor, and a `TokenRefreshAuthenticator` handles 401 →
+`/auth/token/refresh` → single retry, with cross-thread double-refresh protection; failed
+rotation clears the session and routes back to sign-up.
+
+**Verification:** full Android unit suite green — **59 tests, 0 failures** (37
+pre-existing parser/sync/storage + 22 new: `DeviceSessionStoreTest` round-trips,
+`ConsentTextTest` rendered-equals-persisted invariant, `TransactionsViewModelTest`
+cursor threading/reset/hasMore-termination plus a genuine stale-drop race test (a gated
+in-flight response from a superseded filter generation resolving late is discarded —
+added after a `spec-invariant-reviewer` pass flagged the original claim as broader than
+its coverage; everything else in that review came back clean), and
+`TokenRefreshAuthenticatorTest` against MockWebServer — rotate-and-retry,
+revoked-refresh session clear, single-retry cap). `assembleDebug` green both with and without `google-services.json`. **Honesty
+note:** per `docs/testing.md` (Espresso deferred), everything above is unit-level; the
+epic's manual QA checklists — real OTP/Google sign-in on an emulator against a live
+backend with the new Firebase project, seeded-SMS backfill run-through, screen-by-screen
+QA against a seeded backend — have **not** been executed this session. The Working
+Milestone (full onboarding-to-dashboard on an emulator) is implemented and compile/unit
+verified, not yet demoed live. Note for that session: Firebase phone-auth on an emulator
+needs a test phone number configured in the Firebase console, and the backend `.env`
+needs `FIREBASE_PROJECT_ID`/`FIREBASE_PRIVATE_KEY` from `spendwise-21f03`.
+
+**Cross-session note:** Epic 10 ran concurrently in this same working directory; its
+`fa66884` commit incidentally included this epic's then-in-progress Gradle build files
+(`android/build.gradle.kts`, `android/app/build.gradle.kts`) — harmless content-wise
+(the same changes this epic needed, minus the later compileSdk bump), left as-is rather
+than rewriting history.
 
 ## Epic 10 — [Web Dashboard](../epics/epic-10-web-dashboard.md)
 
@@ -754,5 +854,5 @@ running backend; that remains a pre-launch step (Epic 12).
 
 ---
 
-**Progress: 96 / 125 tasks complete.** Update this line's count as you check items off (or
+**Progress: 107 / 125 tasks complete.** Update this line's count as you check items off (or
 leave it — it's a convenience, not a requirement).

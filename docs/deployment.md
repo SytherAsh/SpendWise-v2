@@ -88,6 +88,28 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=
 NEXT_PUBLIC_FIREBASE_APP_ID=
 ```
 
+### Android (Firebase client config — added with Epic 9)
+
+The Android app authenticates through the Firebase **client** SDK (phone OTP + Google
+Sign-In), configured by `android/app/google-services.json`. That file is **gitignored**;
+the Google Services Gradle plugin is applied conditionally on its presence, so CI (unit
+tests only) builds without it, but a runnable local/release build requires it:
+
+1. In the Firebase console (same project as the backend's `FIREBASE_PROJECT_ID` — the
+   client-issued ID tokens must verify against the Admin SDK's project), register an
+   Android app with package name `com.spendwise`.
+2. Add the signing certificate fingerprints: **SHA-1** (Google Sign-In) and **SHA-256**
+   (Play Integrity, used by Firebase phone auth). The debug keystore's fingerprints are
+   per-machine (`keytool -list -v -keystore ~/.android/debug.keystore -alias
+   androiddebugkey -storepass android`); release-keystore fingerprints are added at
+   Epic 12 alongside Firebase App Distribution.
+3. Enable the **Phone** and **Google** sign-in providers (enabling Google creates the web
+   OAuth client whose id ships inside `google-services.json` as `default_web_client_id`).
+   For emulator QA, add a fictional test phone number under Phone → "Phone numbers for
+   testing".
+4. Download `google-services.json` (after step 3, so it includes the OAuth client) into
+   `android/app/`. Do not commit it.
+
 ## Version Control & Branching
 
 Solo project — work directly on `main`; feature branches and pull requests are not required.
