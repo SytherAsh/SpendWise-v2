@@ -662,16 +662,71 @@ worth noting since two consecutive sessions have now hit a different Docker-avai
 
 ## Epic 10 — [Web Dashboard](../epics/epic-10-web-dashboard.md)
 
-- [ ] E10-S1-T1 — Routes, layout, Firebase client login
-- [ ] E10-S1-T2 — Client-side token storage, refresh, protected routes
-- [ ] E10-S2-T1 — Dashboard page
-- [ ] E10-S2-T2 — Transactions page
-- [ ] E10-S2-T3 — Budget page
-- [ ] E10-S2-T4 — EMI/Subscriptions page
-- [ ] E10-S2-T5 — Chatbot page
-- [ ] E10-S2-T6 — Export page
-- [ ] E10-S2-T7 — Settings page
-- [ ] E10-S3-T1 — Client-side cache fallback with stale indicator
+- [x] E10-S1-T1 — Routes, layout, Firebase client login
+- [x] E10-S1-T2 — Client-side token storage, refresh, protected routes
+- [x] E10-S2-T1 — Dashboard page
+- [x] E10-S2-T2 — Transactions page
+- [x] E10-S2-T3 — Budget page
+- [x] E10-S2-T4 — EMI/Subscriptions page
+- [x] E10-S2-T5 — Chatbot page
+- [x] E10-S2-T6 — Export page
+- [x] E10-S2-T7 — Settings page
+- [x] E10-S3-T1 — Client-side cache fallback with stale indicator
+
+### Epic 10 close-out
+
+Built as the first substantial work in `frontend/`, which until now was the Epic-0
+skeleton (bare Next.js App Router, no styling/data/charts/test tooling). A handoff review
+(dependency check confirmed E1/E3/E5/E6/E7/E8 all complete via git tags + STATUS, so every
+E10 story was unblocked per `DEPENDENCY-GRAPH.md`'s per-story table; confirmed Epic 9 was
+running concurrently in a separate session against `android/` — disjoint files, only
+`STATUS.md` shared) preceded any code, resolving four tooling choices with the project
+owner up front (expensive to reverse once 7 pages exist): **Tailwind CSS**, **SWR**,
+**Recharts**, **Vitest + React Testing Library**.
+
+**Foundational setup (new to the repo this epic):** Tailwind v4, SWR, Recharts, the
+firebase client SDK, and a Vitest/RTL/jsdom test stack were installed and wired
+(`postcss.config.mjs`, `vitest.config.mts`, `vitest.setup.ts`). Shared libs:
+`lib/apiClient.ts` (fetch wrapper with a transparent 401→`/auth/token/refresh`→retry
+interceptor, concurrent-401 coalescing so replay-detection isn't tripped, and a
+`downloadFile` binary path for exports), `lib/auth.ts` (client token storage),
+`lib/authApi.ts`, `lib/firebase.ts`/`firebaseLogin.ts`, `lib/useApi.ts` (SWR wrapper
+exposing `isStale`), `lib/useCategories.ts`, `lib/format.ts`. **`docs/testing.md` gained a
+Next.js section** (it had none — a real doc gap this epic was the first to need) and the
+frontend CI job gained an `npm test` step.
+
+**Token storage decision (called out during the handoff, not guessed):** `docs/architecture.md`
+and `docs/deployment.md` describe the frontend as a client app calling the Spring Boot API
+directly (Vercel static hosting, no Next.js BFF/proxy layer). httpOnly cookies would need a
+server layer that doesn't exist and is out of scope to invent, so secure client storage
+(the epic explicitly allows either) is the only option consistent with the current
+architecture.
+
+**Pages (E10-S1 → E10-S3):** App Router route groups — `(auth)/login` public,
+`(app)/*` behind an `AuthGuard` (uses `useSyncExternalStore` for the client-only token
+check, avoiding a hydration mismatch and the new `react-hooks/set-state-in-effect` lint
+rule). All seven E10-S2 pages built against the frozen `docs/api.md` contract; two
+contract details worth noting were honored exactly: the category-correction body is
+snake_case `category_id` (the one endpoint with `@JsonProperty`, unlike the camelCase
+budget/emi DTOs), and EMI deactivate is `PATCH` not `PUT`. Transactions uses
+`useSWRInfinite` for cursor pagination (also the clean way to satisfy the setState-in-effect
+rule) with optimistic local overrides for immediate category-correction reflection.
+
+**E10-S3 (stale handling):** built on SWR's default keep-last-data-on-error behavior —
+`useApi` derives `isStale`, and `DashboardView` shows a page-level `StaleBanner` (retry-all)
+when any section is stale while every section keeps rendering its last-good data. Per the
+epic's own note, the pattern is proven on the dashboard and documented for reuse on the
+other pages rather than re-applied to each here.
+
+**Verification:** full Vitest suite **12 files / 37 tests green** (`npm test`), `npm run
+lint` clean, `npm run build` green (all 10 routes). Each story's "Required Tests" from the
+epic file are covered. **Honesty note:** these are component/unit tests against a mocked
+API plus a real production build — the app was **not** run end-to-end against a live
+backend + real Firebase project this session (no Firebase project exists in this repo;
+Firebase Auth has never been exercised against a real project — see Epic 5's close-out).
+The Working Milestone's live browser demo (login → dashboard → kill-backend stale
+fallback) is implemented and unit-verified but not yet manually smoke-tested against a
+running backend; that remains a pre-launch step (Epic 12).
 
 ## Epic 11 — [Admin Portal](../epics/epic-11-admin-portal.md)
 
@@ -699,5 +754,5 @@ worth noting since two consecutive sessions have now hit a different Docker-avai
 
 ---
 
-**Progress: 86 / 125 tasks complete.** Update this line's count as you check items off (or
+**Progress: 96 / 125 tasks complete.** Update this line's count as you check items off (or
 leave it — it's a convenience, not a requirement).
