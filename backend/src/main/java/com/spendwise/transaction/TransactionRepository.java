@@ -269,4 +269,24 @@ public class TransactionRepository {
                 month,
                 year);
     }
+
+    /**
+     * Cross-user (E6-S2-T1) — every debit transaction since {@code since} with a non-null
+     * {@code upi_id} or {@code recipient_name}, in one bulk read via the {@code spendwise_jobs}
+     * role, mirroring {@link #findAllSpendForMonth}. Backs the Alerts evaluator job's
+     * recurring-payment detection pass; never called from a per-request path.
+     */
+    public List<RecurringCandidateTransaction> findAllForRecurringDetection(Instant since) {
+        return jobsJdbcTemplate.query(
+                "SELECT id, user_id, transaction_date, debit, upi_id, recipient_name FROM transactions "
+                        + "WHERE transaction_date >= ? AND debit > 0 AND (upi_id IS NOT NULL OR recipient_name IS NOT NULL)",
+                (rs, rowNum) -> new RecurringCandidateTransaction(
+                        UUID.fromString(rs.getString("user_id")),
+                        UUID.fromString(rs.getString("id")),
+                        rs.getTimestamp("transaction_date").toInstant(),
+                        rs.getBigDecimal("debit"),
+                        rs.getString("upi_id"),
+                        rs.getString("recipient_name")),
+                Timestamp.from(since));
+    }
 }

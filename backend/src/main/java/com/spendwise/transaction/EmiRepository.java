@@ -1,13 +1,16 @@
 package com.spendwise.transaction;
 
 import com.spendwise.common.db.RlsSession;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -29,10 +32,13 @@ public class EmiRepository {
 
     private final JdbcTemplate jdbcTemplate;
     private final RlsSession rlsSession;
+    private final JdbcTemplate jobsJdbcTemplate;
 
-    public EmiRepository(JdbcTemplate jdbcTemplate, RlsSession rlsSession) {
+    public EmiRepository(
+            JdbcTemplate jdbcTemplate, RlsSession rlsSession, @Qualifier("jobsJdbcTemplate") JdbcTemplate jobsJdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
         this.rlsSession = rlsSession;
+        this.jobsJdbcTemplate = jobsJdbcTemplate;
     }
 
     public Emi insertManual(UUID userId, String label, BigDecimal amount, Integer dueDay) {
@@ -86,5 +92,19 @@ public class EmiRepository {
     public void deactivate(UUID userId, UUID id) {
         rlsSession.setCurrentUser(userId);
         jdbcTemplate.update("UPDATE emis SET is_active = FALSE WHERE user_id = ? AND id = ?", userId, id);
+    }
+
+    /**
+     * Cross-user (E6-S1-T1) — {@code source_transaction_id} of every active {@code emis} row that
+     * has one, via the {@code spendwise_jobs} role, mirroring {@code TransactionRepository}'s bulk
+     * job reads. Backs the recurring-payment detector's exclusion rule: deliberately exact-match
+     * only (see {@code RecurringPaymentDetector}'s Javadoc for why label/amount correlation isn't
+     * used) — never called from a per-request path.
+     */
+    public Set<UUID> findAllActiveSourceTransactionIds() {
+        List<UUID> ids = jobsJdbcTemplate.query(
+                "SELECT source_transaction_id FROM emis WHERE is_active = TRUE AND source_transaction_id IS NOT NULL",
+                (rs, rowNum) -> UUID.fromString(rs.getString("source_transaction_id")));
+        return new HashSet<>(ids);
     }
 }

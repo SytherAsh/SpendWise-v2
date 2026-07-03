@@ -2,12 +2,15 @@ package com.spendwise.transaction;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * Service interface for {@code /emis}, owned by the Transaction module (docs/api.md "/emis"
- * module ownership note). No cross-module consumer yet — Epic 6 (recurring detection) is the
- * anticipated future caller of a source-transaction-linked insert path, not built here.
+ * module ownership note). Consumed cross-module by Alerts (E6-S1) — {@link
+ * #findAllActiveSourceTransactionIds()} backs recurring-payment detection's exclusion rule
+ * (docs/architecture.md "Alerts | May call: Transaction (read spend; read EMIs for
+ * recurring-payment detection)").
  */
 public interface EmiService {
 
@@ -21,4 +24,11 @@ public interface EmiService {
 
     /** Sets {@code is_active = false}; never hard-deletes (E3-S3-T2 DoD). */
     void deactivate(UUID userId, UUID emiId);
+
+    /**
+     * Cross-user (E6-S1-T1) — {@code source_transaction_id} of every currently-active EMI that
+     * has one. Backs the recurring-payment detector's exclusion rule; bypasses RLS via the
+     * {@code spendwise_jobs} role, same pattern as {@link TransactionService#findAllUncategorized}.
+     */
+    Set<UUID> findAllActiveSourceTransactionIds();
 }

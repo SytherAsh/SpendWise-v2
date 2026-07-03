@@ -149,6 +149,13 @@ public class TransactionServiceImpl implements TransactionService {
         return transactionRepository.findAllSpendForMonth(month, year);
     }
 
+    @Override
+    public List<RecurringCandidateTransaction> findAllForRecurringDetection(Instant since) {
+        // No @Transactional / RlsSession here — reads via the spendwise_jobs DataSource (BYPASSRLS),
+        // same reasoning as findAllUncategorized above.
+        return transactionRepository.findAllForRecurringDetection(since);
+    }
+
     private static NewTransactionData withSource(NewTransactionData data, TransactionSource source) {
         return new NewTransactionData(
                 data.transactionDate(),

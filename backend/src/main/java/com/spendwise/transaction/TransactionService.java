@@ -86,4 +86,12 @@ public interface TransactionService {
      * {@link #findAllUncategorized}.
      */
     List<UserCategorySpend> findAllSpendForMonth(int month, int year);
+
+    /**
+     * Cross-user (E6-S2-T1) — every debit transaction dated on or after {@code since} that has a
+     * non-null {@code upi_id} or {@code recipient_name} (the two possible merchant-grouping
+     * keys), across all users. Backs the Alerts evaluator job's recurring-payment detection pass;
+     * bypasses RLS via the {@code spendwise_jobs} role, same pattern as {@link #findAllUncategorized}.
+     */
+    List<RecurringCandidateTransaction> findAllForRecurringDetection(Instant since);
 }
