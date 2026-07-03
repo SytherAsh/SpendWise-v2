@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Exported reports are written to cacheDir before being handed to the share sheet
+     (SettingsScreen E9-S2-T6). -->
+<paths>
+    <cache-path name="exports" path="." />
+</paths>

@@ -12,7 +12,8 @@ plugins {
 
 android {
     namespace = "com.spendwise"
-    compileSdk = 36
+    // 37 required by androidx.hilt 1.4.0 / androidx.lifecycle 2.11.0 AAR metadata.
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.spendwise"
