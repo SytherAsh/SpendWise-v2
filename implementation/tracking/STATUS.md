@@ -401,6 +401,32 @@ a regression. Unlike every prior epic in this repo's history, Docker was availab
 session, so this is the first epic verified against real Testcontainers end-to-end rather than
 compiled-but-unexecuted.
 
+**External-service verification honesty note (added on request before push, 2026-07-03):**
+the above covers Postgres/schema/RLS and the HTTP API layer, both genuinely exercised. Two
+features in this epic touch external services that were **not** verified end-to-end, and
+this is called out explicitly so "tests pass" is never conflated with "verified against the
+real service":
+
+- **FCM push (E5-S3-T1)** and **SMTP email (E5-S3-T2)**: `AlertDispatchServiceImplTest`
+  covers the dispatch *orchestration* logic (channel-enabled checks, token/email presence,
+  `delivered_at` bookkeeping) against **mocked** `FcmClient`/`MailClient` interfaces.
+  `FcmClientImpl` and `MailClientImpl` — the classes that actually call
+  `FirebaseMessaging.send()` and `JavaMailSender.send()` — have **zero test coverage of any
+  kind**, not unit, not integration, not even a stub server (contrast with
+  `CategorizationJobsIntegrationTest`'s local `HttpServer` stub for FastAPI). No real
+  Firebase project or SMTP credentials exist anywhere in this repo or were available this
+  session (`FIREBASE_PROJECT_ID`/`EMAIL_SMTP_HOST` are empty in every profile;
+  `.env.example` holds only placeholders). **Status: implemented, not end-to-end verified —
+  real credentials required before this can be considered production-ready.**
+- **Firebase Auth (OTP/Google verification)** — pre-existing since Epic 1, unchanged here:
+  every integration test substitutes `FirebaseAuthTestConfig`, a fixed-token test double, for
+  the real `FirebaseAuthService`. No test in this repo has ever run against a real Firebase
+  project.
+- **Postgres via Testcontainers vs. real Supabase**: schema/RLS/query correctness is
+  genuinely verified against a real Postgres 16 engine, but this is not the actual hosted
+  Supabase instance — `SUPABASE_URL`/`SUPABASE_KEY` and any free-tier-specific behavior
+  (connection pooling limits, etc.) were never exercised.
+
 ## Epic 6 — [EMI & Recurring Payment Detection](../epics/epic-06-emi-and-recurring.md)
 
 - [ ] E6-S1-T1 — Rolling-window grouping + tolerance matching
