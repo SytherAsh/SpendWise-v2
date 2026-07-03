@@ -40,7 +40,10 @@ export function useApi<T>(key: string | null, config?: SWRConfiguration<T>): Use
     isValidating,
     isStale: error != null && data !== undefined,
     refresh: () => {
-      void mutate();
+      // A failed revalidation is expected while the backend is unreachable — swallow the
+      // rejection so it doesn't surface as an unhandled promise rejection; SWR keeps the
+      // last-good `data` and sets `error`, which is what drives `isStale`.
+      void mutate().catch(() => {});
     },
   };
 }
