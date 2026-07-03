@@ -1,0 +1,47 @@
+package com.spendwise.alerts;
+
+import com.spendwise.alerts.dto.AlertListResponse;
+import com.spendwise.alerts.dto.AlertResponse;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.UUID;
+
+/** docs/api.md "/alerts" — owned by the Alerts module. */
+@RestController
+@RequestMapping("/api/v1/alerts")
+public class AlertController {
+
+    // docs/api.md Pagination section's own example ("GET /api/v1/alerts?limit=20&cursor=...")
+    // — not explicitly mandated elsewhere, but the doc's own illustration is the closest thing
+    // to a spec default, and 20 is a reasonable page size for a lower-volume list than transactions.
+    private static final int DEFAULT_PAGE_SIZE = 20;
+
+    private final AlertsService alertsService;
+
+    public AlertController(AlertsService alertsService) {
+        this.alertsService = alertsService;
+    }
+
+    @GetMapping
+    public AlertListResponse list(
+            @AuthenticationPrincipal UUID userId,
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) UUID cursor,
+            @RequestParam(value = "is_read", required = false) Boolean isRead) {
+        AlertPage page = alertsService.list(userId, limit != null ? limit : DEFAULT_PAGE_SIZE, cursor, isRead);
+        List<AlertResponse> data = page.data().stream().map(AlertResponse::from).toList();
+        return new AlertListResponse(data, page.nextCursor(), page.hasMore());
+    }
+
+    @PutMapping("/{id}/read")
+    public void markRead(@AuthenticationPrincipal UUID userId, @PathVariable UUID id) {
+        alertsService.markRead(userId, id);
+    }
+}

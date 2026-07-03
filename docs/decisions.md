@@ -230,3 +230,84 @@ categories. Counterparty type is deliberately kept out of the ML problem entirel
 `docs/requirements.md`, no more. Counterparty metadata enrichment is deferred to a
 post-MVP enhancement (`docs/roadmap.md` Phase 9), most naturally landing in Epic 7
 (Analytics) or a dedicated future epic once prioritized — not built or scoped now.
+
+---
+
+## ADR-011: Alert Evaluation Stays Scheduled — Event-Driven Is a Deferred, Unimplemented Optimization
+
+**Status**: Accepted (scheduled evaluation implemented in Epic 5); event-driven variant
+explicitly deferred, not built.
+
+**Context**: While planning Epic 5 (Budget & Alerts), before any code was written, the
+project owner asked whether alert evaluation should be split into two execution models:
+an **event-driven** path (re-evaluate a user's alerts immediately after a transaction is
+created, updated, deleted, or recategorized) for the three real alert rules
+(`mid_month_budget`, `category_overspend`, `category_approaching_limit`), versus keeping
+everything on the `@Scheduled` evaluator the epic's own text specifies. The proposal also
+grouped a few adjacent-but-different things under "scheduled" (spending insights, budget
+suggestions, historical analytics, periodic summaries) that turned out to belong to
+other epics (Recommendations/Epic 8, Analytics/Epic 7) or aren't background jobs at all
+(`/budgets/progress` and `/budgets/suggestions` are pull endpoints, not alerts) — that
+scoping mismatch is noted here for the record but isn't this ADR's subject.
+
+**Options considered**:
+1. **Event-driven only** — Transaction/Ingest publishes a change event; Alerts reacts
+   immediately.
+2. **Scheduled only, exactly as specified** — the single `@Scheduled` (every 30 minutes)
+   evaluator from `implementation/epics/epic-05-budget-and-alerts.md` E5-S2-T4, reading
+   all users' spend/budget state in bulk via the `spendwise_jobs` role (same mechanism
+   Epic 4 built for the categorization retry/retrain jobs).
+3. **Hybrid** — keep the scheduled evaluator as the authoritative backstop (and the only
+   driver of the mid-month rule, see below), and additively wire an async Spring
+   `ApplicationEvent`/`@EventListener` nudge that re-runs the overspend/approaching-limit
+   rules for one user immediately after their own transaction data changes.
+
+**Decision**: Option 2 for this epic. Option 3 is a legitimate, spec-compliant future
+optimization — sketched below for a later epic to pick up — but was not implemented now.
+
+**Rationale**:
+- **The mid-month rule cannot be event-driven at all, not even partially.** E5-S2-T1 is
+  "spent 50% of total budget **by mid-month**" (epic DoD: "fixture at exactly 50% by the
+  15th triggers"). Consider a user who crosses 50% on the 5th and makes no further
+  transactions. A purely event-driven design fires nothing on the 15th, because no
+  transaction event occurs that day — the rule's own semantics require a calendar tick
+  that no transaction event can provide. Any design must keep a scheduled component for
+  this rule regardless of what happens with the other two.
+- **Module boundaries don't have a call path for it.** `docs/architecture.md`'s "Allowed
+  module dependencies" table lists Ingest's callable modules as "Transaction
+  (persist), Categorization (trigger), User (device API key validation only), Auth
+  (session validation only) | Must not call: Any other module" — Ingest → Alerts is
+  explicitly forbidden. Transaction already has Alerts as a caller of *it*
+  ("Alerts → Transaction (read spend)"), so a direct Transaction → Alerts call the other
+  direction would be a circular dependency, which CLAUDE.md's architectural invariants
+  prohibit. A decoupled `ApplicationEvent`/`@EventListener` (Option 3) sidesteps the
+  compile-time dependency and avoids the cycle, but is still a new mechanism this
+  document didn't previously describe.
+- **The product doesn't need the responsiveness.** `docs/requirements.md`: "Alert SLA:
+  within 1 hour of a transaction being processed" and "Users review spending at end of
+  day — near-real-time is not required." A 30-minute sweep meets this SLA with margin,
+  for a portfolio-scale product (20–30 users).
+- **Simplicity.** One evaluation path is easier to reason about and test than two paths
+  that both need to agree on suppression state (`alerts` table dedup-per-month) and
+  rule outcomes. The scheduled evaluator already reuses Epic 4's proven cross-user-read
+  pattern (`spendwise_jobs` role via `JobsDataSourceConfig`) rather than introducing a
+  new one.
+
+**What the event-driven option would look like, if built later:** keep the `@Scheduled`
+evaluator as the sole driver of `mid_month_budget` (for the reason above) and as the
+correctness backstop for the other two rules; additionally, have `TransactionService`
+publish a `TransactionsChangedEvent` (Spring `ApplicationEventPublisher`, in-process, no
+new infrastructure — CLAUDE.md forbids adding Kafka/RabbitMQ/Redis without approval) after
+`persistFromIngest`/`createManual`/`correctCategory`; an `@EventListener` (`@Async`) in the
+Alerts module re-runs `CategoryOverspendRule`/`CategoryApproachingLimitRule` for that one
+user only, calling the same `AlertsService.recordIfNotAlreadyTriggeredThisMonth` and
+`AlertDispatchService` the scheduled job already uses — no duplicated rule logic. This
+would need its own ADR amendment to `docs/architecture.md`'s module table (an event
+publisher/listener pair isn't a "call" in the existing table's sense, but should still be
+documented) before implementation, and is only worth the added complexity if a future
+epic's requirements actually demand near-real-time alerts — nothing in the current MVP
+scope (`docs/roadmap.md`) does.
+
+**Consequence**: Epic 5 ships with exactly the scheduled evaluator the epic specified.
+Nothing event-driven was built. This ADR exists so the option isn't silently lost or
+re-litigated from scratch if a future epic's requirements change.

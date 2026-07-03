@@ -303,18 +303,95 @@ exists anywhere in the context.
 
 ## Epic 5 — [Budget & Alerts](../epics/epic-05-budget-and-alerts.md)
 
-- [ ] E5-S1-T1 — `POST /budgets` (idempotent upsert)
-- [ ] E5-S1-T2 — `GET /budgets`
-- [ ] E5-S1-T3 — `GET /budgets/progress`
-- [ ] E5-S1-T4 — `GET /budgets/suggestions`
-- [ ] E5-S2-T1 — Mid-month 50%-of-total-budget rule
-- [ ] E5-S2-T2 — Category 80%-approaching-limit rule
-- [ ] E5-S2-T3 — Category overspend rule
-- [ ] E5-S2-T4 — Alert evaluator scheduled job (every 30 min)
-- [ ] E5-S3-T1 — FCM push dispatch
-- [ ] E5-S3-T2 — SMTP email dispatch
-- [ ] E5-S4-T1 — `GET /alerts` (cursor pagination + `is_read` filter)
-- [ ] E5-S4-T2 — `PUT /alerts/:id/read`
+- [x] E5-S1-T1 — `POST /budgets` (idempotent upsert)
+- [x] E5-S1-T2 — `GET /budgets`
+- [x] E5-S1-T3 — `GET /budgets/progress`
+- [x] E5-S1-T4 — `GET /budgets/suggestions`
+- [x] E5-S2-T1 — Mid-month 50%-of-total-budget rule
+- [x] E5-S2-T2 — Category 80%-approaching-limit rule
+- [x] E5-S2-T3 — Category overspend rule
+- [x] E5-S2-T4 — Alert evaluator scheduled job (every 30 min)
+- [x] E5-S3-T1 — FCM push dispatch
+- [x] E5-S3-T2 — SMTP email dispatch
+- [x] E5-S4-T1 — `GET /alerts` (cursor pagination + `is_read` filter)
+- [x] E5-S4-T2 — `PUT /alerts/:id/read`
+
+### Epic 5 close-out
+
+Implemented as specified (scheduled evaluator, not event-driven — see the handoff decision
+below) across four story commits, plus one prep commit for two prerequisite gaps the handoff
+review surfaced before any Epic 5 code was written:
+
+**Prep (pre-existing gaps, not Epic 5 scope, but blocking it):**
+1. **No FCM device-token storage anywhere in the schema.** `users`/`user_preferences`/
+   `device_api_keys` had no column for a push-registration token, and no epic ever specified
+   registering one. Flagged to the project owner; approved 2026-07-03 to add
+   `user_preferences.fcm_token` (migration `V8__add_fcm_token.sql`) plus a new
+   `PUT /users/me/fcm-token` endpoint (User module) — see `docs/database.md`'s
+   `user_preferences` addendum.
+2. **Alerts had no path to User.** `docs/architecture.md`'s module dependency table gave Alerts
+   `Transaction` and `Budget` only, but the same document assigns Alerts "notification dispatch
+   (push via FCM, email via SMTP)" as a responsibility — impossible without reading `email` and
+   the new `fcm_token`. A gap in the original table, not a deliberate restriction (same category
+   of issue as Epic 4's `spendwise_jobs` gap). Approved 2026-07-03; see `docs/architecture.md`'s
+   Alerts→User addendum for the read-only grant.
+
+**E5-S1 (Budget module):** `com.spendwise.budget` built mirroring `com.spendwise.transaction`'s
+Repository→Service→Controller shape. Per CLAUDE.md ("cross-module calls go through injected
+service interfaces only") and `docs/architecture.md`'s "Budget → Transaction (read-only)" row,
+Budget never queries `transactions`/`transaction_categories` directly — three new read-only
+methods were added to `TransactionService` instead (`sumSpendByCategoryForMonth`,
+`historicalMonthlySpend`, plus the cross-user `findAllSpendForMonth` used by Alerts below).
+`/budgets/suggestions` averages the trailing 3 calendar months of spend per category (not
+specified in docs; a reasonable, undocumented default) and returns an explicit
+`available: false` per category rather than omitting categories with no history, satisfying the
+"no history → graceful, not an error" DoD at per-category granularity.
+
+**E5-S2 (Alerts evaluation engine):** the three rules (`MidMonthBudgetRule`,
+`CategoryApproachingLimitRule`, `CategoryOverspendRule`) are pure static functions, unit-tested
+standalone per the epic's own parallelization note. `AlertEvaluatorJob` mirrors
+`CategorizationRetryJob`'s cross-user pattern exactly: bulk reads via two new
+`spendwise_jobs`-backed methods (`TransactionService.findAllSpendForMonth`,
+`BudgetService.findAllForMonth`), grouped in-memory by user, then per-alert persistence goes
+through the normal RLS-scoped path (each repository method sets `app.current_user_id` itself,
+which works identically from a scheduled-job thread as from a request thread — traced every
+`RlsSession.setCurrentUser` call site to confirm this before relying on it). The suppression
+rule the epic mandates only for the overspend rule (E5-S2-T3) was applied uniformly to all
+three rules — without it, mid-month/approaching-limit would re-fire every 30 minutes for the
+rest of the month once crossed. Boundary rule (overspend takes precedence at ≥100%, per the
+epic's own text) implemented via ordering: overspend checked first, approaching-limit only
+checked if overspend didn't fire.
+
+**Scheduled vs. event-driven (explicit handoff decision, not left ambiguous):** the project
+owner asked mid-epic whether alert evaluation should be event-driven (fire on
+transaction/budget change) instead of scheduled. Decision: implement exactly as specified
+(scheduled, every 30 min) — the mid-month rule is inherently calendar-bound and cannot be
+correctly triggered by a transaction event alone (it must fire on the 15th even with zero
+transactions that day), the module dependency table gives Alerts no callable path from
+Ingest/Transaction without introducing a cycle, and `docs/requirements.md`'s 1-hour alert SLA
+doesn't need event-driven latency. The owner asked for a design note proposing the
+event-driven option as a **future, unimplemented** optimization — see
+`docs/decisions.md` ADR-011.
+
+**E5-S3 (Notification dispatch):** FCM reuses the existing `firebase-admin` dependency (already
+present for Auth's OTP/Google verification) via a second `FirebaseMessaging` bean — no new SDK.
+SMTP added `spring-boot-starter-mail` (a library, not a hosted service — free-tier compatible).
+`AlertDispatchServiceImpl` respects `user_preferences.alert_channels` (push/email toggles,
+already existed for this exact purpose) and sets `delivered_at` **at most once**, regardless of
+how many channels succeeded — sidesteps the "duplicate delivered_at update" ambiguity the
+E5-S3-T2 DoD calls out for the both-channels-succeed case. **Removed `FCM_SERVER_KEY` from
+`docs/deployment.md`**: the epic's original text named it for a legacy FCM HTTP client, which
+Google has deprecated in favor of the Admin SDK credential this project already uses — see the
+deployment.md addendum.
+
+**E5-S4 (Alerts API):** standard cursor pagination mirroring `/transactions`, default page size
+20 (docs/api.md's own Pagination-section example, not an explicit mandate elsewhere).
+
+**Verification caveat (same as every prior epic in this environment):** unit tests are green
+(`./gradlew test`). New integration tests (`BudgetControllerIntegrationTest`,
+`AlertControllerIntegrationTest`) compile clean but are **unexecuted** — Docker is unavailable
+in this environment, consistent with every integration test in this repo per Epic 3/4's
+close-out notes.
 
 ## Epic 6 — [EMI & Recurring Payment Detection](../epics/epic-06-emi-and-recurring.md)
 
