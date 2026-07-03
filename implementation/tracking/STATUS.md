@@ -576,11 +576,75 @@ integrationTest` run confirms all of them pass alongside Epic 7's own suite.
 
 ## Epic 8 — [Recommendations & Chatbot](../epics/epic-08-recommendations-and-chatbot.md)
 
-- [ ] E8-S1-T1 — `LlmClient` interface + stub implementation
-- [ ] E8-S2-T1 — Recommendation generator job (every 6h, idempotent)
-- [ ] E8-S2-T2 — `GET /recommendations`, `PUT /recommendations/:id/dismiss`
-- [ ] E8-S3-T1 — Chatbot session endpoints
-- [ ] E8-S3-T2 — `POST /chatbot/message` with context injection
+- [x] E8-S1-T1 — `LlmClient` interface + stub implementation
+- [x] E8-S2-T1 — Recommendation generator job (every 6h, idempotent)
+- [x] E8-S2-T2 — `GET /recommendations`, `PUT /recommendations/:id/dismiss`
+- [x] E8-S3-T1 — Chatbot session endpoints
+- [x] E8-S3-T2 — `POST /chatbot/message` with context injection
+
+### Epic 8 close-out
+
+Implemented as three new pieces — `com.spendwise.common.llm` (shared infra, not one of the 11
+documented modules), `com.spendwise.recommendations`, `com.spendwise.chatbot` (both previously
+empty placeholders) — following a handoff review (dependency check against Epic 3/Epic 7, both
+complete; `git status`/`git branch -a` confirmed a clean `main` with no parallel-session work in
+flight; schema check confirmed `recommendations`/`chatbot_sessions`/`chatbot_conversations` and
+their RLS policies already existed from Epic 0 — no new migration needed) that resolved four
+undocumented-default questions with the project owner before any code was written, the same
+pattern Epics 5–7 used for their own gaps:
+
+**E8-S1 (`LlmClient`):** CLAUDE.md's "no vendor has been selected... do not hardcode any LLM SDK
+into business logic" has no prior art in this codebase (`MlClient` is a single concrete class
+calling one already-known internal service, not an interface fronting a not-yet-chosen vendor).
+Landed as `com.spendwise.common.llm.LlmClient` (interface) + `LlmConfig` (the config-driven
+provider-selection point, `app.llm.provider`/`LLM_PROVIDER`, default and only value `stub`) +
+`com.spendwise.common.llm.provider.StubLlmClient` (deterministic, no network call, no API key).
+`LlmBoundaryTest` mirrors `CategorizationBoundaryTest`'s exact ArchUnit shape: no class outside
+`com.spendwise.common.llm.provider` may depend on classes in that package — blocks
+Recommendations/Chatbot from injecting `StubLlmClient` directly today, and transparently extends
+to block a future vendor-SDK-backed implementation from leaking outside that same package later.
+`StubLlmClient` renders `docs/requirements.md`'s exact one-liner template for its one well-known
+context shape (Recommendations' four keys) and falls back to a generic deterministic context echo
+for any other shape (e.g. Chatbot's) — a real provider wouldn't need this special-casing at all.
+
+**E8-S2 (Recommendations):** `RecommendationGeneratorJob` mirrors `AlertEvaluatorJob`'s exact
+cross-user shape — bulk reads via the `spendwise_jobs` role, per-user/category persistence through
+the normal RLS-enforced path. Its bulk read is a **new** `AnalyticsService.findAllCategorySpendForMonth`
+(a new `AnalyticsRepository` method using its own `jobsJdbcTemplate`, added this epic) rather than
+routing through the already-existing `TransactionService.findAllSpendForMonth` that Alerts already
+uses for an identical query shape — a deliberate decision, confirmed with the project owner, to keep
+both Analytics' Epic-7 "zero cross-module coupling" invariant and Recommendations' "may only call
+Analytics" rule literally true, accepting ~15 lines of duplicated SQL as the cost. Two numbers
+absent from any doc (`docs/requirements.md`'s "38% more than last month" is illustrative only, not
+a spec'd threshold) were confirmed as explicit defaults: **≥20% month-over-month increase on a
+≥₹200 baseline** triggers a recommendation; **priority is always `medium`** (mirrors Epic 6's
+identical precedent for recurring-payment alerts). Idempotency is a find-before-insert against
+`idx_recs_user_category_active` (at most one active row per user+category) with a
+`DuplicateKeyException` fallback for the race case — the same pattern `EmiService.createFromDetection`
+already uses for its own confirm-flow idempotency.
+
+**E8-S3 (Chatbot):** Session endpoints mirror existing module CRUD shapes; cross-user session
+access 404s without leaking existence (RLS-scoped `findById` plus an explicit ownership check).
+`POST /chatbot/message` reads Transaction history + Analytics summaries directly (both permitted
+per docs/architecture.md's Chatbot row; no new cross-user method needed here, since Chatbot is
+request-scoped, not a background job) for a **fixed current + previous calendar month window on
+every message, regardless of question wording** — confirmed with the project owner as the context
+scope, since no NLU exists (or was built) to parse a date range out of the user's actual question;
+this directly answers the epic's own milestone question ("How much did I spend on food last
+month?") without any date-parsing logic.
+
+**Verification — confirmed green against real Docker (2026-07-03):** unit tests (`./gradlew test`,
+including `LlmBoundaryTest`, `StubLlmClientTest`, `RecommendationGeneratorJobTest`,
+`RecommendationsServiceImplTest`, `ChatbotServiceImplTest`, and the new
+`AnalyticsServiceImplTest`/`AnalyticsServiceImpl` case) and the full integration suite
+(`./gradlew integrationTest`, real Testcontainers Postgres — `RecommendationControllerIntegrationTest`
+(3/3: feed ordering, dismiss-then-refetch, cross-user 404), `RecommendationGeneratorJobIntegrationTest`
+(1/1: a genuine crossing produces one recommendation, a re-run produces no duplicate), and
+`ChatbotControllerIntegrationTest` (3/3: session list order, cross-user 404, message round-trip
+persistence in chronological order)) all pass on the first run, alongside the full pre-existing
+suite (20/20 integration test classes green). Docker required starting Docker Desktop manually
+this session (it wasn't running at session start, distinct from Epic 7's `$PATH`-only issue) —
+worth noting since two consecutive sessions have now hit a different Docker-availability snag.
 
 ## Epic 9 — [Android App UI](../epics/epic-09-android-app-ui.md)
 
@@ -635,5 +699,5 @@ integrationTest` run confirms all of them pass alongside Epic 7's own suite.
 
 ---
 
-**Progress: 81 / 125 tasks complete.** Update this line's count as you check items off (or
+**Progress: 86 / 125 tasks complete.** Update this line's count as you check items off (or
 leave it — it's a convenience, not a requirement).
