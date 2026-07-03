@@ -1,8 +1,7 @@
+import { redirect } from "next/navigation";
+
 export default function HomePage() {
-  return (
-    <main>
-      <h1>SpendWise</h1>
-      <p>Web dashboard — under construction.</p>
-    </main>
-  );
+  // The dashboard route is behind AuthGuard, which bounces unauthenticated users to
+  // /login — so a single redirect here handles both the signed-in and signed-out cases.
+  redirect("/dashboard");
 }

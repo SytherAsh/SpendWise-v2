@@ -141,7 +141,48 @@ cd android
 
 ---
 
-## 4. End-to-End (Golden Path)
+## 4. Next.js Web Dashboard (Vitest + React Testing Library)
+
+Component and unit tests only — end-to-end browser automation (Playwright/Cypress) is
+**deferred** to a future phase, consistent with the Philosophy above (business-logic
+correctness over UI automation) and the Android section's Espresso deferral.
+
+Tests live beside the code they cover as `*.test.ts` / `*.test.tsx` under `frontend/src/`.
+The stack is Vitest + `@testing-library/react` + `@testing-library/jest-dom` on a jsdom
+environment (`frontend/vitest.config.mts`, `frontend/vitest.setup.ts`).
+
+### What is tested
+
+- **API client (`src/lib/apiClient.ts`)**: the refresh-on-401 interceptor — a 401 triggers
+  exactly one `/auth/token/refresh` + retry; a failed refresh clears tokens and surfaces a
+  401 `ApiError`; public (`auth: false`) requests never refresh; concurrent 401s coalesce
+  into a single refresh (so replay-detection is not tripped).
+- **Login form**: success stores the SpendWise access + refresh token and redirects;
+  failure renders an inline error (mocked auth API).
+- **Dashboard sections**: each section renders from mocked API responses; charts render for
+  line (trend) and bar/progress (budget) shapes.
+- **Transactions page**: pagination and filter state; the category-correction flow reflects
+  immediately without a full reload (mocked API).
+- **Budget / EMI / Export / Settings / Chatbot pages**: each page's Required Test from
+  `implementation/epics/epic-10-web-dashboard.md` (edit/suggestion-accept, deactivate,
+  range-picker validation, preferences save, send-message + resume-history).
+- **Stale-data fallback (E10-S3)**: a failed fetch after a successful one still renders the
+  last-good data plus a visible stale indicator.
+
+### Running Web Dashboard Tests
+
+```bash
+cd frontend
+npm test          # vitest run (CI mode, one-shot)
+npm run test:watch # vitest watch mode (local development)
+```
+
+The frontend CI job (`.github/workflows`, `frontend` — build/lint from Epic 0) should run
+`npm test` alongside `npm run build` and `npm run lint`.
+
+---
+
+## 5. End-to-End (Golden Path)
 
 ### What it tests
 
