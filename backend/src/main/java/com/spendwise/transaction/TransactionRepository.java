@@ -10,7 +10,9 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -206,5 +208,65 @@ public class TransactionRepository {
         sql.append(" ORDER BY t.transaction_date DESC, t.id DESC LIMIT ?");
         args.add(limitPlusOne);
         return jdbcTemplate.query(sql.toString(), ROW_MAPPER, args.toArray());
+    }
+
+    /**
+     * Budget module's read-only access (docs/architecture.md "Budget → Transaction (read-only)")
+     * for `/budgets/progress` (E5-S1-T3) — this month's spend per category, {@code debit} only
+     * (money leaving the account; {@code credit} rows are income, not spend against a budget).
+     */
+    public Map<Integer, BigDecimal> sumSpendByCategoryForMonth(UUID userId, int month, int year) {
+        rlsSession.setCurrentUser(userId);
+        List<Object[]> rows = jdbcTemplate.query(
+                "SELECT tc.category_id, SUM(t.debit) AS total_spent FROM transactions t "
+                        + "JOIN transaction_categories tc ON tc.transaction_id = t.id "
+                        + "WHERE t.user_id = ? AND EXTRACT(MONTH FROM t.transaction_date) = ? "
+                        + "AND EXTRACT(YEAR FROM t.transaction_date) = ? AND t.debit > 0 "
+                        + "GROUP BY tc.category_id",
+                (rs, rowNum) -> new Object[] {rs.getInt("category_id"), rs.getBigDecimal("total_spent")},
+                userId,
+                month,
+                year);
+        Map<Integer, BigDecimal> result = new HashMap<>();
+        for (Object[] row : rows) {
+            result.put((Integer) row[0], (BigDecimal) row[1]);
+        }
+        return result;
+    }
+
+    /**
+     * Budget module's read-only access for `/budgets/suggestions` (E5-S1-T4) — per-category,
+     * per-calendar-month spend totals over {@code [from, to)}, used to average a suggested limit.
+     */
+    public List<MonthlyCategorySpend> historicalMonthlySpend(UUID userId, Instant from, Instant to) {
+        rlsSession.setCurrentUser(userId);
+        return jdbcTemplate.query(
+                "SELECT tc.category_id, EXTRACT(MONTH FROM t.transaction_date)::int AS month, "
+                        + "EXTRACT(YEAR FROM t.transaction_date)::int AS year, SUM(t.debit) AS total_spent "
+                        + "FROM transactions t JOIN transaction_categories tc ON tc.transaction_id = t.id "
+                        + "WHERE t.user_id = ? AND t.transaction_date >= ? AND t.transaction_date < ? AND t.debit > 0 "
+                        + "GROUP BY tc.category_id, month, year",
+                (rs, rowNum) -> new MonthlyCategorySpend(
+                        rs.getInt("category_id"), rs.getInt("month"), rs.getInt("year"), rs.getBigDecimal("total_spent")),
+                userId,
+                Timestamp.from(from),
+                Timestamp.from(to));
+    }
+
+    /**
+     * Cross-user (E5-S2-T4) — every user's per-category spend for one calendar month, in one bulk
+     * read via the {@code spendwise_jobs} role, mirroring {@link #findAllUncategorized}. Backs the
+     * Alerts evaluator job; never called from a per-request path.
+     */
+    public List<UserCategorySpend> findAllSpendForMonth(int month, int year) {
+        return jobsJdbcTemplate.query(
+                "SELECT t.user_id, tc.category_id, SUM(t.debit) AS total_spent FROM transactions t "
+                        + "JOIN transaction_categories tc ON tc.transaction_id = t.id "
+                        + "WHERE EXTRACT(MONTH FROM t.transaction_date) = ? AND EXTRACT(YEAR FROM t.transaction_date) = ? "
+                        + "AND t.debit > 0 GROUP BY t.user_id, tc.category_id",
+                (rs, rowNum) -> new UserCategorySpend(
+                        UUID.fromString(rs.getString("user_id")), rs.getInt("category_id"), rs.getBigDecimal("total_spent")),
+                month,
+                year);
     }
 }

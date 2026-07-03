@@ -190,6 +190,39 @@ class TransactionServiceImplTest {
         assertThat(page.nextCursor()).isEqualTo(first.id());
     }
 
+    @Test
+    void sumSpendByCategoryForMonthDelegatesToRepository() {
+        given(transactionRepository.sumSpendByCategoryForMonth(userId, 7, 2026)).willReturn(java.util.Map.of(3, BigDecimal.TEN));
+
+        java.util.Map<Integer, BigDecimal> result = service.sumSpendByCategoryForMonth(userId, 7, 2026);
+
+        assertThat(result).containsEntry(3, BigDecimal.TEN);
+    }
+
+    @Test
+    void historicalMonthlySpendDelegatesWithAMonthsBackWindowExcludingTheCurrentMonth() {
+        given(transactionRepository.historicalMonthlySpend(eq(userId), any(), any()))
+                .willReturn(List.of(new MonthlyCategorySpend(3, 5, 2026, BigDecimal.TEN)));
+
+        List<MonthlyCategorySpend> result = service.historicalMonthlySpend(userId, 3);
+
+        assertThat(result).hasSize(1);
+        org.mockito.ArgumentCaptor<Instant> fromCaptor = org.mockito.ArgumentCaptor.forClass(Instant.class);
+        org.mockito.ArgumentCaptor<Instant> toCaptor = org.mockito.ArgumentCaptor.forClass(Instant.class);
+        verify(transactionRepository).historicalMonthlySpend(eq(userId), fromCaptor.capture(), toCaptor.capture());
+        assertThat(fromCaptor.getValue()).isBefore(toCaptor.getValue());
+    }
+
+    @Test
+    void findAllSpendForMonthDelegatesToRepository() {
+        UserCategorySpend spend = new UserCategorySpend(userId, 3, BigDecimal.TEN);
+        given(transactionRepository.findAllSpendForMonth(7, 2026)).willReturn(List.of(spend));
+
+        List<UserCategorySpend> result = service.findAllSpendForMonth(7, 2026);
+
+        assertThat(result).containsExactly(spend);
+    }
+
     private NewTransactionData data(String upiId, String transactionId) {
         return new NewTransactionData(
                 Instant.parse("2025-06-15T14:32:00Z"),

@@ -4,8 +4,12 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.YearMonth;
+import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -121,6 +125,28 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public List<MlCorrectionRecord> findAllCorrections() {
         return mlCorrectionRepository.findAllCorrections();
+    }
+
+    @Override
+    @Transactional
+    public Map<Integer, BigDecimal> sumSpendByCategoryForMonth(UUID userId, int month, int year) {
+        return transactionRepository.sumSpendByCategoryForMonth(userId, month, year);
+    }
+
+    @Override
+    @Transactional
+    public List<MonthlyCategorySpend> historicalMonthlySpend(UUID userId, int monthsBack) {
+        YearMonth currentMonth = YearMonth.now();
+        Instant from = currentMonth.minusMonths(monthsBack).atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        Instant to = currentMonth.atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        return transactionRepository.historicalMonthlySpend(userId, from, to);
+    }
+
+    @Override
+    public List<UserCategorySpend> findAllSpendForMonth(int month, int year) {
+        // No @Transactional / RlsSession here — reads via the spendwise_jobs DataSource (BYPASSRLS),
+        // same reasoning as findAllUncategorized above.
+        return transactionRepository.findAllSpendForMonth(month, year);
     }
 
     private static NewTransactionData withSource(NewTransactionData data, TransactionSource source) {

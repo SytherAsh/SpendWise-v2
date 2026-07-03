@@ -1,16 +1,20 @@
 package com.spendwise.transaction;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 /**
  * Service interface for the Transaction module's core domain (transactions themselves —
  * categories and EMIs have their own sibling interfaces). Consumed cross-module by Ingest (only
- * via {@link #persistFromIngest}) and by Categorization (via {@link #getById}, {@link
- * #assignMlCategory}, {@link #findAllUncategorized}, and {@link #findAllCorrections}) —
- * docs/architecture.md "Allowed module dependencies".
+ * via {@link #persistFromIngest}), by Categorization (via {@link #getById}, {@link
+ * #assignMlCategory}, {@link #findAllUncategorized}, and {@link #findAllCorrections}), by Budget
+ * (via {@link #sumSpendByCategoryForMonth} and {@link #historicalMonthlySpend}, its only
+ * permitted read — docs/architecture.md "Budget → Transaction (read-only)"), and by Alerts (via
+ * {@link #findAllSpendForMonth}) — docs/architecture.md "Allowed module dependencies".
  */
 public interface TransactionService {
 
@@ -65,4 +69,21 @@ public interface TransactionService {
      * {@code spendwise_jobs} role.
      */
     List<MlCorrectionRecord> findAllCorrections();
+
+    /** Budget module read-only access (E5-S1-T3) — this calendar month's spend, keyed by category_id. */
+    Map<Integer, BigDecimal> sumSpendByCategoryForMonth(UUID userId, int month, int year);
+
+    /**
+     * Budget module read-only access (E5-S1-T4) — per-category monthly spend over the
+     * {@code monthsBack} calendar months immediately before the current one (current month
+     * excluded, since it's still in progress and would skew an average low).
+     */
+    List<MonthlyCategorySpend> historicalMonthlySpend(UUID userId, int monthsBack);
+
+    /**
+     * Cross-user (E5-S2-T4) — every user's per-category spend for one calendar month. Backs the
+     * Alerts evaluator job; bypasses RLS via the {@code spendwise_jobs} role, same pattern as
+     * {@link #findAllUncategorized}.
+     */
+    List<UserCategorySpend> findAllSpendForMonth(int month, int year);
 }
