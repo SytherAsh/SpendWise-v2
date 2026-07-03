@@ -36,7 +36,6 @@ EMAIL_SMTP_PORT=
 EMAIL_SMTP_USER=
 EMAIL_SMTP_PASS=
 ADMIN_JWT_SECRET=
-FCM_SERVER_KEY=
 ML_INTERNAL_KEY=
 ML_LOW_CONFIDENCE_THRESHOLD=0.5
 ML_RETRAIN_CRON=0 0 3 * * SUN
@@ -55,6 +54,15 @@ ML_RETRAIN_CRON=0 0 3 * * SUN
 > the second, `BYPASSRLS`-enabled connection pool background jobs use, not part of Supabase's
 > client-SDK credential set, so omitted from this list too. See `docs/security.md`
 > "Cross-user reads for background jobs" and `backend/.env.example`.
+>
+> **No `FCM_SERVER_KEY` (removed during Epic 5 implementation):** the original epic spec
+> (`implementation/epics/epic-05-budget-and-alerts.md` E5-S3-T1) named this var for a legacy FCM
+> HTTP server-key client. Google has deprecated that legacy HTTP API in favor of the Admin SDK
+> (service-account credentials), and this project already depends on `firebase-admin` for Auth's
+> OTP/Google ID token verification (`FIREBASE_PROJECT_ID`/`FIREBASE_PRIVATE_KEY` above) — so
+> Alerts' push dispatch reuses that same credential via a second `FirebaseMessaging` bean
+> (`com.spendwise.auth.FirebaseConfig`) instead of introducing a second, deprecated auth
+> mechanism and a duplicate env var. No functional gap: the existing two vars cover both uses.
 
 > `FASTAPI_ML_URL` uses plain HTTP because `ml-service` resolves to the hosting platform's internal private network, not the public internet. This does not violate the TLS requirement. The `X-Internal-Key` header provides application-layer authentication on every request.
 

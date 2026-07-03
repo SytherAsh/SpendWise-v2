@@ -32,6 +32,23 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  # Alerts' SMTP dispatch (E5-S3-T2) — provider-agnostic (docs/requirements.md leaves the actual
+  # SMTP provider "TBD at implementation"); any host/port/user/pass pair works here (Gmail app
+  # password, a free-tier transactional-email provider, MailHog locally, etc.). Empty defaults are
+  # intentional — sending fails gracefully (AlertDispatchService logs and leaves delivered_at
+  # null) rather than crashing the evaluator job when unset, same pattern as ML_INTERNAL_KEY below.
+  mail:
+    host: ${EMAIL_SMTP_HOST:}
+    port: ${EMAIL_SMTP_PORT:587}
+    username: ${EMAIL_SMTP_USER:}
+    password: ${EMAIL_SMTP_PASS:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 server:
   port: 8080
 
@@ -58,6 +75,11 @@ app:
   firebase:
     project-id: ${FIREBASE_PROJECT_ID:}
     private-key: ${FIREBASE_PRIVATE_KEY:}
+  mail:
+    # "From" header for alert emails — defaults to the SMTP account itself, the common case for
+    # a free-tier provider (e.g. a Gmail app password) where the authenticated account is also
+    # the sender.
+    from-address: ${EMAIL_SMTP_USER:}
   ml:
     # Internal-network URL of the FastAPI ML service (docs/deployment.md — plain
     # HTTP is fine here, X-Internal-Key is the application-layer auth). Default

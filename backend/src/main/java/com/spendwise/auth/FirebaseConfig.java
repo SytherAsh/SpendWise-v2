@@ -5,6 +5,7 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.messaging.FirebaseMessaging;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,6 +55,16 @@ public class FirebaseConfig {
     @Bean
     public FirebaseAuth firebaseAuth(FirebaseApp firebaseApp) {
         return FirebaseAuth.getInstance(firebaseApp);
+    }
+
+    /**
+     * Reuses the same {@link FirebaseApp} bean above — Epic 5's Alerts push dispatch (E5-S3-T1)
+     * needs no new SDK dependency, just this second client off the existing firebase-admin
+     * credential.
+     */
+    @Bean
+    public FirebaseMessaging firebaseMessaging(FirebaseApp firebaseApp) {
+        return FirebaseMessaging.getInstance(firebaseApp);
     }
 
     private GoogleCredentials resolveCredentials(String privateKey) {

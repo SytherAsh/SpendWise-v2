@@ -38,6 +38,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-validation")
+    // Alerts' SMTP dispatch (E5-S3-T2) — a plain JavaMail client library, not a hosted service,
+    // so it's free-tier compatible; configured via EMAIL_SMTP_* (docs/deployment.md).
+    implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
