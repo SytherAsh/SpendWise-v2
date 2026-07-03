@@ -38,4 +38,10 @@ public class UserPreferencesService {
                 selectedBanks != null ? selectedBanks : existing.selectedBanks(),
                 monthlySpendEstimate != null ? monthlySpendEstimate : existing.monthlySpendEstimate());
     }
+
+    /** `PUT /users/me/fcm-token` (Epic 5, E5-S3-T1) — registers or rotates the device's FCM token. */
+    @Transactional
+    public void updateFcmToken(UUID userId, String fcmToken) {
+        repository.updateFcmToken(userId, fcmToken);
+    }
 }

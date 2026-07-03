@@ -10,9 +10,10 @@ public record UserPreferences(
         Map<String, Boolean> alertChannels,
         List<String> selectedApps,
         List<String> selectedBanks,
-        BigDecimal monthlySpendEstimate) {
+        BigDecimal monthlySpendEstimate,
+        String fcmToken) {
 
     public static UserPreferences defaults(UUID userId) {
-        return new UserPreferences(userId, Map.of("push", true, "email", true), List.of(), List.of(), null);
+        return new UserPreferences(userId, Map.of("push", true, "email", true), List.of(), List.of(), null, null);
     }
 }

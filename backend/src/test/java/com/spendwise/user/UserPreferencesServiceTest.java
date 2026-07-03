@@ -34,10 +34,10 @@ class UserPreferencesServiceTest {
     void updatingAlertChannelsAloneDoesNotWipeSelectedAppsFromOnboarding() {
         UUID userId = UUID.randomUUID();
         UserPreferences existing = new UserPreferences(
-                userId, Map.of("push", true, "email", true), List.of("paytm", "gpay"), List.of("SBI"), new BigDecimal("15000"));
+                userId, Map.of("push", true, "email", true), List.of("paytm", "gpay"), List.of("SBI"), new BigDecimal("15000"), null);
         given(repository.find(userId)).willReturn(Optional.of(existing));
         given(repository.upsert(any(), any(), any(), any(), any())).willAnswer(invocation -> new UserPreferences(
-                userId, invocation.getArgument(1), invocation.getArgument(2), invocation.getArgument(3), invocation.getArgument(4)));
+                userId, invocation.getArgument(1), invocation.getArgument(2), invocation.getArgument(3), invocation.getArgument(4), null));
 
         UserPreferences updated = service.updatePreferences(userId, Map.of("push", false, "email", true), null, null, null);
 
@@ -46,5 +46,14 @@ class UserPreferencesServiceTest {
         assertThat(updated.selectedBanks()).isEqualTo(List.of("SBI"));
         assertThat(updated.monthlySpendEstimate()).isEqualByComparingTo("15000");
         verify(repository).upsert(userId, Map.of("push", false, "email", true), List.of("paytm", "gpay"), List.of("SBI"), new BigDecimal("15000"));
+    }
+
+    @Test
+    void updateFcmTokenDelegatesToRepository() {
+        UUID userId = UUID.randomUUID();
+
+        service.updateFcmToken(userId, "new-token-value");
+
+        verify(repository).updateFcmToken(userId, "new-token-value");
     }
 }

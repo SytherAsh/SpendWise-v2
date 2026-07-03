@@ -70,7 +70,7 @@ SpendWise is built as a **modular monolith** for the MVP. The codebase is organi
 | **Ingest** | Transaction (persist), Categorization (trigger), User (device API key validation only), Auth (reuses the user-JWT filter/service for session validation only) | Any other module |
 | **Categorization** | Transaction (update category) | Any module except Transaction |
 | **Budget** | Transaction (read-only — spend data for progress/suggestions) | Any other module |
-| **Alerts** | Transaction (read spend; read EMIs for recurring-payment detection), Budget (read limits) | Recommendations, Chatbot, Ingest |
+| **Alerts** | Transaction (read spend; read EMIs for recurring-payment detection), Budget (read limits), User (read-only: `email`, `fcm_token`, `alert_channels` preference — dispatch target lookup) | Recommendations, Chatbot, Ingest |
 | **Recommendations** | Analytics (read aggregations) | Alerts, Chatbot, Ingest, Categorization |
 | **Chatbot** | Transaction (read history), Analytics (read summaries) | Any module that writes data |
 | **Analytics** | Reads from all modules *(read-only)* | *(must not call any write methods on any module)* |
@@ -86,6 +86,16 @@ SpendWise is built as a **modular monolith** for the MVP. The codebase is organi
 > Both are read-only/validation-only calls, not writes, and don't create a cycle: User and Auth
 > never call back into Ingest. Approved by project owner 2026-07-02 as a deviation from this
 > document's original dependency table, analogous to docs/database.md's V6 RLS addendum.
+
+> **Alerts' User dependency (added during Epic 5 implementation):** the module table's original
+> "May call" list for Alerts (Transaction, Budget) had no path to the contact info notification
+> dispatch actually needs — `users.email` for SMTP, `user_preferences.fcm_token`/`alert_channels`
+> for FCM — even though this same document's module table already assigns Alerts "notification
+> dispatch (push via FCM, email via SMTP)" as a responsibility. This was a gap in the original
+> table, not a deliberate restriction (`docs/api.md`/`docs/requirements.md` never suggested Alerts
+> should resolve dispatch targets any other way). Read-only, single-direction (User never calls
+> Alerts), no cycle. Approved by project owner 2026-07-03 as a deviation from this document's
+> original dependency table, same pattern as the two addenda above.
 
 Direction rule: data flows inward through the stack (Ingest → Transaction → Analytics). No module calls back up the ingestion chain.
 

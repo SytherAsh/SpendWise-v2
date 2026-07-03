@@ -35,6 +35,10 @@ CREATE TABLE user_preferences (
     selected_apps          TEXT[],    -- e.g. ["paytm", "gpay"]
     selected_banks         TEXT[],    -- e.g. ["SBI"]
     monthly_spend_estimate NUMERIC,   -- from onboarding
+    fcm_token              TEXT,      -- added V8, Epic 5: Firebase Cloud Messaging device registration
+                                       -- token, set via PUT /users/me/fcm-token; nullable until the
+                                       -- client registers one, and whenever the client's token rotates
+                                       -- (FCM tokens are not permanent). Null = push dispatch skipped.
     PRIMARY KEY (user_id)
 );
 ```

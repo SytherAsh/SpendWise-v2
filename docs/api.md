@@ -40,6 +40,7 @@ Authorization: Bearer <access_token>
 | PUT | `/users/me` | Update profile | User |
 | GET | `/users/me/preferences` | Get preferences (alert channels, selected apps/banks) | User |
 | PUT | `/users/me/preferences` | Update preferences | User |
+| PUT | `/users/me/fcm-token` | Register/rotate the device's Firebase Cloud Messaging token, used by Alerts' push dispatch (added Epic 5 — see `docs/database.md` `user_preferences.fcm_token`) | User |
 | POST | `/users/me/onboarding` | Submit onboarding data; records DPDP consent; registers and returns the raw device API key (only occurrence — store immediately in device secure storage) | User |
 | POST | `/users/me/bank-statement` | Upload bank statement PDF for historical transaction seed | User |
 

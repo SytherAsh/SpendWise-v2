@@ -1,0 +1,13 @@
+-- Epic 5 (Budget & Alerts): E5-S3-T1 needs a per-user Firebase Cloud Messaging
+-- registration token to actually target a push notification. No column for
+-- this existed anywhere in the schema (users / user_preferences /
+-- device_api_keys) and no prior epic registered one -- flagged mid-Epic-5
+-- implementation and approved by the project owner 2026-07-03, same pattern
+-- as V6's auth-lookup-policy addendum. See docs/database.md's
+-- user_preferences addendum and docs/architecture.md's Alerts-User addendum
+-- for the full rationale.
+--
+-- Nullable: absent until the client calls PUT /users/me/fcm-token (added
+-- this epic); push dispatch treats a null token as "skip, not an error" --
+-- same graceful-degradation style as budget suggestions with no history.
+ALTER TABLE user_preferences ADD COLUMN fcm_token TEXT;
