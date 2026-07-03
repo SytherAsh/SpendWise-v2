@@ -1,10 +1,11 @@
 import { PageHeader } from "@/components/shared/ui";
+import { ChatbotView } from "@/components/chatbot/ChatbotView";
 
 export default function ChatbotPage() {
   return (
     <>
-      <PageHeader title="Chatbot" />
-      <p className="text-sm text-neutral-500">Coming in E10-S2-T5.</p>
+      <PageHeader title="Chatbot" subtitle="Ask questions about your spending" />
+      <ChatbotView />
     </>
   );
 }

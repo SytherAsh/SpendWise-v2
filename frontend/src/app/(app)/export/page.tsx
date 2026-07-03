@@ -1,10 +1,11 @@
 import { PageHeader } from "@/components/shared/ui";
+import { ExportForm } from "@/components/export/ExportForm";
 
 export default function ExportPage() {
   return (
     <>
-      <PageHeader title="Export" />
-      <p className="text-sm text-neutral-500">Coming in E10-S2-T6.</p>
+      <PageHeader title="Export" subtitle="Download a PDF report or CSV of your transactions" />
+      <ExportForm />
     </>
   );
 }

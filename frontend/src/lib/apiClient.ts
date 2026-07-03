@@ -129,10 +129,11 @@ async function doFetch(path: string, options: RequestOptions, token: string | nu
 }
 
 /**
- * Core request method. Returns the parsed JSON body (typed as `T`), or `undefined` for
- * 204 No Content responses.
+ * Issues the request, transparently refreshing + retrying once on a 401, and returns the
+ * raw (ok) Response — or throws an ApiError. Shared by the JSON path (`apiRequest`) and the
+ * binary download path (`downloadFile`).
  */
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function requestWithRefresh(path: string, options: RequestOptions): Promise<Response> {
   const skipAuth = options.auth === false;
   let res = await doFetch(path, options, skipAuth ? null : getAccessToken());
 
@@ -147,6 +148,15 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (!res.ok) {
     throw await parseError(res);
   }
+  return res;
+}
+
+/**
+ * Core request method. Returns the parsed JSON body (typed as `T`), or `undefined` for
+ * 204 No Content responses.
+ */
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const res = await requestWithRefresh(path, options);
 
   if (res.status === 204 || res.headers.get("Content-Length") === "0") {
     return undefined as T;
@@ -157,6 +167,27 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     return (await res.text()) as unknown as T;
   }
   return (await res.json()) as T;
+}
+
+/**
+ * Downloads an authenticated binary endpoint (e.g. the CSV/PDF export) and saves it to a
+ * file in the browser. A plain `<a href>` can't carry the Bearer token, so we fetch the
+ * bytes through the same auth+refresh path and stream them to an object-URL download.
+ */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const res = await requestWithRefresh(path, { method: "GET" });
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  try {
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 export const apiClient = {
