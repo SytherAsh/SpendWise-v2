@@ -141,7 +141,12 @@ class AlertControllerIntegrationTest {
     @Test
     void confirmingANonRecurringPaymentAlertReturns400() {
         Session session = loginPhone("+919100000095");
-        Alert alert = seedAlert(session.userId(), AlertType.CATEGORY_OVERSPEND, 5);
+        // Distinct category id from markReadFlipsIsReadWithoutTouchingDeliveredAt's CATEGORY_OVERSPEND
+        // seed (id 5) — every loginPhone(...) call in this class resolves to the same fixed-token test
+        // identity (see FirebaseAuthTestConfig), so a shared (type, category) pair across two test
+        // methods hits AlertsService's "already triggered this month" suppression on whichever method
+        // JUnit happens to run second, throwing NoSuchElementException out of seedAlert's orElseThrow().
+        Alert alert = seedAlert(session.userId(), AlertType.CATEGORY_OVERSPEND, 8);
 
         ResponseEntity<Map> response = restTemplate.exchange(
                 baseUrl() + "/alerts/" + alert.id() + "/confirm", HttpMethod.POST, new HttpEntity<>(session.headers()), Map.class);
