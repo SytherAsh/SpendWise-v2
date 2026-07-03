@@ -114,6 +114,20 @@ Authorization: Bearer <access_token>
 
 Query parameters for analytics: `from`, `to`, `granularity` (week/month/year), `category`
 
+> **Epic 7 addenda (implemented 2026-07-03, not fully spelled out above):**
+> - `/analytics/summary`, `/analytics/categories`, `/analytics/trends`, and both export endpoints
+>   require `from`+`to` (400 if either is missing) — inclusive both ends, matching
+>   `/transactions`' existing `from`/`to` convention.
+> - `/analytics/comparison` takes **only** `granularity` (default `month`) — it does not accept
+>   `from`/`to`. It is always anchored to *today* (server clock, UTC): the current calendar
+>   week/month/year vs. the immediately preceding one of the same length. Undocumented default,
+>   resolved during the Epic 7 handoff review against `docs/user_flows.md`'s "compare this month
+>   vs. last" framing — the same category of gap as Epic 5's "trailing 3 months" budget-suggestion
+>   default.
+> - `/analytics/export/pdf` accepts either `from`+`to` **or** `financialYear=<YYYY>` (meaning the
+>   Indian financial year, `YYYY`-04-01 to `(YYYY+1)`-03-31) — exactly one must be present, 400
+>   otherwise.
+
 ### `/chatbot` — AI Chatbot
 
 | Method | Path | Description | Auth |

@@ -486,15 +486,93 @@ implemented and unit-verified; the three new integration tests are compiled-but-
 should be run against real Testcontainers Postgres before this epic is considered fully
 verified.**
 
+**Update (2026-07-03, during the Epic 7 session):** Docker was reachable after all — the
+earlier unavailability was a `$PATH` issue in that session's shell, not Docker Desktop being
+down (see Epic 7's close-out note for the diagnosis). A full `./gradlew test integrationTest`
+run confirms `RecurringPaymentEvaluatorIntegrationTest` and the new
+`AlertControllerIntegrationTest` confirm/dismiss cases all pass against real Testcontainers
+Postgres. This epic is now fully verified, not just unit-verified.
+
 ## Epic 7 — [Analytics & Export](../epics/epic-07-analytics-and-export.md)
 
-- [ ] E7-S1-T1 — `GET /analytics/summary`
-- [ ] E7-S1-T2 — `GET /analytics/categories`
-- [ ] E7-S1-T3 — `GET /analytics/comparison`
-- [ ] E7-S1-T4 — `GET /analytics/trends`
-- [ ] E7-S2-T1 — `GET /analytics/export/csv`
-- [ ] E7-S2-T2 — `GET /analytics/export/pdf`
-- [ ] E7-S3-T1 — Architecture test: Analytics is read-only
+- [x] E7-S1-T1 — `GET /analytics/summary`
+- [x] E7-S1-T2 — `GET /analytics/categories`
+- [x] E7-S1-T3 — `GET /analytics/comparison`
+- [x] E7-S1-T4 — `GET /analytics/trends`
+- [x] E7-S2-T1 — `GET /analytics/export/csv`
+- [x] E7-S2-T2 — `GET /analytics/export/pdf`
+- [x] E7-S3-T1 — Architecture test: Analytics is read-only
+
+### Epic 7 close-out
+
+Implemented as a single new module, `com.spendwise.analytics`, previously an empty
+placeholder. A handoff review (dependency check against Epic 3/4 — both complete;
+confirmed Epic 6 was mid-flight in a parallel session and not a hard dependency per
+`DEPENDENCY-GRAPH.md`) preceded any code, resolving two architectural questions with
+the project owner up front:
+
+1. **Data access:** Analytics owns its own `AnalyticsRepository`, querying
+   `transactions`/`transaction_categories`/`categories` directly via RLS-scoped
+   `JdbcTemplate` — it never calls `TransactionService` or any other module's
+   repository/service class. This matches `docs/architecture.md`'s literal Analytics
+   row ("reads from all modules," "contains no business logic") more directly than
+   routing through Transaction's narrow read-method pattern (Budget's Epic 5
+   precedent) would have, and lets `AnalyticsBoundaryTest` (E7-S3-T1) assert something
+   stronger than "no write calls": no class in `com.spendwise.analytics` depends on
+   any class in another module's package at all.
+2. **PDF library:** [OpenPDF](https://github.com/LibrePDF/OpenPDF) 2.2.2 (LGPL/MPL,
+   chosen over iText 7 specifically to avoid AGPL's network-use copyleft obligation for
+   a hosted service) — a new `backend/build.gradle.kts` dependency, flagged the same
+   way `spring-boot-starter-mail` was flagged in Epic 5 (a plain library, free-tier
+   compatible, no hosted service).
+
+**E7-S1 (aggregation queries):** `/summary`, `/categories`, `/trends` all require
+explicit `from`+`to` (inclusive both ends, matching `TransactionRepository.listPage`'s
+existing convention; 400 if either is missing). `/comparison` is the exception — no
+`from`/`to`, just `granularity` (default `month`), anchored to *today* (server clock,
+UTC): current calendar week/month/year vs. the immediately preceding one of the same
+length. Not explicit in the epic text — flagged as an assumption during planning,
+resolved against `docs/user_flows.md`'s "compare this month vs. last" framing; see
+`docs/api.md`'s new Epic 7 addendum.
+
+**E7-S2 (export):** CSV is hand-written (no library — ~15 flat columns, RFC4180-style
+escaping); reuses the explicit-column-list discipline `TransactionRepository` uses
+(never `SELECT *`) even though Analytics' own `AnalyticsExportRow` type has no
+`sms_raw_text` field to begin with. `GET /analytics/export/pdf` accepts either
+`from`+`to` or `financialYear=<YYYY>` (Indian financial year, April–March, matching the
+product's India focus and the seed dataset's own April–March framing) — exactly one
+must be present, 400 otherwise.
+
+**E7-S3 (read-only enforcement):** `AnalyticsBoundaryTest` mirrors
+`CategorizationBoundaryTest`'s ArchUnit pattern but is stronger per the data-access
+decision above.
+
+**Verification — confirmed green against real Docker (2026-07-03):** unit tests
+(`./gradlew test`, including `AnalyticsBoundaryTest` and `AnalyticsServiceImplTest`)
+and `AnalyticsControllerIntegrationTest` (8/8, real Testcontainers Postgres —
+hand-computed totals for summary/categories/trends/comparison, CSV row/column
+assertions, PDF magic-number + extracted-text assertions via OpenPDF's own
+`PdfTextExtractor`) all pass. Docker was reachable this session but not on the
+Bash tool's default `$PATH` — Docker Desktop's `resources/bin` directory has to be
+added to `PATH` (or exported per-session); this is a one-time environment fix worth
+making at the user-profile level so future sessions don't need to rediscover it.
+
+**Incidental fix, separate commit (pre-existing Epic 5 bug, not Epic 7 scope):** the
+full-suite run alongside this epic surfaced a real, pre-existing, order-dependent
+flake in `AlertControllerIntegrationTest` — `markReadFlipsIsReadWithoutTouchingDeliveredAt`
+and `confirmingANonRecurringPaymentAlertReturns400` both seeded a `CATEGORY_OVERSPEND`
+alert for category id 5 under the class's one shared fixture user (every `loginPhone`
+call in that class resolves to the same fixed test-auth token regardless of the phone
+string passed), so Epic 5's own "don't re-alert the same thing within a month"
+suppression logic made whichever method JUnit ran second throw
+`NoSuchElementException` out of the test's `seedAlert` helper. Reproduced, fixed by
+giving the two methods distinct category ids, and re-ran the class twice (opposite
+method orderings both observed) to confirm the fix holds either way. This also
+resolves Epic 6's own close-out caveat that its new integration tests
+(`RecurringPaymentEvaluatorIntegrationTest`, `AlertControllerIntegrationTest`'s
+confirm/dismiss cases) were "compiled but unexecuted" — Docker turned out to be
+reachable this session (see the `$PATH` note above), and a full `./gradlew test
+integrationTest` run confirms all of them pass alongside Epic 7's own suite.
 
 ## Epic 8 — [Recommendations & Chatbot](../epics/epic-08-recommendations-and-chatbot.md)
 
@@ -557,5 +635,5 @@ verified.**
 
 ---
 
-**Progress: 26 / 125 tasks complete.** Update this line's count as you check items off (or
+**Progress: 81 / 125 tasks complete.** Update this line's count as you check items off (or
 leave it — it's a convenience, not a requirement).
