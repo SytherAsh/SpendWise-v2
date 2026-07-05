@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -44,6 +45,7 @@ public class SecurityConfig {
     @Order(0)
     public SecurityFilterChain adminLoginFilterChain(HttpSecurity http) throws Exception {
         http.securityMatcher("/api/v1/admin/auth/login")
+                .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll());
@@ -55,6 +57,7 @@ public class SecurityConfig {
     public SecurityFilterChain adminFilterChain(HttpSecurity http, @Value("${app.security.admin-jwt-secret}") String adminJwtSecret)
             throws Exception {
         http.securityMatcher("/api/v1/admin/**")
+                .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
@@ -65,7 +68,8 @@ public class SecurityConfig {
     @Bean
     @Order(3)
     public SecurityFilterChain defaultFilterChain(HttpSecurity http, UserJwtService userJwtService) throws Exception {
-        http.csrf(csrf -> csrf.disable())
+        http.cors(Customizer.withDefaults())
+                .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
