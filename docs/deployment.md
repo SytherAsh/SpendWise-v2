@@ -36,10 +36,18 @@ EMAIL_SMTP_PORT=
 EMAIL_SMTP_USER=
 EMAIL_SMTP_PASS=
 ADMIN_JWT_SECRET=
+ADMIN_USERNAME=
+ADMIN_PASSWORD_HASH=
 ML_INTERNAL_KEY=
 ML_LOW_CONFIDENCE_THRESHOLD=0.5
 ML_RETRAIN_CRON=0 0 3 * * SUN
 ```
+
+> `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` (E11-S1-T1): a single seeded admin credential — never
+> a regular user account with a role claim (CLAUDE.md). `ADMIN_PASSWORD_HASH` is a bcrypt hash of
+> the real password, never the raw password itself, checked with Spring Security's
+> `BCryptPasswordEncoder`. Both empty by default so admin login is simply unusable until
+> explicitly configured, rather than shipping a guessable local default.
 
 > `ML_LOW_CONFIDENCE_THRESHOLD` (E4-S3-T1): not specified elsewhere in this doc set — a
 > `/predict` response below this confidence is treated the same as a failed call and left

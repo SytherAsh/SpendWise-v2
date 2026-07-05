@@ -11,19 +11,26 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
- * Two of the three {@link SecurityFilterChain}s in the app (E1-S1-T7 + E1-S2-T1) — the third,
- * {@code com.spendwise.ingest.IngestSecurityConfig}'s {@code @Order(2)} chain for {@code
- * /api/v1/ingest/**} (E3-S1-T1), sits between these two:
+ * Three of the four {@link SecurityFilterChain}s in the app (E1-S1-T7 + E1-S2-T1 + E11-S1-T1) —
+ * the fourth, {@code com.spendwise.ingest.IngestSecurityConfig}'s {@code @Order(2)} chain for
+ * {@code /api/v1/ingest/**} (E3-S1-T1), sits between {@code adminFilterChain} and {@code
+ * defaultFilterChain}:
  *
  * <ol>
- *   <li>{@code adminFilterChain} — matches only {@code /api/v1/admin/**}, guarded by {@link
- *       AdminJwtAuthFilter} ({@code ADMIN_JWT_SECRET}). Given {@code @Order(1)}, so it always
- *       evaluates before every other chain for admin paths.
+ *   <li>{@code adminLoginFilterChain} — matches only {@code /api/v1/admin/auth/login}, no auth
+ *       filter at all (that's the whole point — this is where an admin token is obtained).
+ *       Given {@code @Order(0)}, one step ahead of {@code adminFilterChain}'s broader {@code
+ *       /api/v1/admin/**} matcher, so login requests never reach {@link AdminJwtAuthFilter} —
+ *       which, unlike {@link UserJwtAuthFilter}, rejects outright when no Bearer header is
+ *       present rather than deferring to {@code authorizeHttpRequests}, so a {@code permitAll}
+ *       rule on the broader chain would never actually be reached for this path.
+ *   <li>{@code adminFilterChain} — matches every other {@code /api/v1/admin/**} route, guarded
+ *       by {@link AdminJwtAuthFilter} ({@code ADMIN_JWT_SECRET}). Given {@code @Order(1)}.
  *   <li>{@code defaultFilterChain} — everything else, guarded by {@link UserJwtAuthFilter}
  *       ({@code JWT_SECRET}). Permits the public {@code /auth/*} endpoints and {@code
  *       /health}; every other {@code /api/v1/**} route requires a valid user JWT. Given {@code
- *       @Order(3)} (last) so its catch-all {@code securityMatcher} never shadows the ingest
- *       chain's more specific one.
+ *       @Order(3)} (last) so its catch-all {@code securityMatcher} never shadows the more
+ *       specific chains ahead of it.
  * </ol>
  *
  * No two chains' filters delegate to each other's validation logic — see each filter's
@@ -32,6 +39,16 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    @Bean
+    @Order(0)
+    public SecurityFilterChain adminLoginFilterChain(HttpSecurity http) throws Exception {
+        http.securityMatcher("/api/v1/admin/auth/login")
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll());
+        return http.build();
+    }
 
     @Bean
     @Order(1)

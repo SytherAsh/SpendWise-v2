@@ -154,8 +154,13 @@ Query parameters for analytics: `from`, `to`, `granularity` (week/month/year), `
 
 All admin endpoints require an admin JWT (signed with `ADMIN_JWT_SECRET` — a completely separate secret from `JWT_SECRET`; regular user tokens are rejected at the route level).
 
+> **Doc gap closed in Epic 11:** `AdminJwtAuthFilter`/`SecurityConfig` (E1-S2-T1) validated an
+> admin-signed token from day one, but no endpoint ever issued one — this table never had a login
+> row. `POST /admin/auth/login` below is the missing issuer, added alongside the rest of Epic 11.
+
 | Method | Path | Description | Auth |
 | --- | --- | --- | --- |
+| POST | `/admin/auth/login` | Exchange the seeded admin username/password (env-configured, never a regular user account) for an `ADMIN_JWT_SECRET`-signed token | Public (rate-limited) |
 | GET | `/admin/users` | List all users with stats | Admin JWT |
 | GET | `/admin/users/:id` | Full data for a specific user | Admin JWT |
 | GET | `/admin/analytics` | Aggregate stats across all users | Admin JWT |

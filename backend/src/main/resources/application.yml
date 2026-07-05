@@ -72,6 +72,13 @@ app:
     # Completely separate secret for admin-signed tokens (E1-S2 isolation
     # invariant) — never derived from or shared with jwt-secret.
     admin-jwt-secret: ${ADMIN_JWT_SECRET:local-dev-only-admin-jwt-secret-do-not-use-in-prod}
+    # Single seeded admin credential (E11-S1-T1) — never a regular user account with a role
+    # claim (CLAUDE.md). admin-password-hash is a bcrypt hash, checked with
+    # BCryptPasswordEncoder; both empty by default so admin login is simply unusable until
+    # explicitly configured, rather than shipping a guessable local default (unlike the other
+    # dev-only secrets above, a guessable admin password default is a real risk even locally).
+    admin-username: ${ADMIN_USERNAME:}
+    admin-password-hash: ${ADMIN_PASSWORD_HASH:}
   firebase:
     project-id: ${FIREBASE_PROJECT_ID:}
     private-key: ${FIREBASE_PRIVATE_KEY:}
