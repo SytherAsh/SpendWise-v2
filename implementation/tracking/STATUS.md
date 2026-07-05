@@ -830,13 +830,100 @@ running backend; that remains a pre-launch step (Epic 12).
 
 ## Epic 11 — [Admin Portal](../epics/epic-11-admin-portal.md)
 
-- [ ] E11-S1-T1 — Admin login issuing `ADMIN_JWT_SECRET`-signed tokens
-- [ ] E11-S2-T1 — `GET /admin/users`, `GET /admin/users/:id`
-- [ ] E11-S2-T2 — `GET /admin/analytics`, `GET /admin/analytics/comparison`
-- [ ] E11-S2-T3 — `GET /admin/logs`
-- [ ] E11-S2-T4 — `GET /admin/ml/accuracy`, `POST /admin/ml/retrain`
-- [ ] E11-S2-T5 — `DELETE /admin/users/:id` (full erasure, DPDP)
-- [ ] E11-S3-T1 — Minimal admin web screens
+- [x] E11-S1-T1 — Admin login issuing `ADMIN_JWT_SECRET`-signed tokens
+- [x] E11-S2-T1 — `GET /admin/users`, `GET /admin/users/:id`
+- [x] E11-S2-T2 — `GET /admin/analytics`, `GET /admin/analytics/comparison`
+- [x] E11-S2-T3 — `GET /admin/logs`
+- [x] E11-S2-T4 — `GET /admin/ml/accuracy`, `POST /admin/ml/retrain`
+- [x] E11-S2-T5 — `DELETE /admin/users/:id` (full erasure, DPDP)
+- [x] E11-S3-T1 — Minimal admin web screens
+
+### Epic 11 close-out
+
+Built as the first substantial work in `com.spendwise.admin` (previously an empty placeholder)
+and the first `/admin` route anywhere in `frontend/`, following a handoff review that surfaced
+one real gap before any code was written: **no admin login endpoint existed anywhere** —
+`AdminJwtAuthFilter`/`SecurityConfig` (E1-S2-T1) validated an admin-signed token from day one, but
+nothing ever issued one, and `docs/api.md`'s `/admin` table never had a login row. Same category
+of gap as Epic 5/8/9's FCM-token/bank-statement findings — resolved by building the missing piece
+(`POST /admin/auth/login`) and documenting it, not by blocking.
+
+**E11-S1 (admin login):** A single seeded admin credential (`ADMIN_USERNAME`/
+`ADMIN_PASSWORD_HASH`, bcrypt-hashed, env-configured — never a regular user account with a role
+claim, per CLAUDE.md) is checked in a new `AdminAuthController`, issuing a token via a new
+`AdminJwtService` (mirrors `UserJwtService`, 24h TTL). `SecurityConfig` gained a fourth filter
+chain, `adminLoginFilterChain` (`@Order(0)`), matching only `/api/v1/admin/auth/login` with no
+auth filter at all — `AdminJwtAuthFilter`, unlike `UserJwtAuthFilter`, rejects outright when no
+Bearer header is present rather than deferring to `authorizeHttpRequests`, so a bare `permitAll`
+rule on the broader `/api/v1/admin/**` chain would never actually be reached for this path. A new
+`AdminLoginRateLimiter` (copy of `OtpSendRateLimiter`'s shape, keyed by client IP) finally
+implements docs/security.md's long-documented-but-never-built "10 login attempts per IP per 15
+min" policy.
+
+**E11-S2 (API):** `AdminRepository` reads via the `spendwise_jobs` (BYPASSRLS) role for the two
+things with no per-user anchor to scope RLS to — enumerating every user (`GET /admin/users`) and
+the system-wide `admin_logs` table (`GET /admin/logs`) — broadening that role's sanctioned-use
+list (`JobsDataSourceConfig`, `docs/security.md`) beyond "`@Scheduled` jobs only" to include
+Admin's request-scoped reads, a narrow documented exception, not a blanket bypass. Everything else
+needed zero new bypass code: `GET /admin/users/:id`'s per-user detail calls
+`TransactionService`/`BudgetService`/`AlertsService` with the target user's id, exactly the same
+cross-module call shape every other module already uses (those services scope RLS to whatever id
+is passed in, not the caller's own identity); `GET /admin/analytics(/comparison)` sums each user's
+own `AnalyticsService.summary`/`.comparison` result rather than reimplementing Epic 7's queries;
+`GET /admin/ml/accuracy` / `POST /admin/ml/retrain` delegate straight to
+`CategorizationService` (already built for exactly this in E4-S3-T5) — the existing
+`CategorizationBoundaryTest` ArchUnit rule already covers Admin's boundary, since it blocks any
+package outside `com.spendwise.categorization` from touching `MlClient` directly.
+
+**E11-S2-T5 (erasure, built and tested last per the epic's own note):** captures the target user's
+phone/email/google_id and the ids of every `admin_logs` row referencing them *before* deleting,
+then a single `DELETE FROM users WHERE id = ?` via the BYPASSRLS role cascades atomically to every
+dependent table (confirmed `ON DELETE CASCADE` per docs/database.md) and sets
+`admin_logs.user_id = NULL` for the captured rows (`ON DELETE SET NULL`), then a follow-up pass
+string-replaces the captured identifying strings out of those rows' `event_type`/`payload` with a
+redaction marker — satisfying the DPDP erasure exception (null `user_id` isn't enough on its own).
+Deliberately done entirely via the BYPASSRLS connection rather than the RLS session-variable path,
+sidestepping an untested edge case (the `admin_logs` `SET NULL` cascade is an UPDATE, which would
+need to satisfy a `WITH CHECK` clause against a post-update NULL `user_id` under the normal RLS
+path). Honesty note: the cascade delete and the log-scrub pass are two separate statements, not
+one Spring `@Transactional` unit (no second `PlatformTransactionManager` exists for the jobs
+`DataSource` — matches the existing precedent that no `jobsJdbcTemplate` caller in this codebase
+uses `@Transactional`); a DB failure between them is a narrow, accepted, documented risk.
+
+**E11-S3 (frontend):** a separate route tree (`app/admin/(public)/login`,
+`app/admin/(protected)/{users,users/[id],logs,ml}`) using route groups so the login page and the
+token-gated pages get different layouts despite sharing the `/admin` path prefix — a plain
+`AdminAuthGuard`/`adminApiClient`/`adminAuth.ts` trio mirrors the user-facing equivalents but
+simpler (no refresh-token concept for the 24h admin session; a 401 just clears the token and lets
+the guard redirect). `DeleteUserDialog` gates the irreversible delete behind typing the exact
+user identifier first (epic's explicit DoD) — its Required Test and an integration-level test
+through `UserDetailView` both cover the button staying disabled until the identifier matches
+exactly.
+
+**Verification — confirmed green (2026-07-05):** Backend: `./gradlew test integrationTest`,
+**276/276 tests pass** (real Testcontainers Postgres, Docker Desktop confirmed working after an
+earlier startup failure in this environment resolved itself). All 4 new admin integration test
+classes needed a `@BeforeAll` bootstrap of the `spendwise_jobs` role, mirroring
+`CategorizationJobsIntegrationTest`'s exact pattern — a bare Testcontainers Postgres image never
+runs `db-init/`, so any test touching `AdminRepository` (including the login-flow smoke test,
+which hits `/admin/logs`) needs this or fails with `password authentication failed for user
+"spendwise_jobs"`. Two other test-only bugs surfaced and were fixed during this pass, neither a
+production defect: (1) `AdminAuthControllerIntegrationTest` deserialized `/admin/logs`'s JSON
+*array* response as a `Map`; (2) the erasure test's admin_logs payload was seeded with the test's
+own requested phone number rather than the phone `FirebaseAuthTestConfig`'s fixed OTP-test-token
+actually persists (identity comes from the token, not the request body — the same fact
+`AuthControllerIntegrationTest` already documents) — fixed by fetching the real persisted phone
+before seeding. Frontend: `npm test` **50/50 tests pass** (18 files), `npm run lint` clean,
+`npm run build` clean (all 5 admin routes present: `/admin/login`, `/admin/users`,
+`/admin/users/[id]`, `/admin/logs`, `/admin/ml`). Two frontend tests needed their timeout raised
+from the 5s default to 15s after flaking under full-suite load on this machine — both confirmed to
+pass reliably in isolation, a machine-load characteristic (this session also hit an unrelated
+Docker Desktop startup failure requiring a manual retry), not a code defect.
+
+**Not yet done, deliberately out of scope for this pass:** live manual smoke test against a real
+running backend + browser (no Firebase project or live deployment available in this environment,
+consistent with every prior epic's same caveat); the epic explicitly excludes Epic 12
+(Deployment/Monitoring/Launch), which remains untouched.
 
 ## Epic 12 — [Deployment, Monitoring & Launch](../epics/epic-12-deployment-and-launch.md)
 
@@ -854,5 +941,5 @@ running backend; that remains a pre-launch step (Epic 12).
 
 ---
 
-**Progress: 107 / 125 tasks complete.** Update this line's count as you check items off (or
+**Progress: 114 / 125 tasks complete.** Update this line's count as you check items off (or
 leave it — it's a convenience, not a requirement).
