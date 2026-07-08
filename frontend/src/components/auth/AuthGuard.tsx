@@ -10,6 +10,11 @@ import { isAuthenticated } from "@/lib/auth";
 // during SSR/first paint and to the real value once mounted on the client.
 const EMPTY_SUBSCRIBE = () => () => {};
 
+// TEMP DEV-ONLY BYPASS: set NEXT_PUBLIC_DISABLE_AUTH=true in .env.local to skip the
+// redirect-to-login below while OTP login is broken locally. Remove once login works
+// again — this does not bypass backend JWT checks, only the client-side route guard.
+const DEV_BYPASS_AUTH = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
+
 function useClientAuthenticated(): boolean {
   return useSyncExternalStore(
     EMPTY_SUBSCRIBE,
@@ -29,12 +34,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const authed = useClientAuthenticated();
 
   useEffect(() => {
-    if (!authed) {
+    if (!authed && !DEV_BYPASS_AUTH) {
       router.replace("/login");
     }
   }, [authed, router]);
 
-  if (!authed) {
+  if (!authed && !DEV_BYPASS_AUTH) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-neutral-500">
         Loading…

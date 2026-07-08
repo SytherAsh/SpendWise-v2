@@ -27,7 +27,12 @@ public class CorsConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOrigins(List.of("http://localhost:3000", "http://127.0.0.1:3000"));
+		// Pattern (not setAllowedOrigins) so any local dev port is accepted — `next dev`
+		// silently falls back to 3001/3002/... whenever 3000 is already taken by another
+		// process, which otherwise turns into a same-symptom-every-time 403 "Invalid CORS
+		// request" on every auth call from the browser. Patterns remain compatible with
+		// allowCredentials(true), unlike a bare "*" origin.
+		config.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		config.setAllowedHeaders(List.of("*"));
 		config.setAllowCredentials(true);
