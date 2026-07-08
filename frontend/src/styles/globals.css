@@ -195,6 +195,24 @@ body {
   font-feature-settings: "tnum" 1;
 }
 
+/* Loading skeleton — a subtle emerald sheen sweeps across a muted surface.
+   Under reduced-motion the global rule freezes the sweep to a static tint. */
+@keyframes sw-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+.sw-skeleton {
+  background-image: linear-gradient(
+    90deg,
+    var(--surface-muted) 0%,
+    color-mix(in oklab, var(--color-brand-400) 16%, var(--surface-muted)) 50%,
+    var(--surface-muted) 100%
+  );
+  background-size: 200% 100%;
+  animation: sw-shimmer 1.4s linear infinite;
+}
+
 /* Consistent, visible focus ring for keyboard users (WCAG AA). */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--ring);

@@ -1,14 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle, Inbox } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
     <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-foreground-muted">{subtitle}</p>}
       </div>
       {action}
@@ -42,21 +42,48 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
   return (
     <div
       role="alert"
-      className="rounded-[var(--radius-sm)] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-4 py-3 text-sm text-[var(--color-danger)]"
+      className="flex items-start gap-2.5 rounded-[var(--radius-sm)] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-4 py-3 text-sm text-[var(--color-danger)]"
     >
-      <p>{message}</p>
-      {onRetry && (
-        <button type="button" onClick={onRetry} className="mt-2 font-medium underline">
-          Retry
-        </button>
-      )}
+      <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <div>
+        <p>{message}</p>
+        {onRetry && (
+          <button type="button" onClick={onRetry} className="mt-2 font-medium underline">
+            Retry
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
-export function EmptyState({ message }: { message: string }) {
+/**
+ * Empty state. Passing only `message` keeps the compact inline form; passing an
+ * `icon`/`title`/`action` renders the branded, illustrative variant with a CTA.
+ */
+export function EmptyState({
+  message,
+  title,
+  icon,
+  action,
+}: {
+  message: string;
+  title?: string;
+  icon?: ReactNode;
+  action?: ReactNode;
+}) {
+  if (!title && !icon && !action) {
+    return <p className="py-8 text-center text-sm text-foreground-subtle">{message}</p>;
+  }
   return (
-    <p className="py-8 text-center text-sm text-foreground-subtle">{message}</p>
+    <div className="flex flex-col items-center gap-3 py-10 text-center">
+      <span className="grid size-12 place-items-center rounded-[var(--radius)] bg-[image:var(--gradient-brand-vivid)] text-[#04170d] shadow-[var(--glow-brand-sm)]">
+        {icon ?? <Inbox className="size-6" />}
+      </span>
+      {title && <p className="font-display text-base font-semibold text-foreground">{title}</p>}
+      <p className="max-w-sm text-sm text-foreground-muted">{message}</p>
+      {action}
+    </div>
   );
 }
 

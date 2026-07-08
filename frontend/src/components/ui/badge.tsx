@@ -16,7 +16,7 @@ export function Badge({
 }) {
   const tones = {
     neutral: "bg-surface-muted text-foreground-muted",
-    brand: "bg-brand-50 text-brand-800",
+    brand: "bg-brand-50 text-brand-800 dark:bg-brand-400/15 dark:text-brand-300",
     warning: "bg-[var(--color-warning-surface)] text-[var(--color-warning)]",
     danger: "bg-[var(--color-danger-surface)] text-[var(--color-danger)]",
   } as const;

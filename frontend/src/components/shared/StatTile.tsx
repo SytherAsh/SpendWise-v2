@@ -63,7 +63,7 @@ export function StatTile({
         <p className="text-sm font-medium text-foreground-muted">{label}</p>
         {icon && <span className="text-foreground-subtle">{icon}</span>}
       </div>
-      <p className="tnum mt-2 text-2xl font-semibold tracking-tight text-foreground" style={accent ? { color: accent } : undefined}>
+      <p className="mono mt-2 text-[1.75rem] font-medium leading-tight tracking-tight text-foreground" style={accent ? { color: accent } : undefined}>
         {format(shown)}
       </p>
       {delta && (
