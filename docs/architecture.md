@@ -40,6 +40,10 @@ SpendWise is built as a **modular monolith** for the MVP. The codebase is organi
 
 > **Web dashboard offline behavior:** The Next.js frontend uses client-side state (browser storage / in-memory React state) to serve the last-fetched data when the backend is unreachable. No server-side cache or cache server is required or deployed.
 
+<!-- -->
+
+> **Web dashboard structure & IA (UI/UX redesign):** The app is a client-rendered Next.js App Router SPA calling the Spring Boot REST API directly (no BFF/proxy layer). Route groups: `(auth)/login` (public) and `(app)/*` behind a client-side `AuthGuard`, plus a separate `/admin` tree. The five primary destinations are **Dashboard**, **Transactions**, **Analytics**, **Planning**, **Settings** (`lib/shell.tsx` `NAV_ITEMS`). **Planning** consolidates the former Budget + EMIs/Subscriptions screens into two tabs; **Settings** consolidates Profile + Preferences + Export into three tabs. The former standalone `/budget`, `/emis`, and `/export` routes were removed once these consolidations landed. Shared frontend infrastructure (kept stable across the visual redesign): `lib/apiClient.ts` (auth + transparent 401→refresh retry), SWR via `lib/useApi.ts` (exposes `isStale`), design tokens + a light/dark theme seam in `styles/globals.css` driven by a `data-theme` attribute via **`next-themes`** (Light/Dark/System, a client-only preference never sent to the backend), category color/icon helpers in `lib/categories.ts`, and Recharts theming in `lib/chart-theme.ts`.
+
 ## Spring Boot Modules
 
 | Module | Package | Responsibility |

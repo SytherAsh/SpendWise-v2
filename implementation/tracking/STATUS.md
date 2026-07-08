@@ -943,3 +943,40 @@ consistent with every prior epic's same caveat); the epic explicitly excludes Ep
 
 **Progress: 114 / 125 tasks complete.** Update this line's count as you check items off (or
 leave it — it's a convenience, not a requirement).
+
+## Post-MVP: UI/UX Redesign (not backlog tasks)
+
+A user-directed **whole-web-app visual redesign** is underway on top of the completed MVP. This
+is not part of the Epic 0–12 backlog — it's the "UI/UX Refinement & Product Polishing" phase from
+`CLAUDE.md`. Recorded here only so the redesign's cross-cutting changes aren't lost. Nothing below
+changes any Epic's done/not-done state.
+
+**Pages redesigned so far:**
+
+- **Transactions** — category-summary tile grid (per-category spend + share of total, click a tile
+  to filter the list, click again to clear; Uncategorized as a 13th tile); a money-spent /
+  money-received header; wired to the global date-range picker. Category-filtered views are
+  **debit-only** (money received never shows inside a category filter).
+- **Planning / Budgets** — no-scroll category grid, per-category budget slider (₹100 steps, max
+  scaled from the suggestion) pre-filled from a **6-month** suggestion average; read-only total-budget
+  header; per-category drill-through to the filtered Transactions view.
+- **Planning / EMIs & Subscriptions** — restyled to the shared card/component language (data +
+  interactions unchanged).
+- **Settings** — split into **Profile / Preferences / Export** tabs; added a real **Light/Dark/System
+  theme toggle** (`next-themes`, `data-theme` seam). The standalone `/budget`, `/emis`, `/export`
+  routes were removed (Planning + Settings tabs now cover them).
+
+**Backend/API changes made in service of the above (all additive, docs/api.md updated):**
+
+- `GET /analytics/categories` now appends a synthetic **Uncategorized** row (`categoryId: null`),
+  debit-only, only when such transactions exist in range. `/analytics/summary` + `/analytics/comparison`
+  unchanged.
+- `GET /transactions?category=` now accepts the literal `uncategorized` (no-category filter) in
+  addition to a numeric id; and whenever a category filter is active, the list is debit-only.
+- `/budgets/suggestions` trailing-average window changed 3 → 6 months.
+
+**Shared frontend infra added:** category color/icon helpers (`lib/categories.ts`), the theme system
+(`next-themes` + `styles/globals.css` `data-theme` tokens).
+
+**Verification:** backend unit suite green; frontend `npm test` green, `npm run build` clean. (Same
+pre-existing, unrelated `StatTile.tsx` lint violation as before — not introduced by this work.)
