@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-variant overlay: permits cleartext HTTP to the local backend during local
+  acceptance testing (adb reverse 127.0.0.1 / emulator 10.0.2.2 / LAN). The release
+  build has no networkSecurityConfig and keeps Android's secure cleartext-blocked
+  default. This file is merged only into the debug APK.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:networkSecurityConfig="@xml/network_security_config" />
+</manifest>
