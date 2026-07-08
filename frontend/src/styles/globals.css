@@ -1,48 +1,51 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* Light-first: drive Tailwind's `dark:` variant from an explicit `data-theme="dark"`
-   attribute rather than the OS `prefers-color-scheme`. This keeps every not-yet-migrated
-   `dark:` utility dormant so the app renders consistently light until a theme toggle is
-   wired later (see the `:root[data-theme="dark"]` seam below). */
+/* Theme is driven by an explicit `data-theme` attribute (set by next-themes,
+   defaultTheme="system"), not the OS `prefers-color-scheme`. Light and dark are
+   BOTH designed — see the `:root[data-theme="dark"]` block below. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* ============================================================================
-   SpendWise design tokens — light-first (Phase 1 foundations)
-   Dark mode is intentionally deferred; the `:root[data-theme="dark"]` seam
-   below exists so it can be added later (next-themes) without reworking tokens.
+   SpendWise design tokens — "Emerald Command Center"
+   Green-first identity: a vibrant "signal" green for glow/accent/dark-primary,
+   a deeper "text-safe" green for text on light. Green-biased neutrals. Both
+   themes are first-class. See docs/design-system.md for the full spec.
    ========================================================================== */
 
 :root {
   color-scheme: light;
 
-  /* Surfaces & ink (warm-neutral, Mercury-style) */
-  --background: #f7f7f5; /* page plane */
+  /* Surfaces & ink (warm-neutral, faint green bias — chosen, not defaulted) */
+  --background: #f5f7f3; /* page plane */
   --surface: #ffffff; /* cards */
-  --surface-muted: #f3f3f0; /* insets, table headers */
-  --foreground: #111210; /* primary ink */
-  --foreground-muted: #56574f; /* secondary ink */
-  --foreground-subtle: #8a8b82; /* tertiary / axis labels */
-  --border: #e6e5df; /* hairline */
-  --border-strong: #d5d4cc;
-  --ring: #059669; /* focus ring = brand */
+  --surface-muted: #edf1ec; /* insets, table headers */
+  --surface-elevated: #ffffff; /* overlays, toasts, popovers */
+  --foreground: #0e1611; /* primary ink (green-black) */
+  --foreground-muted: #55605a; /* secondary ink */
+  --foreground-subtle: #86928b; /* tertiary / axis labels */
+  --border: #e2e7df; /* hairline */
+  --border-strong: #d2d9cf;
+  --ring: #06a052; /* focus ring = interactive brand (AA on light) */
 
-  /* Brand — emerald/teal (interactive: buttons, active nav, links, key figures) */
-  --color-brand-50: #ecfdf5;
-  --color-brand-100: #d1fae5;
-  --color-brand-200: #a7f3d0;
-  --color-brand-300: #6ee7b7;
-  --color-brand-400: #34d399;
-  --color-brand-500: #10b981;
-  --color-brand-600: #059669; /* DEFAULT accent */
-  --color-brand-700: #047857; /* text-bearing fills (≥4.5:1 on white) */
-  --color-brand-800: #065f46;
-  --color-brand-900: #064e3b;
+  /* Brand — vibrant emerald.
+     300/400 = bright "signal" (glow, gradients, dark-mode primary, chart lines) —
+     DISPLAY ONLY on light (fail as text on white).
+     600 = interactive default. 700+ = text-safe on light (labels/links ≥ AA). */
+  --color-brand-50: #e7fcef;
+  --color-brand-100: #c6f7da;
+  --color-brand-200: #92efb9;
+  --color-brand-300: #55e390; /* text-safe on dark */
+  --color-brand-400: #24d46e; /* SIGNAL green — glow / dark primary */
+  --color-brand-500: #0fbf5e; /* bright primary / gradient origin */
+  --color-brand-600: #06a052; /* interactive DEFAULT (light) */
+  --color-brand-700: #067a45; /* text-safe on light (white label ≥4.5:1) */
+  --color-brand-800: #0a6338;
+  --color-brand-900: #0b4a2c;
 
-  /* Semantic — reserved for meaning only.
-     Positive/healthy folds into brand (app is emerald), so there is no
-     separate "success" hue to collide with the brand green. */
-  --color-warning: #b45309; /* amber-700 text; used for stale/approaching */
+  /* Semantic — meaning only (positive/healthy folds into brand emerald, so there
+     is no separate "success" hue to collide with the brand). */
+  --color-warning: #b45309; /* amber-700 text; approaching / stale */
   --color-warning-surface: #fff7ed;
   --color-warning-border: #fed7aa;
   --color-danger: #dc2626; /* over-budget / destructive */
@@ -50,9 +53,10 @@
   --color-danger-border: #fecaca;
 
   /* Category palette — 12 fixed categories, keyed by name (see src/lib/categories.ts).
-     Validated with the dataviz skill: an 8–12 categorical set is legal ONLY with
-     secondary encoding, which the UI always ships (icon + label on chips, the
-     ranked list beside every donut, direct slice labels, and a table view). */
+     dataviz-validated: an 8–12 categorical set is legal ONLY with the secondary
+     encoding the UI always ships (icon + label chips, ranked list beside every
+     donut, direct slice labels, table view). Category greens deliberately differ
+     from the interactive brand emerald. */
   --color-cat-shopping: #2a78d6; /* blue */
   --color-cat-food: #eb6834; /* orange */
   --color-cat-groceries: #16a34a; /* green */
@@ -66,27 +70,52 @@
   --color-cat-transfers: #eda100; /* amber */
   --color-cat-misc: #8b8b82; /* neutral — the "everything else" bucket, recedes */
 
-  /* Shape & depth */
-  --radius: 0.75rem; /* cards */
-  --radius-sm: 0.5rem; /* inputs, chips */
-  --radius-lg: 1rem; /* modals, hero cards */
-  --shadow-sm: 0 1px 2px 0 rgb(17 18 16 / 0.04), 0 1px 3px 0 rgb(17 18 16 / 0.06);
-  --shadow-md: 0 2px 4px -1px rgb(17 18 16 / 0.05), 0 6px 16px -4px rgb(17 18 16 / 0.08);
-  --shadow-lg: 0 8px 24px -6px rgb(17 18 16 / 0.12), 0 16px 48px -12px rgb(17 18 16 / 0.14);
+  /* Shape & depth — crisp corners (the "serious analytics" tell) */
+  --radius: 0.5rem; /* cards, panels */
+  --radius-sm: 0.375rem; /* inputs, chips, buttons */
+  --radius-lg: 0.75rem; /* modals, hero cards */
+  --shadow-sm: 0 1px 2px 0 rgb(14 22 17 / 0.05), 0 1px 3px 0 rgb(14 22 17 / 0.06);
+  --shadow-md: 0 2px 4px -1px rgb(14 22 17 / 0.05), 0 6px 16px -4px rgb(14 22 17 / 0.08);
+  --shadow-lg: 0 8px 24px -6px rgb(14 22 17 / 0.12), 0 16px 48px -12px rgb(14 22 17 / 0.14);
+
+  /* Signature glow + gradients. Glow is restrained on light (see dark block for
+     the stronger dark values). */
+  --glow-brand-sm: 0 0 0 1px color-mix(in oklab, var(--color-brand-400) 22%, transparent),
+    0 0 16px -4px color-mix(in oklab, var(--color-brand-400) 30%, transparent);
+  --glow-brand-md: 0 0 26px -4px color-mix(in oklab, var(--color-brand-400) 28%, transparent);
+  --gradient-brand: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-700));
+  --gradient-brand-vivid: linear-gradient(135deg, var(--color-brand-400), var(--color-brand-600));
 }
 
-/* Dark seam — deferred. Values are placeholders so tokens resolve if a theme
-   toggle is wired later; the app is light-first for now. */
+/* Dark seam — first-class "command center". Deep green-black surfaces; the glow
+   is the star here (higher alpha). Bright brand steps become text-safe on dark. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --background: #0d0d0c;
-  --surface: #1a1a19;
-  --surface-muted: #232321;
-  --foreground: #ffffff;
-  --foreground-muted: #c3c2b7;
-  --foreground-subtle: #898781;
-  --border: #2c2c2a;
-  --border-strong: #3a3a37;
+  --background: #08100b;
+  --surface: #0f1813;
+  --surface-muted: #14201a;
+  --surface-elevated: #1a281f;
+  --foreground: #eaf3ee;
+  --foreground-muted: #9db0a6;
+  --foreground-subtle: #6c7f75;
+  --border: #22322a;
+  --border-strong: #2e4137;
+  --ring: #24d46e;
+
+  --color-warning: #f5b547;
+  --color-warning-surface: #2a2011;
+  --color-warning-border: #4d3a17;
+  --color-danger: #ff6b6b;
+  --color-danger-surface: #2a1414;
+  --color-danger-border: #4d2020;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow-md: 0 2px 8px -2px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 12px 40px -12px rgb(0 0 0 / 0.6);
+
+  --glow-brand-sm: 0 0 0 1px color-mix(in oklab, var(--color-brand-400) 35%, transparent),
+    0 0 18px -4px color-mix(in oklab, var(--color-brand-400) 55%, transparent);
+  --glow-brand-md: 0 0 30px -4px color-mix(in oklab, var(--color-brand-400) 60%, transparent);
 }
 
 /* Expose CSS vars to Tailwind v4 utilities (bg-brand-600, text-foreground, etc.) */
@@ -94,6 +123,7 @@
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
+  --color-surface-elevated: var(--surface-elevated);
   --color-foreground: var(--foreground);
   --color-foreground-muted: var(--foreground-muted);
   --color-foreground-subtle: var(--foreground-subtle);
@@ -129,7 +159,8 @@
 
   /* Fonts (wired via next/font CSS variables in layout.tsx) */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
 }
 
 html {
@@ -151,8 +182,15 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Tabular figures for aligned money columns/figures — opt in with `.tnum`. */
+/* Mono, tabular numerals — the "financial terminal" figure treatment.
+   `.tnum` keeps the sans face but aligns digits; `.mono` switches to the mono
+   numeric face. Use `.mono` for KPIs/figures, `.tnum` for inline sans numbers. */
 .tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+.mono {
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
