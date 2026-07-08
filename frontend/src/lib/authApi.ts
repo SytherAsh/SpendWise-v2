@@ -39,6 +39,17 @@ export async function googleLogin(idToken: string): Promise<AuthTokenResponse> {
 }
 
 /**
+ * Local-dev-only shortcut: mints a real session for a seeded test user, skipping Firebase
+ * entirely. Only ever succeeds against a backend running with the "local" Spring profile
+ * (see DevAuthController) — 404s against the shared dev/prod deployments.
+ */
+export async function devLogin(): Promise<AuthTokenResponse> {
+  const res = await apiClient.post<AuthTokenResponse>("/auth/dev-login", undefined, { auth: false });
+  setTokens({ accessToken: res.accessToken, refreshToken: res.refreshToken });
+  return res;
+}
+
+/**
  * Revoke this device's refresh token server-side, then clear local tokens. Local tokens
  * are cleared even if the network call fails — the user's intent to end the session takes
  * precedence over the server round-trip.

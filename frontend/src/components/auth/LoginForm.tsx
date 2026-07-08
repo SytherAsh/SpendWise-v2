@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { googleLogin, verifyOtp } from "@/lib/authApi";
+import { devLogin, googleLogin, verifyOtp } from "@/lib/authApi";
 import {
   confirmOtp,
   signInWithGoogle,
@@ -70,6 +70,19 @@ export function LoginForm() {
     try {
       const idToken = await signInWithGoogle();
       await googleLogin(idToken);
+      router.replace("/dashboard");
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDevLogin() {
+    setError(null);
+    setBusy(true);
+    try {
+      await devLogin();
       router.replace("/dashboard");
     } catch (err) {
       setError(errorMessage(err));
@@ -149,6 +162,20 @@ export function LoginForm() {
       <Button type="button" variant="secondary" onClick={onGoogle} disabled={busy} className="w-full">
         Continue with Google
       </Button>
+
+      {/* next dev always sets NODE_ENV=development, next build always sets "production" — this
+          can never render in a deployed build regardless of any env file. */}
+      {process.env.NODE_ENV === "development" && (
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onDevLogin}
+          disabled={busy}
+          className="mt-2 w-full text-foreground-subtle"
+        >
+          Dev login (skip Firebase)
+        </Button>
+      )}
 
       {/* Firebase invisible reCAPTCHA mounts here for phone-OTP sign-in. */}
       <div id={RECAPTCHA_CONTAINER_ID} />

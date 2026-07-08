@@ -77,6 +77,9 @@ public class SecurityConfig {
                                 "/api/v1/auth/otp/verify",
                                 "/api/v1/auth/google",
                                 "/api/v1/auth/token/refresh",
+                                // Only ever mapped to a real controller under the "local" profile
+                                // (see DevAuthController) — 404s everywhere else, permitAll or not.
+                                "/api/v1/auth/dev-login",
                                 "/api/v1/health")
                         .permitAll()
                         .anyRequest()
