@@ -54,20 +54,20 @@ export function MlAccuracyPanel() {
             type="button"
             onClick={onRetrain}
             disabled={retraining}
-            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded-md bg-brand-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             {retraining ? "Triggering…" : "Trigger retrain"}
           </button>
         </div>
-        {retrainMessage && <p role="status" className="mb-3 text-sm text-neutral-500">{retrainMessage}</p>}
+        {retrainMessage && <p role="status" className="mb-3 text-sm text-foreground-muted">{retrainMessage}</p>}
         {data && (
           <>
             <p className="mb-1 text-2xl font-semibold">{(data.accuracy * 100).toFixed(1)}%</p>
-            <p className="mb-4 text-sm text-neutral-500">
+            <p className="mb-4 text-sm text-foreground-muted">
               {data.n_samples} samples · generated {new Date(data.generated_at).toLocaleString()}
             </p>
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-black/10 text-neutral-500 dark:border-white/10">
+              <thead className="border-b border-black/10 text-foreground-muted dark:border-white/10">
                 <tr>
                   <th className="py-2 font-medium">Category</th>
                   <th className="py-2 font-medium">Precision</th>

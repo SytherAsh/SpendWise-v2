@@ -1,15 +1,17 @@
 "use client";
 
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { ChartTooltip } from "@/components/charts/ChartTooltip";
+import { CHART, axisTick } from "@/lib/chart-theme";
 
 export interface TrendBucket {
   bucketStart: string;
   totalSpend: number;
 }
 
-/** Line chart of spending over time (E10-S2-T1 trend chart, from GET /analytics/trends). */
-export function TrendLineChart({ buckets }: { buckets: TrendBucket[] }) {
+/** Area chart of spending over time (E10-S2-T1 trend chart, from GET /analytics/trends). */
+export function TrendLineChart({ buckets, height = 260 }: { buckets: TrendBucket[]; height?: number }) {
   const data = buckets.map((b) => ({
     label: formatDate(b.bucketStart),
     spend: Number(b.totalSpend),
@@ -23,14 +25,34 @@ export function TrendLineChart({ buckets }: { buckets: TrendBucket[] }) {
       <p className="sr-only">
         Spending trend across {data.length} periods{latest ? `, latest ${formatCurrency(latest.spend)}` : ""}.
       </p>
-      <ResponsiveContainer width="100%" height={260}>
-        <LineChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
-          <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-          <YAxis tick={{ fontSize: 12 }} width={64} tickFormatter={(v) => formatCurrency(Number(v))} />
-          <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-          <Line type="monotone" dataKey="spend" stroke="#2563eb" strokeWidth={2} dot={false} />
-        </LineChart>
+      <ResponsiveContainer width="100%" height={height}>
+        <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
+          <defs>
+            <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={CHART.brand} stopOpacity={0.22} />
+              <stop offset="100%" stopColor={CHART.brand} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid stroke={CHART.grid} vertical={false} />
+          <XAxis dataKey="label" tick={axisTick} tickLine={false} axisLine={false} />
+          <YAxis
+            tick={axisTick}
+            tickLine={false}
+            axisLine={false}
+            width={64}
+            tickFormatter={(v) => formatCurrency(Number(v))}
+          />
+          <Tooltip content={<ChartTooltip />} cursor={{ stroke: CHART.axis, strokeDasharray: "4 4" }} />
+          <Area
+            type="monotone"
+            dataKey="spend"
+            stroke={CHART.brandStrong}
+            strokeWidth={2}
+            fill="url(#trendFill)"
+            activeDot={{ r: 4, strokeWidth: 0 }}
+            dot={false}
+          />
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );

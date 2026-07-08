@@ -70,7 +70,7 @@ describe("dashboard sections", () => {
     expect(screen.getByText("Travel")).toBeInTheDocument();
   });
 
-  it("CategorySummarySection renders the bar chart from summary categories", () => {
+  it("CategorySummarySection renders the category donut from summary categories", () => {
     render(
       <CategorySummarySection
         state={{
@@ -83,8 +83,10 @@ describe("dashboard sections", () => {
         }}
       />,
     );
-    expect(screen.getByTestId("category-bar-chart")).toBeInTheDocument();
+    expect(screen.getByTestId("category-donut")).toBeInTheDocument();
     expect(screen.getByText(/spending by category across 2 categories/i)).toBeInTheDocument();
+    // Ranked list carries category identity as the required secondary encoding.
+    expect(screen.getByText("Food")).toBeInTheDocument();
   });
 
   it("TrendSection renders the line chart from trend buckets", () => {

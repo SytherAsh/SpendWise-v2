@@ -88,13 +88,13 @@ export function BudgetManager() {
             <div className="flex items-center justify-between gap-4">
               <span className="font-medium">{categoryName(categoryId)}</span>
               {p ? (
-                <span className="text-sm text-neutral-500">
+                <span className="text-sm text-foreground-muted">
                   {formatCurrency(p.spent)} / {formatCurrency(p.monthlyLimit)}
                   {" · "}
                   {Math.round(p.percentSpent)}%
                 </span>
               ) : (
-                <span className="text-sm text-neutral-400">No budget set</span>
+                <span className="text-sm text-foreground-subtle">No budget set</span>
               )}
             </div>
 
@@ -107,19 +107,19 @@ export function BudgetManager() {
             {isEditing ? (
               <div className="mt-4 space-y-2">
                 {suggestion?.available && (
-                  <p className="text-sm text-neutral-500">
+                  <p className="text-sm text-foreground-muted">
                     Suggested: {formatCurrency(suggestion.suggestedMonthlyLimit)}{" "}
                     <button
                       type="button"
                       onClick={() => acceptSuggestion(categoryId)}
-                      className="ml-1 text-blue-600 underline"
+                      className="ml-1 text-brand-700 underline"
                     >
                       Accept
                     </button>
                   </p>
                 )}
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-neutral-500">₹</span>
+                  <span className="text-sm text-foreground-muted">₹</span>
                   <input
                     type="number"
                     min={1}
@@ -132,7 +132,7 @@ export function BudgetManager() {
                     type="button"
                     onClick={() => save(categoryId)}
                     disabled={saving}
-                    className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+                    className="rounded-md bg-brand-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
                   >
                     {saving ? "Saving…" : "Save"}
                   </button>
@@ -150,7 +150,7 @@ export function BudgetManager() {
               <button
                 type="button"
                 onClick={() => startEdit(categoryId)}
-                className="mt-3 text-sm text-blue-600 underline"
+                className="mt-3 text-sm text-brand-700 underline"
               >
                 {p ? "Edit budget" : "Set budget"}
               </button>

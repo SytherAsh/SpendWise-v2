@@ -69,7 +69,7 @@ export function UserDetailView({ userId }: { userId: string }) {
     <div className="max-w-3xl space-y-6">
       <Card>
         <h2 className="mb-1 text-lg font-semibold">{identifier}</h2>
-        <p className="text-sm text-neutral-500">Joined {new Date(data.createdAt).toLocaleDateString()}</p>
+        <p className="text-sm text-foreground-muted">Joined {new Date(data.createdAt).toLocaleDateString()}</p>
       </Card>
 
       <Card>

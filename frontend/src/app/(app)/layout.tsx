@@ -1,17 +1,15 @@
 import { AuthGuard } from "@/components/auth/AuthGuard";
-import { AppNav } from "@/components/shared/AppNav";
+import { AppShell } from "@/components/shared/AppShell";
 
 /**
  * Layout for all authenticated dashboard routes. Wraps everything in AuthGuard (redirects
- * to /login if unauthenticated) and renders the persistent side nav alongside the page.
+ * to /login if unauthenticated) and renders the persistent app shell — sidebar, top
+ * context bar (date-range, ⌘K, quick-add), and the floating chat assistant.
  */
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard>
-      <div className="flex min-h-screen">
-        <AppNav />
-        <main className="flex-1 overflow-x-auto p-6 md:p-8">{children}</main>
-      </div>
+      <AppShell>{children}</AppShell>
     </AuthGuard>
   );
 }

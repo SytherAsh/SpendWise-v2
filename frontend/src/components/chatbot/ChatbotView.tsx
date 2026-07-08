@@ -95,7 +95,7 @@ export function ChatbotView() {
         <button
           type="button"
           onClick={newChat}
-          className="mb-3 w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white"
+          className="mb-3 w-full rounded-md bg-brand-700 px-3 py-2 text-sm font-medium text-white"
         >
           New chat
         </button>
@@ -112,7 +112,7 @@ export function ChatbotView() {
                   onClick={() => selectSession(s.id)}
                   aria-current={selectedId === s.id ? "true" : undefined}
                   className={`w-full rounded-md px-3 py-2 text-left text-sm ${
-                    selectedId === s.id ? "bg-blue-600 text-white" : "hover:bg-black/5 dark:hover:bg-white/5"
+                    selectedId === s.id ? "bg-brand-700 text-white" : "hover:bg-black/5 dark:hover:bg-white/5"
                   }`}
                 >
                   Chat · {formatDate(s.lastActiveAt)}
@@ -132,7 +132,7 @@ export function ChatbotView() {
               {loadingHistory ? (
                 <Spinner />
               ) : messages.length === 0 ? (
-                <p className="py-8 text-center text-sm text-neutral-400">
+                <p className="py-8 text-center text-sm text-foreground-subtle">
                   Ask about your spending, e.g. “How much did I spend on food last month?”
                 </p>
               ) : (
@@ -141,7 +141,7 @@ export function ChatbotView() {
                     key={m.id}
                     className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
                       m.role === "user"
-                        ? "ml-auto bg-blue-600 text-white"
+                        ? "ml-auto bg-brand-700 text-white"
                         : "mr-auto bg-black/[0.05] dark:bg-white/[0.08]"
                     }`}
                   >
@@ -165,7 +165,7 @@ export function ChatbotView() {
               <button
                 type="submit"
                 disabled={sending || !input.trim()}
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                className="rounded-md bg-brand-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
                 {sending ? "…" : "Send"}
               </button>

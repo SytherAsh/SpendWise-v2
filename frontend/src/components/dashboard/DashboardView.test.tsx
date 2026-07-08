@@ -1,6 +1,16 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DashboardView } from "@/components/dashboard/DashboardView";
+import { DateRangeProvider } from "@/lib/date-range";
+
+/** The dashboard reads the global date range from context; provide it in tests. */
+function renderDashboard() {
+  return render(
+    <DateRangeProvider>
+      <DashboardView />
+    </DateRangeProvider>,
+  );
+}
 
 /**
  * E10-S3 on the dashboard page: when a section is serving stale data (a failed fetch after
@@ -69,7 +79,7 @@ describe("DashboardView stale handling (E10-S3)", () => {
       return ok(undefined);
     });
 
-    render(<DashboardView />);
+    renderDashboard();
 
     // Stale indicator present…
     expect(screen.getByRole("status")).toHaveTextContent(/last-loaded data/i);
@@ -88,7 +98,7 @@ describe("DashboardView stale handling (E10-S3)", () => {
       return ok(undefined);
     });
 
-    render(<DashboardView />);
+    renderDashboard();
     expect(screen.queryByText(/last-loaded data/i)).not.toBeInTheDocument();
   });
 });

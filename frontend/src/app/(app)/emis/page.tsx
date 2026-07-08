@@ -1,11 +1,6 @@
-import { PageHeader } from "@/components/shared/ui";
-import { EmiManager } from "@/components/emis/EmiManager";
+import { redirect } from "next/navigation";
 
+/** EMIs & Subscriptions were merged into Planning in the IA redesign. */
 export default function EmisPage() {
-  return (
-    <>
-      <PageHeader title="EMIs & Subscriptions" subtitle="Track recurring payments and cancel what you no longer use" />
-      <EmiManager />
-    </>
-  );
+  redirect("/planning");
 }

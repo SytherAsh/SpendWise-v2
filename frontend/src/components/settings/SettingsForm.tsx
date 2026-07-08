@@ -80,7 +80,7 @@ export function SettingsForm() {
   return (
     <form onSubmit={onSave} className="max-w-xl space-y-6">
       <Card>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Alert channels</h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Alert channels</h2>
         <label className="flex items-center gap-3 py-1 text-sm">
           <input
             type="checkbox"
@@ -100,7 +100,7 @@ export function SettingsForm() {
       </Card>
 
       <Card>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Payment apps</h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Payment apps</h2>
         <div className="flex flex-wrap gap-3">
           {PAYMENT_APPS.map((app) => (
             <label key={app.value} className="flex items-center gap-2 text-sm">
@@ -116,7 +116,7 @@ export function SettingsForm() {
       </Card>
 
       <Card>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Banks</h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Banks</h2>
         <div className="flex flex-wrap gap-3">
           {BANKS.map((bank) => (
             <label key={bank.value} className="flex items-center gap-2 text-sm">
@@ -132,9 +132,9 @@ export function SettingsForm() {
       </Card>
 
       <Card>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Monthly spend estimate</h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Monthly spend estimate</h2>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-neutral-500">₹</span>
+          <span className="text-sm text-foreground-muted">₹</span>
           <input
             type="number"
             min={0}
@@ -152,7 +152,7 @@ export function SettingsForm() {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-md bg-brand-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save preferences"}
         </button>
@@ -164,7 +164,7 @@ export function SettingsForm() {
       </div>
 
       <p className="pt-2 text-sm">
-        <a href={PRIVACY_POLICY_URL} target="_blank" rel="noreferrer" className="text-blue-600 underline">
+        <a href={PRIVACY_POLICY_URL} target="_blank" rel="noreferrer" className="text-brand-700 underline">
           Privacy policy
         </a>
       </p>

@@ -1,7 +1,7 @@
-import { redirect } from "next/navigation";
+import { Landing } from "@/components/landing/Landing";
 
+/** Public marketing landing page. Visitors sign in via the header CTAs; the authenticated
+ *  app lives under the (app) route group (AuthGuard bounces unauthenticated users to /login). */
 export default function HomePage() {
-  // The dashboard route is behind AuthGuard, which bounces unauthenticated users to
-  // /login — so a single redirect here handles both the signed-in and signed-out cases.
-  redirect("/dashboard");
+  return <Landing />;
 }

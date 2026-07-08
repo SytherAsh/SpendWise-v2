@@ -1,11 +1,7 @@
-import { PageHeader } from "@/components/shared/ui";
-import { ChatbotView } from "@/components/chatbot/ChatbotView";
+import { redirect } from "next/navigation";
 
+/** The chatbot is now the floating assistant, available on every page from the launcher
+ *  in the bottom-right. This route redirects to the dashboard. */
 export default function ChatbotPage() {
-  return (
-    <>
-      <PageHeader title="Chatbot" subtitle="Ask questions about your spending" />
-      <ChatbotView />
-    </>
-  );
+  redirect("/dashboard");
 }

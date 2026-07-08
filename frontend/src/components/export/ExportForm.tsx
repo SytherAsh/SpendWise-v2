@@ -66,7 +66,7 @@ export function ExportForm() {
     <Card className="max-w-xl">
       <form onSubmit={onDownload} className="space-y-5">
         <fieldset>
-          <legend className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">Range</legend>
+          <legend className="mb-2 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Range</legend>
           <div className="flex gap-4 text-sm">
             <label className="flex items-center gap-2">
               <input type="radio" name="mode" checked={mode === "custom"} onChange={() => setMode("custom")} />
@@ -81,7 +81,7 @@ export function ExportForm() {
           {mode === "custom" ? (
             <div className="mt-3 flex flex-wrap gap-4">
               <label className="text-sm">
-                <span className="mb-1 block text-neutral-500">From</span>
+                <span className="mb-1 block text-foreground-muted">From</span>
                 <input
                   type="date"
                   aria-label="Start date"
@@ -91,7 +91,7 @@ export function ExportForm() {
                 />
               </label>
               <label className="text-sm">
-                <span className="mb-1 block text-neutral-500">To</span>
+                <span className="mb-1 block text-foreground-muted">To</span>
                 <input
                   type="date"
                   aria-label="End date"
@@ -103,7 +103,7 @@ export function ExportForm() {
             </div>
           ) : (
             <label className="mt-3 block text-sm">
-              <span className="mb-1 block text-neutral-500">Financial year (Apr–Mar)</span>
+              <span className="mb-1 block text-foreground-muted">Financial year (Apr–Mar)</span>
               <select
                 aria-label="Financial year"
                 value={fy}
@@ -121,7 +121,7 @@ export function ExportForm() {
         </fieldset>
 
         <fieldset>
-          <legend className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">Format</legend>
+          <legend className="mb-2 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Format</legend>
           <div className="flex gap-4 text-sm">
             <label className="flex items-center gap-2">
               <input type="radio" name="format" checked={format === "pdf"} onChange={() => setFormat("pdf")} />
@@ -139,7 +139,7 @@ export function ExportForm() {
         <button
           type="submit"
           disabled={busy}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-md bg-brand-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {busy ? "Preparing…" : "Download"}
         </button>

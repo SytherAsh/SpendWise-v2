@@ -113,7 +113,7 @@ export function EmiManager() {
           <button
             type="button"
             onClick={() => { setAdding(true); setFormError(null); }}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+            className="rounded-md bg-brand-700 px-4 py-2 text-sm font-medium text-white"
           >
             Add EMI / subscription
           </button>
@@ -123,7 +123,7 @@ export function EmiManager() {
             <EmiFieldset fields={addFields} onChange={setAddFields} />
             {formError && <p role="alert" className="mt-2 text-sm text-red-600">{formError}</p>}
             <div className="mt-3 flex gap-2">
-              <button type="button" onClick={createEmi} disabled={busy} className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">
+              <button type="button" onClick={createEmi} disabled={busy} className="rounded-md bg-brand-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">
                 {busy ? "Adding…" : "Add"}
               </button>
               <button type="button" onClick={() => { setAdding(false); setAddFields(EMPTY); }} className="rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15">
@@ -144,7 +144,7 @@ export function EmiManager() {
                 <EmiFieldset fields={fields} onChange={setFields} />
                 {formError && <p role="alert" className="mt-2 text-sm text-red-600">{formError}</p>}
                 <div className="mt-3 flex gap-2">
-                  <button type="button" onClick={() => saveEdit(emi.id)} disabled={busy} className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">
+                  <button type="button" onClick={() => saveEdit(emi.id)} disabled={busy} className="rounded-md bg-brand-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">
                     {busy ? "Saving…" : "Save"}
                   </button>
                   <button type="button" onClick={() => setEditing(null)} className="rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15">
@@ -156,14 +156,14 @@ export function EmiManager() {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="font-medium">{emi.label}</p>
-                  <p className="text-sm text-neutral-500">
+                  <p className="text-sm text-foreground-muted">
                     {formatCurrency(emi.amount)}
                     {emi.dueDay != null && ` · due day ${emi.dueDay}`}
                     {emi.detectedFromSms && " · auto-detected"}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-2">
-                  <button type="button" onClick={() => startEdit(emi)} className="text-sm text-blue-600 underline">
+                  <button type="button" onClick={() => startEdit(emi)} className="text-sm text-brand-700 underline">
                     Edit
                   </button>
                   <button
@@ -189,7 +189,7 @@ function EmiFieldset({ fields, onChange }: { fields: EmiFields; onChange: (f: Em
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <label className="block text-sm">
-        <span className="mb-1 block text-neutral-500">Label</span>
+        <span className="mb-1 block text-foreground-muted">Label</span>
         <input
           type="text"
           aria-label="Label"
@@ -199,7 +199,7 @@ function EmiFieldset({ fields, onChange }: { fields: EmiFields; onChange: (f: Em
         />
       </label>
       <label className="block text-sm">
-        <span className="mb-1 block text-neutral-500">Amount (₹)</span>
+        <span className="mb-1 block text-foreground-muted">Amount (₹)</span>
         <input
           type="number"
           min={1}
@@ -210,7 +210,7 @@ function EmiFieldset({ fields, onChange }: { fields: EmiFields; onChange: (f: Em
         />
       </label>
       <label className="block text-sm">
-        <span className="mb-1 block text-neutral-500">Due day (optional)</span>
+        <span className="mb-1 block text-foreground-muted">Due day (optional)</span>
         <input
           type="number"
           min={1}

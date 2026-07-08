@@ -1,20 +1,135 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+/* Light-first: drive Tailwind's `dark:` variant from an explicit `data-theme="dark"`
+   attribute rather than the OS `prefers-color-scheme`. This keeps every not-yet-migrated
+   `dark:` utility dormant so the app renders consistently light until a theme toggle is
+   wired later (see the `:root[data-theme="dark"]` seam below). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ============================================================================
+   SpendWise design tokens — light-first (Phase 1 foundations)
+   Dark mode is intentionally deferred; the `:root[data-theme="dark"]` seam
+   below exists so it can be added later (next-themes) without reworking tokens.
+   ========================================================================== */
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+
+  /* Surfaces & ink (warm-neutral, Mercury-style) */
+  --background: #f7f7f5; /* page plane */
+  --surface: #ffffff; /* cards */
+  --surface-muted: #f3f3f0; /* insets, table headers */
+  --foreground: #111210; /* primary ink */
+  --foreground-muted: #56574f; /* secondary ink */
+  --foreground-subtle: #8a8b82; /* tertiary / axis labels */
+  --border: #e6e5df; /* hairline */
+  --border-strong: #d5d4cc;
+  --ring: #059669; /* focus ring = brand */
+
+  /* Brand — emerald/teal (interactive: buttons, active nav, links, key figures) */
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669; /* DEFAULT accent */
+  --color-brand-700: #047857; /* text-bearing fills (≥4.5:1 on white) */
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+
+  /* Semantic — reserved for meaning only.
+     Positive/healthy folds into brand (app is emerald), so there is no
+     separate "success" hue to collide with the brand green. */
+  --color-warning: #b45309; /* amber-700 text; used for stale/approaching */
+  --color-warning-surface: #fff7ed;
+  --color-warning-border: #fed7aa;
+  --color-danger: #dc2626; /* over-budget / destructive */
+  --color-danger-surface: #fef2f2;
+  --color-danger-border: #fecaca;
+
+  /* Category palette — 12 fixed categories, keyed by name (see src/lib/categories.ts).
+     Validated with the dataviz skill: an 8–12 categorical set is legal ONLY with
+     secondary encoding, which the UI always ships (icon + label on chips, the
+     ranked list beside every donut, direct slice labels, and a table view). */
+  --color-cat-shopping: #2a78d6; /* blue */
+  --color-cat-food: #eb6834; /* orange */
+  --color-cat-groceries: #16a34a; /* green */
+  --color-cat-travel: #0891b2; /* cyan */
+  --color-cat-entertainment: #7c5cff; /* violet */
+  --color-cat-subscriptions: #4f46e5; /* indigo */
+  --color-cat-sports: #84a800; /* lime */
+  --color-cat-cosmetics: #e0559d; /* pink */
+  --color-cat-medical: #1baf7a; /* teal */
+  --color-cat-fees: #e34948; /* red */
+  --color-cat-transfers: #eda100; /* amber */
+  --color-cat-misc: #8b8b82; /* neutral — the "everything else" bucket, recedes */
+
+  /* Shape & depth */
+  --radius: 0.75rem; /* cards */
+  --radius-sm: 0.5rem; /* inputs, chips */
+  --radius-lg: 1rem; /* modals, hero cards */
+  --shadow-sm: 0 1px 2px 0 rgb(17 18 16 / 0.04), 0 1px 3px 0 rgb(17 18 16 / 0.06);
+  --shadow-md: 0 2px 4px -1px rgb(17 18 16 / 0.05), 0 6px 16px -4px rgb(17 18 16 / 0.08);
+  --shadow-lg: 0 8px 24px -6px rgb(17 18 16 / 0.12), 0 16px 48px -12px rgb(17 18 16 / 0.14);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Dark seam — deferred. Values are placeholders so tokens resolve if a theme
+   toggle is wired later; the app is light-first for now. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0d0d0c;
+  --surface: #1a1a19;
+  --surface-muted: #232321;
+  --foreground: #ffffff;
+  --foreground-muted: #c3c2b7;
+  --foreground-subtle: #898781;
+  --border: #2c2c2a;
+  --border-strong: #3a3a37;
 }
 
+/* Expose CSS vars to Tailwind v4 utilities (bg-brand-600, text-foreground, etc.) */
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
   --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-foreground-subtle: var(--foreground-subtle);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-ring: var(--ring);
+
+  --color-brand-50: var(--color-brand-50);
+  --color-brand-100: var(--color-brand-100);
+  --color-brand-200: var(--color-brand-200);
+  --color-brand-300: var(--color-brand-300);
+  --color-brand-400: var(--color-brand-400);
+  --color-brand-500: var(--color-brand-500);
+  --color-brand-600: var(--color-brand-600);
+  --color-brand-700: var(--color-brand-700);
+  --color-brand-800: var(--color-brand-800);
+  --color-brand-900: var(--color-brand-900);
+
+  --color-warning: var(--color-warning);
+  --color-warning-surface: var(--color-warning-surface);
+  --color-warning-border: var(--color-warning-border);
+  --color-danger: var(--color-danger);
+  --color-danger-surface: var(--color-danger-surface);
+  --color-danger-border: var(--color-danger-border);
+
+  --radius-DEFAULT: var(--radius);
+  --radius-sm: var(--radius-sm);
+  --radius-lg: var(--radius-lg);
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  /* Fonts (wired via next/font CSS variables in layout.tsx) */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 html {
@@ -31,13 +146,32 @@ body {
   min-height: 100%;
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+/* Tabular figures for aligned money columns/figures — opt in with `.tnum`. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Consistent, visible focus ring for keyboard users (WCAG AA). */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Respect reduced-motion globally; component motion also guards this. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

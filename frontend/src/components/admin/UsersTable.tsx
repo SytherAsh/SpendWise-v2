@@ -25,7 +25,7 @@ export function UsersTable() {
   return (
     <Card className="overflow-x-auto p-0">
       <table className="w-full min-w-[640px] text-left text-sm">
-        <thead className="border-b border-black/10 text-neutral-500 dark:border-white/10">
+        <thead className="border-b border-black/10 text-foreground-muted dark:border-white/10">
           <tr>
             <th className="px-4 py-3 font-medium">User</th>
             <th className="px-4 py-3 font-medium">Transactions</th>
@@ -37,7 +37,7 @@ export function UsersTable() {
           {users.map((u) => (
             <tr key={u.id} className="border-b border-black/5 last:border-0 dark:border-white/5">
               <td className="px-4 py-3">
-                <Link href={`/admin/users/${u.id}`} className="text-blue-600 underline">
+                <Link href={`/admin/users/${u.id}`} className="text-brand-700 underline">
                   {u.phone ?? u.email ?? u.id}
                 </Link>
               </td>

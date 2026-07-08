@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Wallet } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { googleLogin, verifyOtp } from "@/lib/authApi";
 import {
   confirmOtp,
@@ -76,22 +79,32 @@ export function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-sm rounded-xl border border-black/10 bg-white p-8 shadow-sm dark:border-white/10 dark:bg-neutral-900">
-      <h1 className="mb-1 text-2xl font-semibold">SpendWise</h1>
-      <p className="mb-6 text-sm text-neutral-500">Sign in to your dashboard</p>
+    <div className="w-full max-w-sm rounded-[var(--radius-lg)] border border-border bg-surface p-8 shadow-[var(--shadow-lg)]">
+      <div className="mb-6 flex items-center gap-2.5">
+        <span className="flex size-9 items-center justify-center rounded-lg bg-brand-600 text-white">
+          <Wallet className="size-5" />
+        </span>
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">SpendWise</h1>
+          <p className="text-sm text-foreground-muted">Sign in to your dashboard</p>
+        </div>
+      </div>
 
       {error && (
-        <p role="alert" className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+        <p
+          role="alert"
+          className="mb-4 rounded-[var(--radius-sm)] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-3 py-2 text-sm text-[var(--color-danger)]"
+        >
           {error}
         </p>
       )}
 
       {!confirmation ? (
         <form onSubmit={onSendOtp} className="space-y-3">
-          <label className="block text-sm font-medium" htmlFor="phone">
+          <label className="block text-sm font-medium text-foreground" htmlFor="phone">
             Phone number
           </label>
-          <input
+          <Input
             id="phone"
             name="phone"
             type="tel"
@@ -100,22 +113,17 @@ export function LoginForm() {
             placeholder="+91XXXXXXXXXX"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-neutral-800"
           />
-          <button
-            type="submit"
-            disabled={busy || !phone}
-            className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
+          <Button type="submit" disabled={busy || !phone} className="w-full">
             {busy ? "Sending…" : "Send OTP"}
-          </button>
+          </Button>
         </form>
       ) : (
         <form onSubmit={onVerifyOtp} className="space-y-3">
-          <label className="block text-sm font-medium" htmlFor="otp">
+          <label className="block text-sm font-medium text-foreground" htmlFor="otp">
             Enter OTP
           </label>
-          <input
+          <Input
             id="otp"
             name="otp"
             type="text"
@@ -125,32 +133,22 @@ export function LoginForm() {
             placeholder="6-digit code"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            className="w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-neutral-800"
           />
-          <button
-            type="submit"
-            disabled={busy || !code}
-            className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
+          <Button type="submit" disabled={busy || !code} className="w-full">
             {busy ? "Verifying…" : "Verify & sign in"}
-          </button>
+          </Button>
         </form>
       )}
 
-      <div className="my-5 flex items-center gap-3 text-xs text-neutral-400">
-        <span className="h-px flex-1 bg-black/10 dark:bg-white/10" />
+      <div className="my-5 flex items-center gap-3 text-xs text-foreground-subtle">
+        <span className="h-px flex-1 bg-border" />
         or
-        <span className="h-px flex-1 bg-black/10 dark:bg-white/10" />
+        <span className="h-px flex-1 bg-border" />
       </div>
 
-      <button
-        type="button"
-        onClick={onGoogle}
-        disabled={busy}
-        className="w-full rounded-md border border-black/15 px-3 py-2 text-sm font-medium disabled:opacity-50 dark:border-white/15"
-      >
+      <Button type="button" variant="secondary" onClick={onGoogle} disabled={busy} className="w-full">
         Continue with Google
-      </button>
+      </Button>
 
       {/* Firebase invisible reCAPTCHA mounts here for phone-OTP sign-in. */}
       <div id={RECAPTCHA_CONTAINER_ID} />

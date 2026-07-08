@@ -1,11 +1,6 @@
-import { PageHeader } from "@/components/shared/ui";
-import { ExportForm } from "@/components/export/ExportForm";
+import { redirect } from "next/navigation";
 
+/** Export is now an action within Settings (IA redesign). */
 export default function ExportPage() {
-  return (
-    <>
-      <PageHeader title="Export" subtitle="Download a PDF report or CSV of your transactions" />
-      <ExportForm />
-    </>
-  );
+  redirect("/settings");
 }

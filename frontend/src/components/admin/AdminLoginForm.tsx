@@ -40,7 +40,7 @@ export function AdminLoginForm() {
   return (
     <div className="w-full max-w-sm rounded-xl border border-black/10 bg-white p-8 shadow-sm dark:border-white/10 dark:bg-neutral-900">
       <h1 className="mb-1 text-2xl font-semibold">SpendWise Admin</h1>
-      <p className="mb-6 text-sm text-neutral-500">Operator sign-in — separate from any user account</p>
+      <p className="mb-6 text-sm text-foreground-muted">Operator sign-in — separate from any user account</p>
 
       {error && (
         <p role="alert" className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
@@ -78,7 +78,7 @@ export function AdminLoginForm() {
         <button
           type="submit"
           disabled={busy || !username || !password}
-          className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="w-full rounded-md bg-brand-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {busy ? "Signing in…" : "Sign in"}
         </button>

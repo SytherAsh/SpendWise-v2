@@ -22,7 +22,7 @@ export function LogsViewer() {
   return (
     <div className="max-w-3xl space-y-4">
       <label className="block text-sm">
-        <span className="mb-1 block text-neutral-500">Filter by event type</span>
+        <span className="mb-1 block text-foreground-muted">Filter by event type</span>
         <select
           value={eventType}
           onChange={(e) => setEventType(e.target.value)}
@@ -48,9 +48,9 @@ export function LogsViewer() {
           <Card key={log.id}>
             <div className="mb-1 flex items-center justify-between text-sm">
               <span className="font-mono font-medium">{log.eventType}</span>
-              <span className="text-neutral-500">{new Date(log.createdAt).toLocaleString()}</span>
+              <span className="text-foreground-muted">{new Date(log.createdAt).toLocaleString()}</span>
             </div>
-            {log.userId && <p className="mb-1 text-xs text-neutral-500">user {log.userId}</p>}
+            {log.userId && <p className="mb-1 text-xs text-foreground-muted">user {log.userId}</p>}
             <pre className="overflow-x-auto rounded-md bg-black/5 p-2 text-xs dark:bg-white/5">
               {JSON.stringify(log.payload, null, 2)}
             </pre>
