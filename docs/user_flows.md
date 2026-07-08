@@ -111,11 +111,30 @@ Resume previous conversation:
 ### Exporting a Report
 
 ```text
-User goes to Export screen (web dashboard or Android)
+User goes to the Export tab within Settings (web dashboard) or the Export screen (Android)
 → Selects date range: custom start/end date OR select full financial year
 → Selects format: PDF (formatted report) or CSV (raw data)
 → File downloaded or shared
 ```
+
+> **Web IA note (UI/UX redesign):** On the web dashboard, Export is a **tab within Settings**
+> (`/settings` → Export), not a standalone `/export` route. Settings is organized into three
+> tabs — **Profile** (phone read-only, editable email, member-since, appearance/theme toggle,
+> privacy policy link), **Preferences** (alert channels, payment apps, banks, monthly spend
+> estimate), and **Export**. The former standalone `/budget`, `/emis`, and `/export` routes were
+> removed once Planning (Budgets + EMIs tabs) and Settings (Export tab) fully absorbed them.
+
+### Appearance / Theme (web dashboard)
+
+```text
+User opens Settings → Profile → Appearance
+→ Chooses Light, Dark, or System (default: System, follows the OS preference)
+→ Choice persists across sessions (stored client-side) and applies app-wide immediately
+```
+
+> Client-only preference (no backend field) — the web app drives Tailwind's `dark:` variant from
+> a `data-theme` attribute via `next-themes`; nothing about the theme is sent to or stored by the
+> backend.
 
 ### Recurring Payment Detection
 

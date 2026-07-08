@@ -1,9 +1,9 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SettingsForm } from "@/components/settings/SettingsForm";
+import { PreferencesTab } from "@/components/settings/PreferencesTab";
 
-/** E10-S2-T7 required test: the preferences form save flow. */
+/** E10-S2-T7 required test coverage, split out of the old SettingsForm: the preferences save flow. */
 
 const put = vi.fn();
 vi.mock("@/lib/apiClient", () => ({
@@ -26,17 +26,17 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("SettingsForm", () => {
+describe("PreferencesTab", () => {
   it("saves edited preferences and shows a confirmation", async () => {
     const user = userEvent.setup();
     useApi.mockReturnValue({ data: initialPrefs, error: undefined, isLoading: false, refresh: vi.fn() });
     put.mockResolvedValue({ ...initialPrefs, selectedApps: ["paytm", "gpay"], alertChannels: { push: false, email: true } });
 
-    render(<SettingsForm />);
+    render(<PreferencesTab />);
 
-    // Toggle email... actually toggle push off, and add GPay.
-    await user.click(screen.getByLabelText(/push notifications/i));
-    await user.click(screen.getByLabelText(/google pay/i));
+    // Toggle push off, and add GPay.
+    await user.click(screen.getByRole("button", { name: /push notifications/i }));
+    await user.click(screen.getByRole("button", { name: /google pay/i }));
     await user.click(screen.getByRole("button", { name: /save preferences/i }));
 
     await waitFor(() => {
@@ -55,15 +55,18 @@ describe("SettingsForm", () => {
     useApi.mockReturnValue({ data: initialPrefs, error: undefined, isLoading: false, refresh: vi.fn() });
     put.mockRejectedValue(new Error("500"));
 
-    render(<SettingsForm />);
+    render(<PreferencesTab />);
     await user.click(screen.getByRole("button", { name: /save preferences/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/could not save/i);
   });
 
-  it("renders a privacy policy link", () => {
+  it("reflects the currently selected apps and banks as pressed chips", () => {
     useApi.mockReturnValue({ data: initialPrefs, error: undefined, isLoading: false, refresh: vi.fn() });
-    render(<SettingsForm />);
-    expect(screen.getByRole("link", { name: /privacy policy/i })).toHaveAttribute("href");
+    render(<PreferencesTab />);
+
+    expect(screen.getByRole("button", { name: /^paytm$/i })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /google pay/i })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /^sbi$/i })).toHaveAttribute("aria-pressed", "true");
   });
 });

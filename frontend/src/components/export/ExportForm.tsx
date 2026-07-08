@@ -4,6 +4,8 @@ import { useState } from "react";
 import { downloadFile } from "@/lib/apiClient";
 import { currentYear } from "@/lib/format";
 import { Card, ErrorState } from "@/components/shared/ui";
+import { Button } from "@/components/ui/button";
+import { Input, Select } from "@/components/ui/input";
 
 type RangeMode = "custom" | "financialYear";
 type Format = "pdf" | "csv";
@@ -69,11 +71,23 @@ export function ExportForm() {
           <legend className="mb-2 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Range</legend>
           <div className="flex gap-4 text-sm">
             <label className="flex items-center gap-2">
-              <input type="radio" name="mode" checked={mode === "custom"} onChange={() => setMode("custom")} />
+              <input
+                type="radio"
+                name="mode"
+                className="accent-brand-600"
+                checked={mode === "custom"}
+                onChange={() => setMode("custom")}
+              />
               Custom dates
             </label>
             <label className="flex items-center gap-2">
-              <input type="radio" name="mode" checked={mode === "financialYear"} onChange={() => setMode("financialYear")} />
+              <input
+                type="radio"
+                name="mode"
+                className="accent-brand-600"
+                checked={mode === "financialYear"}
+                onChange={() => setMode("financialYear")}
+              />
               Financial year
             </label>
           </div>
@@ -82,40 +96,23 @@ export function ExportForm() {
             <div className="mt-3 flex flex-wrap gap-4">
               <label className="text-sm">
                 <span className="mb-1 block text-foreground-muted">From</span>
-                <input
-                  type="date"
-                  aria-label="Start date"
-                  value={from}
-                  onChange={(e) => setFrom(e.target.value)}
-                  className="rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-neutral-800"
-                />
+                <Input type="date" aria-label="Start date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-40" />
               </label>
               <label className="text-sm">
                 <span className="mb-1 block text-foreground-muted">To</span>
-                <input
-                  type="date"
-                  aria-label="End date"
-                  value={to}
-                  onChange={(e) => setTo(e.target.value)}
-                  className="rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-neutral-800"
-                />
+                <Input type="date" aria-label="End date" value={to} onChange={(e) => setTo(e.target.value)} className="w-40" />
               </label>
             </div>
           ) : (
             <label className="mt-3 block text-sm">
               <span className="mb-1 block text-foreground-muted">Financial year (Apr–Mar)</span>
-              <select
-                aria-label="Financial year"
-                value={fy}
-                onChange={(e) => setFy(Number(e.target.value))}
-                className="rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-neutral-800"
-              >
+              <Select aria-label="Financial year" value={fy} onChange={(e) => setFy(Number(e.target.value))} className="w-40">
                 {years.map((y) => (
                   <option key={y} value={y}>
                     FY {y}–{y + 1}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           )}
         </fieldset>
@@ -124,11 +121,11 @@ export function ExportForm() {
           <legend className="mb-2 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Format</legend>
           <div className="flex gap-4 text-sm">
             <label className="flex items-center gap-2">
-              <input type="radio" name="format" checked={format === "pdf"} onChange={() => setFormat("pdf")} />
+              <input type="radio" name="format" className="accent-brand-600" checked={format === "pdf"} onChange={() => setFormat("pdf")} />
               PDF report
             </label>
             <label className="flex items-center gap-2">
-              <input type="radio" name="format" checked={format === "csv"} onChange={() => setFormat("csv")} />
+              <input type="radio" name="format" className="accent-brand-600" checked={format === "csv"} onChange={() => setFormat("csv")} />
               CSV data
             </label>
           </div>
@@ -136,13 +133,9 @@ export function ExportForm() {
 
         {error && <ErrorState message={error} />}
 
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded-md bg-brand-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
+        <Button type="submit" disabled={busy}>
           {busy ? "Preparing…" : "Download"}
-        </button>
+        </Button>
       </form>
     </Card>
   );
