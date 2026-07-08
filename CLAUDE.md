@@ -4,9 +4,9 @@ This file is the entry point for Claude Code. Read this before working on any pa
 
 ## Claude's Role
 
-You are an implementation author for SpendWise. Write code, scaffold modules, and follow the patterns established in the docs below. Before writing code that touches **module boundaries, security surfaces, authentication, data access, or ML infrastructure**, read the relevant document from the index before proceeding.
+You are a **UI/UX refinement and product-polishing author** for SpendWise. The core product is built; your work now is to improve the frontend experience, implement custom design, and make the targeted backend/API changes those improvements require — **reusing the existing services and business logic rather than rewriting them**, and keeping every change compatible with the established architecture. Before writing code that touches **module boundaries, security surfaces, authentication, data access, or ML infrastructure**, read the relevant document from the index below before proceeding. See **[Current Phase — UI/UX Refinement & Product Polishing](#current-phase--uiux-refinement--product-polishing)** below for how to prioritize this phase's work.
 
-**Project state:** Epic 0 (Foundation & Project Scaffolding) is complete — see [implementation/tracking/STATUS.md](./implementation/tracking/STATUS.md) for the full task record. All four services (Spring Boot, FastAPI, Next.js, Android) have working skeletons; the database schema is fully migrated with Row-Level Security; CI (backend, ml, android, frontend) is verified green on GitHub Actions. No business logic exists yet — the 11 Spring Boot modules and Android's SMS/Parser/Sync/Storage packages (`backend/src/main/java/com/spendwise/<module>/`, `android/app/src/main/kotlin/com/spendwise/<module>/`) remain empty placeholders, ready for Epic 1 onward.
+**Project state:** Feature implementation is complete. Epics 0–11 have landed across all four surfaces — Auth/User, Android SMS parsing & sync, ingestion & transactions, ML categorization, budgets & alerts, EMI/recurring detection, analytics & export, recommendations & chatbot, the Android app UI, the web dashboard, and the admin portal — see [implementation/tracking/STATUS.md](./implementation/tracking/STATUS.md) for the full task record (114/125 tasks done). All 11 Spring Boot modules and the Android SMS/Parser/Sync/Storage/UI packages carry working business logic; the Next.js web app and admin portal are built and have an established design system and app shell; the database schema is fully migrated with Row-Level Security; CI (backend, ml, android, frontend) is green on GitHub Actions. **The project has now transitioned from feature implementation to UI/UX refinement and product polishing.** The one remaining backlog epic — Epic 12 (Deployment, Monitoring & Launch) — is not yet done; treat it as the launch track that runs alongside the polish work, not as new feature development.
 
 ## What is SpendWise
 
@@ -89,7 +89,8 @@ See [docs/decisions.md](./docs/decisions.md) for full ADRs.
 - Read [docs/development_guidelines.md](./docs/development_guidelines.md) for coding standards and the pre-commit security checklist
 - All API routes are prefixed `/api/v1/`
 - JWT Bearer token required on all protected endpoints
-- See **Git & GitHub Workflow** below for the commit, push, and epic-completion process
+- The current focus is UI/UX polish — read **[Current Phase](#current-phase--uiux-refinement--product-polishing)** below before starting work
+- See **Git & GitHub Workflow** below for the commit and push process
 
 ### Security invariants
 
@@ -111,6 +112,22 @@ See [docs/decisions.md](./docs/decisions.md) for full ADRs.
 - All services run on free-tier hosting — do not introduce any solution that requires a paid plan
 - Do not add Redis, Kafka, RabbitMQ, Celery, or any external message queue or cache without explicit approval
 - Background jobs run inside the Spring Boot process via Spring `@Scheduled` — no external job runner
+
+## Current Phase — UI/UX Refinement & Product Polishing
+
+Feature implementation is done (Epics 0–11). Day-to-day work now is **polishing the product and building out a custom, production-quality UI/UX** — primarily on the Next.js web app, with the Android app and supporting backend following as needed. Prioritize work in this order:
+
+1. **Frontend UI/UX first.** Improve the web dashboard's design, layout, interactions, and custom visual identity — this is the primary surface for the current phase. The web app already has an established design system and app shell; build on it rather than starting a new visual language each time. Apply the same care to the Android UI where a change is warranted.
+2. **Backend/API changes only in service of the frontend.** When a UI improvement needs data, a field, or an endpoint shape that doesn't exist yet, make the *minimal* corresponding backend/API change to support it. Don't build backend features the frontend doesn't need.
+3. **Reuse, don't rewrite.** The 11 Spring Boot modules and their service interfaces already implement the business logic; the frontend already has shared infrastructure. Call existing services and endpoints, and extend them narrowly if required — do **not** reimplement categorization, budgets, alerts, analytics, auth, etc. Rewriting working business logic is out of scope unless explicitly requested.
+4. **Stay compatible with the existing architecture.** Every change must respect the **Security, Architectural, and Infrastructure invariants above** — module boundaries, RLS scoping, the dual-auth `/ingest` rule, the read-only Analytics module, free-tier constraints, and the ADRs in [docs/decisions.md](./docs/decisions.md). UI polish is never a license to bypass an invariant.
+5. **Keep changes modular and production-ready.** Componentize UI, keep concerns separated, and match the structure already in the codebase. No throwaway or prototype-quality code on `main`.
+6. **Preserve existing coding standards and conventions.** Follow [docs/development_guidelines.md](./docs/development_guidelines.md) and the patterns already present — on the frontend: the `components/ui/` primitives and `components/shared/` app shell, `lib/apiClient.ts` (auth + 401-refresh wrapper), SWR via `lib/useApi.ts` (with its `isStale` handling), the `AuthGuard`/route-group structure, Tailwind, and Recharts + `lib/chart-theme.ts`; on the backend: the Repository→Service→Controller module shape.
+7. **Update documentation whenever functionality or architecture changes.** If a change alters an API contract, a data flow, a schema, or a user flow, update the relevant `docs/` file *in the same change*, and reflect it in [implementation/tracking/STATUS.md](./implementation/tracking/STATUS.md) if it touches tracked work. Keep `docs/` the source of truth (see the frozen-spec rule in [implementation/README.md](./implementation/README.md)).
+
+**When a design decision is genuinely open** (visual direction, a new interaction pattern, a UX trade-off with no obvious default), ask before committing to it rather than guessing.
+
+**Not in scope by default:** new post-MVP features (see [docs/roadmap.md](./docs/roadmap.md)), microservices extraction, changing the ML approach, or adding paid infrastructure. Epic 12 (deployment/monitoring/launch) remains the separate, still-open launch track — see [implementation/tracking/STATUS.md](./implementation/tracking/STATUS.md).
 
 ## Git & GitHub Workflow
 
@@ -140,19 +157,17 @@ This is the authoritative process for how Claude Code operates on this repositor
 - Branches remain available if *you or the user* deliberately choose to isolate a risky or experimental change — but they are optional, never the default. Don't open one without a specific reason, and don't require one for routine work, including epics.
 - If a task grows past its expected 2–4 hour size, stop and split it per the complexity guidance in [implementation/README.md](./implementation/README.md) — this is about task sizing, not branching.
 
-### Epic Workflow
+### Task Workflow (UI/UX polish & remaining launch work)
 
-Epics and tasks are tracked in [implementation/](./implementation/README.md) — read it first for how the workspace is organized (`ROADMAP.md`, `DEPENDENCY-GRAPH.md`, `epics/*.md`, `tracking/STATUS.md`). For every epic or standalone task:
+The MVP backlog is essentially complete — Epics 0–11 have landed. The [implementation/](./implementation/README.md) workspace (`ROADMAP.md`, `DEPENDENCY-GRAPH.md`, `epics/*.md`, `tracking/STATUS.md`) remains the record of that work and the spec for the one epic still open, **Epic 12 (Deployment, Monitoring & Launch)**. Most current work is UI/UX polish that isn't a backlog task; for those follow the **[Current Phase](#current-phase--uiux-refinement--product-polishing)** priorities above. For any change — polish or a remaining Epic 12 task:
 
-1. Review the requirements — read the task's card in its epic file (`implementation/epics/epic-<NN>-*.md`) and the `docs/` source it's grounded in.
-2. Verify dependencies — check [implementation/DEPENDENCY-GRAPH.md](./implementation/DEPENDENCY-GRAPH.md) to confirm prerequisite epics/tasks are actually done, not just assumed.
-3. Implement the epic, respecting the security and architectural invariants above.
-4. Run all tests named in the task's "Required Tests" and in [docs/testing.md](./docs/testing.md).
-5. Fix any failures — do not proceed with red tests.
+1. Ground the change in the docs — read the relevant `docs/` file(s) before touching an API contract, data flow, schema, security surface, or module boundary. For an Epic 12 task, also read its card in `implementation/epics/epic-12-*.md`.
+2. Make the change respecting the Security, Architectural, and Infrastructure invariants above, reusing existing services and business logic (don't rewrite them).
+3. Run the relevant test suite(s) for whatever was touched (see [docs/testing.md](./docs/testing.md)); add or update tests when behavior changes.
+4. Fix any failures — do not proceed with red tests.
+5. Update any documentation the change affects (`docs/*` for contract/architecture/flow changes) and, if it touches tracked work, [implementation/tracking/STATUS.md](./implementation/tracking/STATUS.md).
 6. Commit the completed work per the Commit Policy above.
 7. Ask for approval before pushing, per Git Operations above.
-8. Once the epic is complete and pushed, recommend a Git tag (e.g. `epic-<NN>-<slug>-complete`, matching the epic's filename) — propose it, don't create it without confirmation.
-9. Update [implementation/tracking/STATUS.md](./implementation/tracking/STATUS.md) (check off the task/epic) and any documentation the epic actually changed — e.g. [docs/roadmap.md](./docs/roadmap.md) if MVP scope shifted.
 
 ### Repository Safety
 
