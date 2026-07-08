@@ -15,7 +15,7 @@ const EMPTY_SUBSCRIBE = () => () => {};
 // again — this does not bypass backend JWT checks, only the client-side route guard.
 const DEV_BYPASS_AUTH = process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
 
-function useClientAuthenticated(): boolean {
+export function useClientAuthenticated(): boolean {
   return useSyncExternalStore(
     EMPTY_SUBSCRIBE,
     () => isAuthenticated(),
