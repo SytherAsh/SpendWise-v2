@@ -112,7 +112,7 @@ Authorization: Bearer <access_token>
 | GET | `/analytics/export/pdf` | Export PDF report for selected date range | User |
 | GET | `/analytics/export/csv` | Export CSV for selected date range | User |
 
-Query parameters for analytics: `from`, `to`, `granularity` (week/month/year), `category`
+Query parameters for analytics: `from`, `to`, `granularity` (week/month/year — `/analytics/trends` additionally accepts `day`), `category`
 
 > **Epic 7 addenda (implemented 2026-07-03, not fully spelled out above):**
 > - `/analytics/summary`, `/analytics/categories`, `/analytics/trends`, and both export endpoints
@@ -127,6 +127,14 @@ Query parameters for analytics: `from`, `to`, `granularity` (week/month/year), `
 > - `/analytics/export/pdf` accepts either `from`+`to` **or** `financialYear=<YYYY>` (meaning the
 >   Indian financial year, `YYYY`-04-01 to `(YYYY+1)`-03-31) — exactly one must be present, 400
 >   otherwise.
+>
+> **Epic 9/local-E2E addendum (found + fixed 2026-07-05):** `/analytics/trends` additionally
+> accepts `granularity=day` (`/analytics/comparison` does not — it stays week/month/year only,
+> per its own periodStart/nextPeriodStart logic above). The Android dashboard's 30-day daily
+> spending trend line (E9-S2-T1) calls `/analytics/trends?granularity=day`, which 400'd against
+> the original week/month/year-only validator during the first live local end-to-end test —
+> this endpoint's own doc line was written before that client existed and never anticipated a
+> daily bucket. `date_trunc('day', ...)` is a native Postgres field, so no SQL change was needed.
 
 ### `/chatbot` — AI Chatbot
 
