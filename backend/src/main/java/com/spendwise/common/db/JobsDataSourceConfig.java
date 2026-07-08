@@ -1,6 +1,7 @@
 package com.spendwise.common.db;
 
 import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.jdbc.JdbcConnectionDetails;
@@ -20,10 +21,15 @@ import javax.sql.DataSource;
  * so this stays correct under Testcontainers' {@code @ServiceConnection}, which overrides {@link
  * JdbcConnectionDetails}, not the properties themselves: reading the properties directly here
  * would silently reconnect to the wrong (non-ephemeral) database in every integration test.
- * {@code JdbcConnectionDetailsConfiguration}'s own auto-configured fallback bean (derived from
- * {@code spring.datasource.*} when no {@code @ServiceConnection} is present) is conditional on
- * {@code @ConditionalOnMissingBean(JdbcConnectionDetails.class)}, not on {@code DataSource.class},
- * so it stays active regardless of the {@link DataSource} beans defined below.
+ *
+ * <p>When {@code @ServiceConnection} is absent (a real {@code bootRun}/prod boot), Spring Boot 3.5
+ * does <b>not</b> register a {@link JdbcConnectionDetails} fallback bean here (an earlier version of
+ * this class assumed it did — the assumption held in integration tests, where {@code
+ * @ServiceConnection} supplies the bean, but failed context startup on the first real {@code
+ * bootRun}, 2026-07-05). Both bean methods below therefore inject an {@code
+ * ObjectProvider<JdbcConnectionDetails>} and fall back to the {@code spring.datasource.*} properties
+ * directly when no such bean exists — while still preferring {@link JdbcConnectionDetails} whenever
+ * it IS present, so the ephemeral Testcontainers connection still wins in integration tests.
  *
  * <p>Defining an explicit {@code @Primary} {@code dataSource} bean here makes {@code
  * DataSourceAutoConfiguration}'s own bean back off ({@code
@@ -66,11 +72,16 @@ public class JobsDataSourceConfig {
 
     @Primary
     @Bean
-    public DataSource dataSource(JdbcConnectionDetails connectionDetails) {
+    public DataSource dataSource(
+            ObjectProvider<JdbcConnectionDetails> connectionDetails,
+            @Value("${spring.datasource.url}") String url,
+            @Value("${spring.datasource.username}") String username,
+            @Value("${spring.datasource.password}") String password) {
+        JdbcConnectionDetails details = connectionDetails.getIfAvailable();
         return DataSourceBuilder.create()
-                .url(connectionDetails.getJdbcUrl())
-                .username(connectionDetails.getUsername())
-                .password(connectionDetails.getPassword())
+                .url(details != null ? details.getJdbcUrl() : url)
+                .username(details != null ? details.getUsername() : username)
+                .password(details != null ? details.getPassword() : password)
                 .build();
     }
 
@@ -83,14 +94,16 @@ public class JobsDataSourceConfig {
 
     @Bean
     public DataSource jobsDataSource(
-            JdbcConnectionDetails connectionDetails,
+            ObjectProvider<JdbcConnectionDetails> connectionDetails,
+            @Value("${spring.datasource.url}") String url,
             @Value("${app.datasource.jobs.username}") String jobsUsername,
             @Value("${app.datasource.jobs.password}") String jobsPassword) {
         // Same host/port/database as the primary connection (including the ephemeral
         // Testcontainers one in integration tests) — only the role differs.
+        JdbcConnectionDetails details = connectionDetails.getIfAvailable();
         HikariDataSource dataSource = DataSourceBuilder.create()
                 .type(HikariDataSource.class)
-                .url(connectionDetails.getJdbcUrl())
+                .url(details != null ? details.getJdbcUrl() : url)
                 .username(jobsUsername)
                 .password(jobsPassword)
                 .build();

@@ -74,7 +74,7 @@ public class AnalyticsRepository {
                 Timestamp.from(to));
     }
 
-    /** {@code granularity} must already be validated to one of week/month/year — passed straight into {@code date_trunc}. */
+    /** {@code granularity} must already be validated to one of day/week/month/year — passed straight into {@code date_trunc}. */
     public List<TrendBucket> trends(UUID userId, String granularity, Instant from, Instant to, Integer categoryId) {
         rlsSession.setCurrentUser(userId);
         StringBuilder sql = new StringBuilder(

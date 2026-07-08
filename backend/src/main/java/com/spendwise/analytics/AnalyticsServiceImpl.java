@@ -16,6 +16,13 @@ import java.util.UUID;
 public class AnalyticsServiceImpl implements AnalyticsService {
 
     private static final Set<String> VALID_GRANULARITIES = Set.of("week", "month", "year");
+    // trends() has no periodStart/nextPeriodStart notion (unlike comparison(), which anchors
+    // "day" would be meaningless there) -- it forwards granularity straight into a SQL
+    // date_trunc call (AnalyticsRepository.trends), which natively supports 'day'. Added after
+    // local E2E testing found the Android dashboard's 30-day daily trend line (E9-S2-T1) 400s
+    // against this endpoint -- week/month/year alone can't render a meaningful 30-day trend
+    // (docs/api.md's granularity note was written before that client existed).
+    private static final Set<String> VALID_TRENDS_GRANULARITIES = Set.of("day", "week", "month", "year");
 
     private final AnalyticsRepository analyticsRepository;
 
@@ -41,7 +48,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     @Override
     @Transactional
     public AnalyticsComparison comparison(UUID userId, String granularity) {
-        String normalized = validateGranularity(granularity);
+        String normalized = validateGranularity(granularity, VALID_GRANULARITIES);
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
 
         LocalDate currentStart = periodStart(today, normalized);
@@ -57,7 +64,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     @Override
     @Transactional
     public AnalyticsTrends trends(UUID userId, String granularity, Instant from, Instant to, Integer categoryId) {
-        String normalized = validateGranularity(granularity);
+        String normalized = validateGranularity(granularity, VALID_TRENDS_GRANULARITIES);
         validateRange(from, to);
         return new AnalyticsTrends(normalized, analyticsRepository.trends(userId, normalized, from, to, categoryId));
     }
@@ -111,13 +118,13 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         };
     }
 
-    private static String validateGranularity(String granularity) {
+    private static String validateGranularity(String granularity, Set<String> validValues) {
         if (granularity == null || granularity.isBlank()) {
             return "month";
         }
         String normalized = granularity.toLowerCase();
-        if (!VALID_GRANULARITIES.contains(normalized)) {
-            throw new InvalidAnalyticsQueryException("granularity must be one of week, month, year");
+        if (!validValues.contains(normalized)) {
+            throw new InvalidAnalyticsQueryException("granularity must be one of " + String.join(", ", validValues.stream().sorted().toList()));
         }
         return normalized;
     }
