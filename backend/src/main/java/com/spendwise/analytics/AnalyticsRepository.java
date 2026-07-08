@@ -74,6 +74,30 @@ public class AnalyticsRepository {
                 Timestamp.from(to));
     }
 
+    /**
+     * Spend for transactions with no category assigned in range — the complement of {@link
+     * #categoryTotals}, which only ever sees rows that have a {@code transaction_categories} entry.
+     * Debit-only ({@code t.debit > 0}): money received with no category is not "an uncategorized
+     * expense" and should never inflate this bucket — it's surfaced separately as the Transactions
+     * page's "money received" total instead. Always returns exactly one row (COALESCEd to zero),
+     * never absent. {@code totalIncome} is therefore always zero here (unlike {@link
+     * #categoryTotals}, which deliberately keeps credit rows for its own callers).
+     */
+    public UncategorizedTotal uncategorizedTotal(UUID userId, Instant from, Instant to) {
+        rlsSession.setCurrentUser(userId);
+        return jdbcTemplate.queryForObject(
+                "SELECT COALESCE(SUM(t.debit), 0) AS total_spend, COALESCE(SUM(t.credit), 0) AS total_income, "
+                        + "COUNT(*) AS txn_count FROM transactions t "
+                        + "LEFT JOIN transaction_categories tc ON tc.transaction_id = t.id "
+                        + "WHERE t.user_id = ? AND t.transaction_date >= ? AND t.transaction_date <= ? "
+                        + "AND tc.category_id IS NULL AND t.debit > 0",
+                (rs, rowNum) -> new UncategorizedTotal(
+                        rs.getBigDecimal("total_spend"), rs.getBigDecimal("total_income"), rs.getLong("txn_count")),
+                userId,
+                Timestamp.from(from),
+                Timestamp.from(to));
+    }
+
     /** {@code granularity} must already be validated to one of day/week/month/year — passed straight into {@code date_trunc}. */
     public List<TrendBucket> trends(UUID userId, String granularity, Instant from, Instant to, Integer categoryId) {
         rlsSession.setCurrentUser(userId);

@@ -5,9 +5,11 @@ import { SWRConfig } from "swr";
 import { TransactionsBrowser } from "@/components/transactions/TransactionsBrowser";
 
 /**
- * E10-S2-T2 required tests: pagination, filter state, and the category-correction flow
- * (mocked API). The paginated list is driven by useSWRInfinite → swrFetcher, so we mock
- * swrFetcher (by URL) and apiClient.put (for the correction).
+ * E10-S2-T2 required tests: pagination and the category-correction flow (mocked API). Category
+ * filtering is now driven entirely by the `categoryFilter` prop (set by CategorySummaryGrid) and
+ * the date range by the shared `useDateRange` context — both mocked below — rather than a local
+ * filter form. The paginated list is driven by useSWRInfinite → swrFetcher, so we mock swrFetcher
+ * (by URL) and apiClient.put (for the correction).
  */
 
 const fetcher = vi.fn();
@@ -26,6 +28,14 @@ vi.mock("@/lib/useCategories", () => ({
     categoryName: (id: number) => (id === 7 ? "Food / Dine Out" : "Travel"),
     isLoading: false,
     error: undefined,
+  }),
+}));
+
+vi.mock("@/lib/date-range", () => ({
+  useDateRange: () => ({
+    range: { from: "2026-06-01", to: "2026-06-30", preset: "this-month", label: "This month" },
+    setPreset: vi.fn(),
+    setCustom: vi.fn(),
   }),
 }));
 
@@ -60,7 +70,7 @@ describe("TransactionsBrowser", () => {
         : Promise.resolve({ data: [txn("t1", 7, "Swiggy")], nextCursor: "t1", hasMore: true }),
     );
 
-    renderIsolated(<TransactionsBrowser />);
+    renderIsolated(<TransactionsBrowser categoryFilter={null} onClearFilter={vi.fn()} />);
 
     expect(await screen.findByText("Swiggy")).toBeInTheDocument();
     expect(fetcher.mock.calls[0][0]).toContain("limit=50");
@@ -76,19 +86,38 @@ describe("TransactionsBrowser", () => {
     );
   });
 
-  it("re-fetches with the category filter param when filters are applied", async () => {
-    const user = userEvent.setup();
-    fetcher.mockResolvedValue({ data: [txn("t1", 7, "Swiggy")], nextCursor: null, hasMore: false });
+  it("requests the numeric category filter param when categoryFilter is set", async () => {
+    fetcher.mockResolvedValue({ data: [txn("t1", 5, "Uber")], nextCursor: null, hasMore: false });
 
-    renderIsolated(<TransactionsBrowser />);
-    await screen.findByText("Swiggy");
-
-    await user.selectOptions(screen.getByLabelText(/filter by category/i), "5");
-    await user.click(screen.getByRole("button", { name: /^apply$/i }));
+    renderIsolated(<TransactionsBrowser categoryFilter={5} onClearFilter={vi.fn()} />);
 
     await waitFor(() => {
       expect(fetcher.mock.calls.some((c) => (c[0] as string).includes("category=5"))).toBe(true);
     });
+    expect(screen.getByText(/showing:/i)).toBeInTheDocument();
+  });
+
+  it('requests the "uncategorized" sentinel when categoryFilter is "uncategorized"', async () => {
+    fetcher.mockResolvedValue({ data: [], nextCursor: null, hasMore: false });
+
+    renderIsolated(<TransactionsBrowser categoryFilter="uncategorized" onClearFilter={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(fetcher.mock.calls.some((c) => (c[0] as string).includes("category=uncategorized"))).toBe(true);
+    });
+  });
+
+  it("calls onClearFilter when the Clear filter control is clicked", async () => {
+    const user = userEvent.setup();
+    const onClearFilter = vi.fn();
+    fetcher.mockResolvedValue({ data: [txn("t1", 5, "Uber")], nextCursor: null, hasMore: false });
+
+    renderIsolated(<TransactionsBrowser categoryFilter={5} onClearFilter={onClearFilter} />);
+    await screen.findByText("Uber");
+
+    await user.click(screen.getByRole("button", { name: /clear filter/i }));
+
+    expect(onClearFilter).toHaveBeenCalledTimes(1);
   });
 
   it("corrects a transaction category via PUT and reflects it immediately", async () => {
@@ -96,7 +125,7 @@ describe("TransactionsBrowser", () => {
     fetcher.mockResolvedValue({ data: [txn("t1", 7, "Swiggy")], nextCursor: null, hasMore: false });
     put.mockResolvedValue({ transactionId: "t1", categoryId: 5 });
 
-    renderIsolated(<TransactionsBrowser />);
+    renderIsolated(<TransactionsBrowser categoryFilter={null} onClearFilter={vi.fn()} />);
     const row = (await screen.findByText("Swiggy")).closest("tr")!;
     const select = within(row).getByRole("combobox") as HTMLSelectElement;
     expect(select.value).toBe("7");

@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useSWRInfinite from "swr/infinite";
-import { Filter, Users, X } from "lucide-react";
+import { Users, X } from "lucide-react";
 import { apiClient, swrFetcher } from "@/lib/apiClient";
 import { useCategories } from "@/lib/useCategories";
+import { useDateRange } from "@/lib/date-range";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Card, EmptyState, ErrorState, Spinner } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
-import { Input, Select } from "@/components/ui/input";
+import { Select } from "@/components/ui/input";
 import { categoryColor } from "@/lib/categories";
 import { cn } from "@/lib/cn";
+import type { CategorySelection } from "./CategorySummaryGrid";
 
 interface Transaction {
   id: string;
@@ -29,35 +31,33 @@ interface TransactionListResponse {
   hasMore: boolean;
 }
 
-interface Filters {
-  category: string;
-  from: string;
-  to: string;
-}
-
 interface BulkPrompt {
   payee: string;
   categoryId: number;
   ids: string[];
 }
 
-const EMPTY_FILTERS: Filters = { category: "", from: "", to: "" };
 const PAGE_SIZE = 50;
 
-function buildPath(filters: Filters, cursor: string | null): string {
+function buildPath(categoryFilter: CategorySelection, from: string, to: string, cursor: string | null): string {
   const params = new URLSearchParams();
   params.set("limit", String(PAGE_SIZE));
   if (cursor) params.set("cursor", cursor);
-  if (filters.category) params.set("category", filters.category);
-  if (filters.from) params.set("from", filters.from);
-  if (filters.to) params.set("to", filters.to);
+  if (categoryFilter !== null) params.set("category", String(categoryFilter));
+  params.set("from", from);
+  params.set("to", to);
   return `/transactions?${params.toString()}`;
 }
 
-export function TransactionsBrowser() {
+export function TransactionsBrowser({
+  categoryFilter,
+  onClearFilter,
+}: {
+  categoryFilter: CategorySelection;
+  onClearFilter: () => void;
+}) {
+  const { range } = useDateRange();
   const { categories, categoryName } = useCategories();
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [applied, setApplied] = useState<Filters>(EMPTY_FILTERS);
   // Optimistic category corrections overlaid on the fetched data — lets a change reflect
   // immediately without refetching the whole paginated list.
   const [overrides, setOverrides] = useState<Record<string, number>>({});
@@ -68,7 +68,7 @@ export function TransactionsBrowser() {
   const getKey = (pageIndex: number, previous: TransactionListResponse | null) => {
     if (previous && !previous.hasMore) return null;
     const cursor = pageIndex === 0 ? null : previous?.nextCursor ?? null;
-    return buildPath(applied, cursor);
+    return buildPath(categoryFilter, range.from, range.to, cursor);
   };
 
   const { data, error, isLoading, size, setSize, isValidating } = useSWRInfinite<TransactionListResponse>(
@@ -77,6 +77,23 @@ export function TransactionsBrowser() {
     { revalidateFirstPage: false },
   );
 
+  // Dismiss any pending bulk-correction prompt as soon as the filter it was computed against
+  // changes — adjusted during render (not an effect) per React's "adjusting state when a prop
+  // changes" pattern, since it's derived from categoryFilter/range rather than an external system.
+  const filterKey = `${categoryFilter}|${range.from}|${range.to}`;
+  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
+  if (filterKey !== lastFilterKey) {
+    setLastFilterKey(filterKey);
+    setBulk(null);
+  }
+
+  // Reset to the first page whenever the category tile or global date range changes — mirrors
+  // the old "Apply"/"Reset" buttons' behavior, just triggered by the new filter sources instead.
+  useEffect(() => {
+    void setSize(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setSize's identity is stable per SWR
+  }, [categoryFilter, range.from, range.to]);
+
   const pages = data ?? [];
   const items = pages.flatMap((p) => p.data);
   const hasMore = pages.length > 0 ? pages[pages.length - 1].hasMore : false;
@@ -84,19 +101,7 @@ export function TransactionsBrowser() {
 
   const categoryOf = (t: Transaction): number | "" => overrides[t.id] ?? t.categoryId ?? "";
 
-  function applyFilters(e: React.FormEvent) {
-    e.preventDefault();
-    setApplied(filters);
-    setBulk(null);
-    void setSize(1); // reset to the first page for the new filter set
-  }
-
-  function resetFilters() {
-    setFilters(EMPTY_FILTERS);
-    setApplied(EMPTY_FILTERS);
-    setBulk(null);
-    void setSize(1);
-  }
+  const filterLabel = categoryFilter === "uncategorized" ? "Uncategorized" : categoryFilter !== null ? categoryName(categoryFilter) : null;
 
   async function putCategory(id: string, categoryId: number) {
     setOverrides((prev) => ({ ...prev, [id]: categoryId }));
@@ -141,37 +146,21 @@ export function TransactionsBrowser() {
 
   return (
     <div className="space-y-4">
-      <form onSubmit={applyFilters} className="flex flex-wrap items-end gap-3">
-        <label className="text-sm">
-          <span className="mb-1.5 block font-medium text-foreground-muted">Category</span>
-          <Select
-            aria-label="Filter by category"
-            value={filters.category}
-            onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-            className="w-44"
+      {filterLabel && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-foreground-muted">
+            Showing: <span className="font-medium text-foreground">{filterLabel}</span>
+          </p>
+          <button
+            type="button"
+            onClick={onClearFilter}
+            className="flex items-center gap-1 text-sm font-medium text-foreground-muted transition-colors hover:text-foreground"
           >
-            <option value="">All categories</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </Select>
-        </label>
-        <label className="text-sm">
-          <span className="mb-1.5 block font-medium text-foreground-muted">From</span>
-          <Input type="date" aria-label="From date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="w-40" />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1.5 block font-medium text-foreground-muted">To</span>
-          <Input type="date" aria-label="To date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="w-40" />
-        </label>
-        <Button type="submit" className="gap-1.5">
-          <Filter className="size-4" />
-          Apply
-        </Button>
-        <Button type="button" variant="secondary" onClick={resetFilters}>
-          Reset
-        </Button>
-      </form>
+            Clear filter
+            <X className="size-3.5" />
+          </button>
+        </div>
+      )}
 
       {correctionError && <ErrorState message={correctionError} />}
       {error && items.length === 0 && <ErrorState message="Could not load transactions." />}
@@ -196,7 +185,7 @@ export function TransactionsBrowser() {
         <Spinner />
       ) : items.length === 0 ? (
         <Card>
-          <EmptyState message="No transactions match these filters." />
+          <EmptyState message="No transactions match this filter." />
         </Card>
       ) : (
         <Card className="overflow-x-auto p-0">

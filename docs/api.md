@@ -60,12 +60,16 @@ Authorization: Bearer <access_token>
 
 | Method | Path | Description | Auth |
 | --- | --- | --- | --- |
-| GET | `/transactions` | List transactions (paginated, 50/page, cursor-based); supports optional filters: `category` (category_id), `from`, `to` (ISO 8601 dates) | User |
+| GET | `/transactions` | List transactions (paginated, 50/page, cursor-based); supports optional filters: `category` (category_id, or the literal `uncategorized`), `from`, `to` (ISO 8601 dates) | User |
 | GET | `/transactions/:id` | Get single transaction | User |
 | POST | `/transactions` | Manually create a transaction | User |
 | PUT | `/transactions/:id/category` | Correct a transaction's category; writes a labeled example to `ml_corrections` for the next retraining cycle | User |
 
 > **Category correction ownership:** `PUT /transactions/:id/category` is served by the Transaction module. The controller updates `transaction_categories` (new category assignment) and writes directly to `ml_corrections` (correction record) — both within the Transaction module's own DB access scope. No cross-module service call to the Categorization module is made; the Categorization module reads `ml_corrections` independently during its retraining cycle. This keeps the module dependency graph acyclic: Categorization → Transaction remains one-way.
+>
+> **`category=uncategorized` (added for the Transactions page redesign):** `GET /transactions`'s `category` filter accepts a numeric category id, the literal string `uncategorized` (filters to transactions with no `transaction_categories` row at all), or is omitted (no filter). Any other non-numeric value is a 400 (`INVALID_CATEGORY_FILTER`). Backward compatible — numeric filtering is unchanged.
+>
+> **Category filters are debit-only:** whenever `category` is set (a numeric id or `uncategorized`), the result additionally excludes any transaction where `debit` is not positive — money received (a refund, an incoming transfer) never appears in a category-filtered view, even if it happens to carry that category. This only applies when a category filter is active; the unfiltered list (no `category` param) is unaffected and still returns every transaction, spend or income.
 
 ### `/categories` — Categories
 
@@ -135,6 +139,25 @@ Query parameters for analytics: `from`, `to`, `granularity` (week/month/year —
 > the original week/month/year-only validator during the first live local end-to-end test —
 > this endpoint's own doc line was written before that client existed and never anticipated a
 > daily bucket. `date_trunc('day', ...)` is a native Postgres field, so no SQL change was needed.
+>
+> **"Uncategorized" row (added for the Transactions page redesign):** `GET /analytics/categories`
+> now additionally returns a synthetic row for transactions with no category assigned —
+> `categoryId: null`, `categoryName: "Uncategorized"` — alongside the normal per-category rows,
+> but only when at least one such transaction exists in range (consistent with this endpoint's
+> existing "only categories with a transaction are represented" behavior). `/analytics/summary`
+> and `/analytics/comparison` are unaffected — they still call the original categorized-only
+> query and never include this row.
+>
+> **This "Uncategorized" row is debit-only** (unlike every other row `/analytics/categories` and
+> `/analytics/summary` return): money received with no category assigned is not "an uncategorized
+> expense" and is never counted here. `totalIncome` on this synthetic row is therefore always
+> `0`. By contrast, a *real* category's row (e.g. `categoryId: 7`) still includes any credit rows
+> assigned to it in `totalIncome`/`transactionCount` — that per-category behavior is unchanged and
+> intentional (docs/testing.md's Epic 7 summary test covers it): it reflects the full picture for
+> Analytics/Summary, including refunds. The Transactions page's frontend tiles only ever display
+> each category's `totalSpend` (already debit-only) — never its `totalIncome` — so this
+> distinction is invisible there; it only matters to a future consumer of this endpoint's raw
+> per-category `totalIncome`/`transactionCount` fields.
 
 ### `/chatbot` — AI Chatbot
 

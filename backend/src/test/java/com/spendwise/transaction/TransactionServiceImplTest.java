@@ -152,10 +152,10 @@ class TransactionServiceImplTest {
 
     @Test
     void listFirstPageDoesNotResolveACursor() {
-        given(transactionRepository.listPage(eq(userId), eq(null), eq(null), eq(null), eq(null), eq(null), eq(51)))
+        given(transactionRepository.listPage(eq(userId), eq(null), eq(false), eq(null), eq(null), eq(null), eq(null), eq(51)))
                 .willReturn(List.of(sampleTransaction()));
 
-        TransactionPage page = service.list(userId, 50, null, null, null, null);
+        TransactionPage page = service.list(userId, 50, null, null, false, null, null);
 
         verify(transactionRepository, never()).findTransactionDate(any(), any());
         assertThat(page.hasMore()).isFalse();
@@ -168,11 +168,11 @@ class TransactionServiceImplTest {
         UUID cursor = UUID.randomUUID();
         Instant cursorDate = Instant.parse("2025-06-01T00:00:00Z");
         given(transactionRepository.findTransactionDate(userId, cursor)).willReturn(Optional.of(cursorDate));
-        given(transactionRepository.listPage(userId, null, null, null, cursorDate, cursor, 51)).willReturn(List.of());
+        given(transactionRepository.listPage(userId, null, false, null, null, cursorDate, cursor, 51)).willReturn(List.of());
 
-        service.list(userId, 50, cursor, null, null, null);
+        service.list(userId, 50, cursor, null, false, null, null);
 
-        verify(transactionRepository).listPage(userId, null, null, null, cursorDate, cursor, 51);
+        verify(transactionRepository).listPage(userId, null, false, null, null, cursorDate, cursor, 51);
     }
 
     @Test
@@ -180,14 +180,24 @@ class TransactionServiceImplTest {
         Transaction first = sampleTransaction();
         Transaction second = sampleTransaction();
         // Repository is asked for limit + 1 rows; returning 2 for a limit of 1 signals hasMore.
-        given(transactionRepository.listPage(eq(userId), eq(null), eq(null), eq(null), eq(null), eq(null), eq(2)))
+        given(transactionRepository.listPage(eq(userId), eq(null), eq(false), eq(null), eq(null), eq(null), eq(null), eq(2)))
                 .willReturn(List.of(first, second));
 
-        TransactionPage page = service.list(userId, 1, null, null, null, null);
+        TransactionPage page = service.list(userId, 1, null, null, false, null, null);
 
         assertThat(page.data()).containsExactly(first);
         assertThat(page.hasMore()).isTrue();
         assertThat(page.nextCursor()).isEqualTo(first.id());
+    }
+
+    @Test
+    void listPassesUncategorizedOnlyThroughToRepository() {
+        given(transactionRepository.listPage(eq(userId), eq(null), eq(true), eq(null), eq(null), eq(null), eq(null), eq(51)))
+                .willReturn(List.of());
+
+        service.list(userId, 50, null, null, true, null, null);
+
+        verify(transactionRepository).listPage(userId, null, true, null, null, null, null, 51);
     }
 
     @Test

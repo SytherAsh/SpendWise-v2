@@ -42,11 +42,18 @@ public class TransactionController {
             @AuthenticationPrincipal UUID userId,
             @RequestParam(required = false) Integer limit,
             @RequestParam(required = false) UUID cursor,
-            @RequestParam(required = false) Integer category,
+            @RequestParam(required = false) String category,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
+        CategoryFilter filter = parseCategoryFilter(category);
         TransactionPage page = transactionService.list(
-                userId, limit != null ? limit : DEFAULT_PAGE_SIZE, cursor, category, parseDate(from), parseDate(to));
+                userId,
+                limit != null ? limit : DEFAULT_PAGE_SIZE,
+                cursor,
+                filter.categoryId(),
+                filter.uncategorizedOnly(),
+                parseDate(from),
+                parseDate(to));
         List<TransactionResponse> data = page.data().stream().map(TransactionResponse::from).toList();
         return new TransactionListResponse(data, page.nextCursor(), page.hasMore());
     }
@@ -100,6 +107,23 @@ public class TransactionController {
             return Instant.parse(value);
         } catch (java.time.format.DateTimeParseException e) {
             return LocalDate.parse(value).atStartOfDay(ZoneOffset.UTC).toInstant();
+        }
+    }
+
+    private record CategoryFilter(Integer categoryId, boolean uncategorizedOnly) {}
+
+    /** {@code category} is either a numeric category id, the literal {@code "uncategorized"}, or absent. */
+    private static CategoryFilter parseCategoryFilter(String category) {
+        if (category == null || category.isBlank()) {
+            return new CategoryFilter(null, false);
+        }
+        if (category.equalsIgnoreCase("uncategorized")) {
+            return new CategoryFilter(null, true);
+        }
+        try {
+            return new CategoryFilter(Integer.parseInt(category), false);
+        } catch (NumberFormatException e) {
+            throw new InvalidCategoryFilterException(category);
         }
     }
 }

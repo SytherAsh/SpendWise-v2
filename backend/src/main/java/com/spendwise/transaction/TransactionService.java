@@ -31,8 +31,11 @@ public interface TransactionService {
     /**
      * @param limit page size (docs/api.md default 50)
      * @param cursor last-seen transaction id from a prior page, or null for the first page
+     * @param categoryId filter to this category id; ignored when {@code uncategorizedOnly} is true
+     * @param uncategorizedOnly filter to transactions with no category assigned at all
      */
-    TransactionPage list(UUID userId, int limit, UUID cursor, Integer categoryId, Instant from, Instant to);
+    TransactionPage list(
+            UUID userId, int limit, UUID cursor, Integer categoryId, boolean uncategorizedOnly, Instant from, Instant to);
 
     /** @throws TransactionNotFoundException if absent or owned by a different user */
     Transaction getById(UUID userId, UUID transactionId);

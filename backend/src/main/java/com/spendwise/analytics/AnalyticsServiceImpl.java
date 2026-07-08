@@ -47,6 +47,13 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     @Transactional
+    public UncategorizedTotal uncategorizedTotal(UUID userId, Instant from, Instant to) {
+        validateRange(from, to);
+        return analyticsRepository.uncategorizedTotal(userId, from, to);
+    }
+
+    @Override
+    @Transactional
     public AnalyticsComparison comparison(UUID userId, String granularity) {
         String normalized = validateGranularity(granularity, VALID_GRANULARITIES);
         LocalDate today = LocalDate.now(ZoneOffset.UTC);

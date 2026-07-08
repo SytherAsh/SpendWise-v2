@@ -177,6 +177,7 @@ public class TransactionRepository {
     public List<Transaction> listPage(
             UUID userId,
             Integer categoryId,
+            boolean uncategorizedOnly,
             Instant from,
             Instant to,
             Instant cursorDate,
@@ -189,8 +190,13 @@ public class TransactionRepository {
         List<Object> args = new ArrayList<>();
         args.add(userId);
         if (categoryId != null) {
-            sql.append(" AND EXISTS (SELECT 1 FROM transaction_categories tc2 WHERE tc2.transaction_id = t.id AND tc2.category_id = ?)");
+            // A category filter means "show me what I spent in this category" — money received
+            // (a refund, an incoming transfer) that happens to carry this category never belongs
+            // in that view, so it's excluded here regardless of which category was requested.
+            sql.append(" AND EXISTS (SELECT 1 FROM transaction_categories tc2 WHERE tc2.transaction_id = t.id AND tc2.category_id = ?) AND t.debit > 0");
             args.add(categoryId);
+        } else if (uncategorizedOnly) {
+            sql.append(" AND NOT EXISTS (SELECT 1 FROM transaction_categories tc2 WHERE tc2.transaction_id = t.id) AND t.debit > 0");
         }
         if (from != null) {
             sql.append(" AND t.transaction_date >= ?");

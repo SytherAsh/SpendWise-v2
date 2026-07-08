@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,9 +42,17 @@ public class AnalyticsController {
     @GetMapping("/categories")
     public List<CategoryTotalResponse> categories(
             @AuthenticationPrincipal UUID userId, @RequestParam(required = false) String from, @RequestParam(required = false) String to) {
-        return analyticsService.categoryBreakdown(userId, parseDate(from), parseDate(to)).stream()
-                .map(CategoryTotalResponse::from)
-                .toList();
+        Instant fromInstant = parseDate(from);
+        Instant toInstant = parseDate(to);
+        List<CategoryTotalResponse> result = new ArrayList<>(
+                analyticsService.categoryBreakdown(userId, fromInstant, toInstant).stream()
+                        .map(CategoryTotalResponse::from)
+                        .toList());
+        UncategorizedTotal uncategorized = analyticsService.uncategorizedTotal(userId, fromInstant, toInstant);
+        if (uncategorized.transactionCount() > 0) {
+            result.add(CategoryTotalResponse.uncategorized(uncategorized));
+        }
+        return result;
     }
 
     @GetMapping("/comparison")

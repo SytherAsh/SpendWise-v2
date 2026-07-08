@@ -13,6 +13,9 @@ public interface AnalyticsService {
     /** @throws InvalidAnalyticsQueryException if {@code from}/{@code to} are missing or {@code from} is after {@code to} */
     List<CategoryTotal> categoryBreakdown(UUID userId, Instant from, Instant to);
 
+    /** @throws InvalidAnalyticsQueryException if {@code from}/{@code to} are missing or {@code from} is after {@code to} */
+    UncategorizedTotal uncategorizedTotal(UUID userId, Instant from, Instant to);
+
     /**
      * Current calendar period (week/month/year, per {@code granularity}) vs. the immediately
      * preceding period of the same length, anchored to today (server clock, UTC).

@@ -143,7 +143,7 @@ class ChatbotServiceImplTest {
                 7,
                 0.9f,
                 "ml");
-        given(transactionService.list(eq(userId), anyInt(), isNull(), isNull(), any(), any()))
+        given(transactionService.list(eq(userId), anyInt(), isNull(), isNull(), eq(false), any(), any()))
                 .willReturn(new TransactionPage(List.of(transaction), null, false));
         return currentSummary;
     }
