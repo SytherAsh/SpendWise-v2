@@ -49,7 +49,8 @@ export function useShell(): ShellContextValue {
   return ctx;
 }
 
-/** Shared nav definition — the 5 primary destinations. */
+/** Shared nav definition — every in-app destination (used by the command palette
+ *  and the mobile drawer). */
 export const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { href: "/transactions", label: "Transactions", icon: "ArrowLeftRight" },
@@ -57,3 +58,7 @@ export const NAV_ITEMS = [
   { href: "/planning", label: "Planning", icon: "Target" },
   { href: "/settings", label: "Settings", icon: "Settings" },
 ] as const;
+
+/** Primary destinations shown in the top nav. Settings lives in the user menu
+ *  (see UserMenu), so it is intentionally excluded here. */
+export const PRIMARY_NAV = NAV_ITEMS.filter((i) => i.href !== "/settings");
