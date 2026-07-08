@@ -19,9 +19,10 @@ import java.util.stream.Collectors;
 public class BudgetServiceImpl implements BudgetService {
 
     // Not specified in docs — how many trailing calendar months /budgets/suggestions averages
-    // over. 3 balances recency (a stale 12-month-old spike shouldn't dominate) against enough
-    // signal to smooth out one unusually high or low month.
-    private static final int SUGGESTION_HISTORY_MONTHS = 3;
+    // over. 6 months, per explicit product-owner request during the Planning page redesign
+    // (was 3 originally; Epic 5's rationale for 3 no longer applies — the owner wants a longer
+    // window to smooth seasonal categories like Travel).
+    private static final int SUGGESTION_HISTORY_MONTHS = 6;
 
     private final BudgetRepository budgetRepository;
     private final TransactionService transactionService;

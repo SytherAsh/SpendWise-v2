@@ -1,9 +1,14 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BudgetManager } from "@/components/budget/BudgetManager";
 
-/** E10-S2-T3 required test: the edit form and suggestion-accept flow. */
+/**
+ * Required tests for the Planning page's redesigned Budgets tab: the category grid (no scroll,
+ * one tile per category with spend-vs-budget progress), the click-to-expand slider (starting at
+ * the existing budget, or the suggestion for an unbudgeted category), the "Use" suggestion
+ * shortcut, zero-limit validation, and the per-tile drill-through link to Transactions.
+ */
 
 const post = vi.fn();
 vi.mock("@/lib/apiClient", () => ({
@@ -23,7 +28,10 @@ vi.mock("@/lib/useApi", () => ({
     }
     if (key === "/budgets/suggestions") {
       return {
-        data: [{ categoryId: 5, suggestedMonthlyLimit: 2500, available: true }],
+        data: [
+          { categoryId: 5, suggestedMonthlyLimit: 2500, available: true },
+          { categoryId: 7, suggestedMonthlyLimit: 0, available: false },
+        ],
         error: undefined,
         isLoading: false,
         refresh: vi.fn(),
@@ -35,8 +43,11 @@ vi.mock("@/lib/useApi", () => ({
 
 vi.mock("@/lib/useCategories", () => ({
   useCategories: () => ({
-    categories: [{ id: 5, name: "Travel", icon: "flight" }],
-    categoryName: (id: number) => (id === 5 ? "Travel" : `Category ${id}`),
+    categories: [
+      { id: 5, name: "Travel", icon: "flight" },
+      { id: 7, name: "Food / Dine Out", icon: "restaurant" },
+    ],
+    categoryName: (id: number) => (id === 5 ? "Travel" : "Food / Dine Out"),
     isLoading: false,
     error: undefined,
   }),
@@ -47,28 +58,30 @@ afterEach(() => {
 });
 
 describe("BudgetManager", () => {
-  it("renders current budget progress", () => {
+  it("renders every category as a tile with spend-vs-budget progress and the total budget header", () => {
     render(<BudgetManager />);
     expect(screen.getByText("Travel")).toBeInTheDocument();
     expect(screen.getByText(/60%/)).toBeInTheDocument();
+    expect(screen.getByTestId("budget-total")).toHaveTextContent(/total budget this month.*₹2,000/i);
+    // A category with no budget set yet still renders, zero-filled.
+    expect(screen.getByText("Food / Dine Out")).toBeInTheDocument();
+    expect(screen.getByText(/no budget set/i)).toBeInTheDocument();
   });
 
-  it("accepts a suggestion, edits, and saves the budget", async () => {
+  it("expands the slider starting at the existing budget, applies the suggestion, and saves", async () => {
     const user = userEvent.setup();
     post.mockResolvedValue({});
 
     render(<BudgetManager />);
+    await user.click(screen.getByText("Travel").closest("button")!);
 
-    await user.click(screen.getByRole("button", { name: /edit budget/i }));
+    const slider = screen.getByLabelText(/monthly budget for travel/i) as HTMLInputElement;
+    expect(slider.value).toBe("2000"); // starts at the existing budget, not the suggestion
 
-    // Accept the suggestion — fills the limit input with the suggested value.
-    await user.click(screen.getByRole("button", { name: /accept/i }));
-    const input = screen.getByLabelText(/monthly limit for travel/i) as HTMLInputElement;
-    expect(input.value).toBe("2500");
+    await user.click(screen.getByRole("button", { name: /^use$/i }));
+    expect(slider.value).toBe("2500");
 
-    // Override to a custom value, then save.
-    await user.clear(input);
-    await user.type(input, "3000");
+    fireEvent.change(slider, { target: { value: "3000" } });
     await user.click(screen.getByRole("button", { name: /^save$/i }));
 
     await waitFor(() => {
@@ -77,17 +90,32 @@ describe("BudgetManager", () => {
     });
   });
 
-  it("rejects a non-positive limit without calling the API", async () => {
+  it("starts an unbudgeted, no-history category's slider at zero (no suggestion available)", async () => {
     const user = userEvent.setup();
     render(<BudgetManager />);
 
-    await user.click(screen.getByRole("button", { name: /edit budget/i }));
-    const input = screen.getByLabelText(/monthly limit for travel/i);
-    await user.clear(input);
-    await user.type(input, "0");
+    await user.click(screen.getByText("Food / Dine Out").closest("button")!);
+    const slider = screen.getByLabelText(/monthly budget for food \/ dine out/i) as HTMLInputElement;
+    expect(slider.value).toBe("0");
+    expect(slider.max).toBe("10000"); // fallback max with no suggestion to scale from
+  });
+
+  it("rejects a zero limit without calling the API", async () => {
+    const user = userEvent.setup();
+    render(<BudgetManager />);
+
+    await user.click(screen.getByText("Travel").closest("button")!);
+    const slider = screen.getByLabelText(/monthly budget for travel/i);
+    fireEvent.change(slider, { target: { value: "0" } });
     await user.click(screen.getByRole("button", { name: /^save$/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/greater than zero/i);
     expect(post).not.toHaveBeenCalled();
+  });
+
+  it("links each tile to that category's filtered transactions", () => {
+    render(<BudgetManager />);
+    const link = screen.getByRole("link", { name: /view travel transactions/i });
+    expect(link).toHaveAttribute("href", "/transactions?category=5");
   });
 });

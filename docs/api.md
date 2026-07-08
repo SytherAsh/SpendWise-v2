@@ -89,6 +89,8 @@ Authorization: Bearer <access_token>
 | GET | `/budgets/suggestions` | Get history-based budget suggestions derived from spending patterns (requires bank statement or SMS history) | User |
 
 > **Budget upsert:** `POST /budgets` is an idempotent upsert. If a budget for this category in the current month already exists, it is replaced. Repeated calls with the same parameters are safe.
+>
+> **`/budgets/suggestions` averaging window (updated for the Planning page redesign):** averages the trailing **6** calendar months of spend per category (current month excluded, since it's still in progress) — widened from the original 3-month default (Epic 5) at the product owner's explicit request, to smooth seasonal categories like Travel. Still an undocumented-by-spec default, not a hard requirement; a category with no spend in that window returns `available: false` rather than an error (unchanged).
 
 ### `/alerts` — Alerts
 

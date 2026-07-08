@@ -1,26 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  ArrowLeftRight,
-  Clapperboard,
-  Dumbbell,
-  HelpCircle,
-  MoreHorizontal,
-  Plane,
-  Receipt,
-  Repeat,
-  ShoppingBag,
-  ShoppingCart,
-  Sparkles,
-  Stethoscope,
-  UtensilsCrossed,
-  type LucideIcon,
-} from "lucide-react";
+import { HelpCircle, type LucideIcon } from "lucide-react";
 import { useApi } from "@/lib/useApi";
 import { useCategories } from "@/lib/useCategories";
 import { useDateRange } from "@/lib/date-range";
-import { categoryColor } from "@/lib/categories";
+import { categoryColor, categoryIcon } from "@/lib/categories";
 import { formatCurrency } from "@/lib/format";
 import { ErrorState, StaleBanner } from "@/components/shared/ui";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,29 +34,6 @@ interface Tile {
   amount: number;
   count: number;
   sharePct: number;
-}
-
-// The backend seeds `categories.icon` as Google Material Icons identifiers (docs/database.md) —
-// there's no Material Icons font loaded in this app, so rendering that string directly just
-// prints it as text. Map each known identifier to the equivalent lucide-react icon (already the
-// app's icon set everywhere else) instead.
-const MATERIAL_ICON_TO_LUCIDE: Record<string, LucideIcon> = {
-  shopping_bag: ShoppingBag,
-  movie: Clapperboard,
-  fitness_center: Dumbbell,
-  local_grocery_store: ShoppingCart,
-  flight: Plane,
-  more_horiz: MoreHorizontal,
-  restaurant: UtensilsCrossed,
-  face: Sparkles,
-  subscriptions: Repeat,
-  swap_horiz: ArrowLeftRight,
-  local_hospital: Stethoscope,
-  request_quote: Receipt,
-};
-
-function resolveIcon(icon: string | null | undefined): LucideIcon {
-  return (icon && MATERIAL_ICON_TO_LUCIDE[icon]) || HelpCircle;
 }
 
 const TILE_COUNT_ESTIMATE = 13; // 12 fixed categories + Uncategorized — used only to size the loading skeleton
@@ -118,7 +80,7 @@ export function CategorySummaryGrid({
       return {
         key: c.id,
         name: c.name,
-        icon: resolveIcon(c.icon),
+        icon: categoryIcon(c.icon),
         color: categoryColor(c.name, c.id),
         amount: row?.totalSpend ?? 0,
         count: row?.transactionCount ?? 0,

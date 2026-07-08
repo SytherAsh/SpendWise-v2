@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { Repeat } from "lucide-react";
 import { apiClient } from "@/lib/apiClient";
 import { useApi } from "@/lib/useApi";
 import { formatCurrency } from "@/lib/format";
 import { Card, EmptyState, ErrorState, Spinner } from "@/components/shared/ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 interface Emi {
   id: string;
@@ -107,79 +111,87 @@ export function EmiManager() {
   }
 
   return (
-    <div className="max-w-2xl space-y-4">
+    <div className="space-y-4">
       <div>
         {!adding ? (
-          <button
-            type="button"
-            onClick={() => { setAdding(true); setFormError(null); }}
-            className="rounded-md bg-brand-700 px-4 py-2 text-sm font-medium text-white"
-          >
+          <Button onClick={() => { setAdding(true); setFormError(null); }}>
             Add EMI / subscription
-          </button>
+          </Button>
         ) : (
-          <Card>
-            <h2 className="mb-3 text-sm font-semibold">New EMI / subscription</h2>
+          <Card className="max-w-2xl">
+            <h2 className="mb-3 text-sm font-semibold text-foreground">New EMI / subscription</h2>
             <EmiFieldset fields={addFields} onChange={setAddFields} />
-            {formError && <p role="alert" className="mt-2 text-sm text-red-600">{formError}</p>}
+            {formError && <p role="alert" className="mt-2 text-sm text-[var(--color-danger)]">{formError}</p>}
             <div className="mt-3 flex gap-2">
-              <button type="button" onClick={createEmi} disabled={busy} className="rounded-md bg-brand-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">
+              <Button size="sm" onClick={createEmi} disabled={busy}>
                 {busy ? "Adding…" : "Add"}
-              </button>
-              <button type="button" onClick={() => { setAdding(false); setAddFields(EMPTY); }} className="rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15">
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => { setAdding(false); setAddFields(EMPTY); }}>
                 Cancel
-              </button>
+              </Button>
             </div>
           </Card>
         )}
       </div>
 
       {emis.length === 0 ? (
-        <EmptyState message="No active EMIs or subscriptions." />
+        <Card>
+          <EmptyState message="No active EMIs or subscriptions." />
+        </Card>
       ) : (
-        emis.map((emi) => (
-          <Card key={emi.id}>
-            {editing === emi.id ? (
-              <>
-                <EmiFieldset fields={fields} onChange={setFields} />
-                {formError && <p role="alert" className="mt-2 text-sm text-red-600">{formError}</p>}
-                <div className="mt-3 flex gap-2">
-                  <button type="button" onClick={() => saveEdit(emi.id)} disabled={busy} className="rounded-md bg-brand-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">
-                    {busy ? "Saving…" : "Save"}
-                  </button>
-                  <button type="button" onClick={() => setEditing(null)} className="rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15">
-                    Cancel
-                  </button>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-3">
+          {emis.map((emi) => (
+            <Card key={emi.id}>
+              {editing === emi.id ? (
+                <>
+                  <EmiFieldset fields={fields} onChange={setFields} />
+                  {formError && <p role="alert" className="mt-2 text-sm text-[var(--color-danger)]">{formError}</p>}
+                  <div className="mt-3 flex gap-2">
+                    <Button size="sm" onClick={() => saveEdit(emi.id)} disabled={busy}>
+                      {busy ? "Saving…" : "Save"}
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => setEditing(null)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span
+                        aria-hidden
+                        className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-muted text-foreground-muted"
+                      >
+                        <Repeat className="size-4" />
+                      </span>
+                      <p className="font-medium text-foreground">{emi.label}</p>
+                    </div>
+                    {emi.detectedFromSms && <Badge tone="brand">Auto-detected</Badge>}
+                  </div>
+                  <p className="tnum text-lg font-semibold text-foreground">{formatCurrency(emi.amount)}</p>
+                  {emi.dueDay != null && (
+                    <p className="text-xs text-foreground-subtle">Due day {emi.dueDay}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => startEdit(emi)}>
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => deactivate(emi.id)}
+                      disabled={busy}
+                      aria-label={`Deactivate ${emi.label}`}
+                    >
+                      Deactivate
+                    </Button>
+                  </div>
                 </div>
-              </>
-            ) : (
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="font-medium">{emi.label}</p>
-                  <p className="text-sm text-foreground-muted">
-                    {formatCurrency(emi.amount)}
-                    {emi.dueDay != null && ` · due day ${emi.dueDay}`}
-                    {emi.detectedFromSms && " · auto-detected"}
-                  </p>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  <button type="button" onClick={() => startEdit(emi)} className="text-sm text-brand-700 underline">
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deactivate(emi.id)}
-                    disabled={busy}
-                    aria-label={`Deactivate ${emi.label}`}
-                    className="text-sm text-red-600 underline disabled:opacity-50"
-                  >
-                    Deactivate
-                  </button>
-                </div>
-              </div>
-            )}
-          </Card>
-        ))
+              )}
+            </Card>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -190,35 +202,32 @@ function EmiFieldset({ fields, onChange }: { fields: EmiFields; onChange: (f: Em
     <div className="grid gap-3 sm:grid-cols-3">
       <label className="block text-sm">
         <span className="mb-1 block text-foreground-muted">Label</span>
-        <input
+        <Input
           type="text"
           aria-label="Label"
           value={fields.label}
           onChange={(e) => onChange({ ...fields, label: e.target.value })}
-          className="w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-neutral-800"
         />
       </label>
       <label className="block text-sm">
         <span className="mb-1 block text-foreground-muted">Amount (₹)</span>
-        <input
+        <Input
           type="number"
           min={1}
           aria-label="Amount"
           value={fields.amount}
           onChange={(e) => onChange({ ...fields, amount: e.target.value })}
-          className="w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-neutral-800"
         />
       </label>
       <label className="block text-sm">
         <span className="mb-1 block text-foreground-muted">Due day (optional)</span>
-        <input
+        <Input
           type="number"
           min={1}
           max={31}
           aria-label="Due day"
           value={fields.dueDay}
           onChange={(e) => onChange({ ...fields, dueDay: e.target.value })}
-          className="w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-neutral-800"
         />
       </label>
     </div>

@@ -1,3 +1,20 @@
+import {
+  ArrowLeftRight,
+  Clapperboard,
+  Dumbbell,
+  HelpCircle,
+  MoreHorizontal,
+  Plane,
+  Receipt,
+  Repeat,
+  ShoppingBag,
+  ShoppingCart,
+  Sparkles,
+  Stethoscope,
+  UtensilsCrossed,
+  type LucideIcon,
+} from "lucide-react";
+
 /**
  * Category color system for the 12 fixed spending categories.
  *
@@ -64,4 +81,31 @@ export function categoryColor(name: string | null | undefined, id?: number): str
 /** A soft tinted background for category chips (12% of the hue over the surface). */
 export function categoryTint(name: string | null | undefined, id?: number): string {
   return `color-mix(in srgb, ${categoryColor(name, id)} 12%, transparent)`;
+}
+
+/**
+ * The backend seeds `categories.icon` as Google Material Icons identifiers (docs/database.md) —
+ * there's no Material Icons font loaded in this app, so rendering that string directly just
+ * prints it as text. Map each known identifier to the equivalent lucide-react icon (already the
+ * app's icon set everywhere else) instead. Shared by every page that renders a category icon
+ * (Transactions, Planning, ...) so the mapping stays in one place.
+ */
+const MATERIAL_ICON_TO_LUCIDE: Record<string, LucideIcon> = {
+  shopping_bag: ShoppingBag,
+  movie: Clapperboard,
+  fitness_center: Dumbbell,
+  local_grocery_store: ShoppingCart,
+  flight: Plane,
+  more_horiz: MoreHorizontal,
+  restaurant: UtensilsCrossed,
+  face: Sparkles,
+  subscriptions: Repeat,
+  swap_horiz: ArrowLeftRight,
+  local_hospital: Stethoscope,
+  request_quote: Receipt,
+};
+
+/** Resolves a category's `icon` field to a renderable component; falls back to a generic icon. */
+export function categoryIcon(icon: string | null | undefined): LucideIcon {
+  return (icon && MATERIAL_ICON_TO_LUCIDE[icon]) || HelpCircle;
 }

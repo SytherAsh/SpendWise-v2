@@ -1,12 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/shared/ui";
 import { CategorySummaryGrid, type CategorySelection } from "@/components/transactions/CategorySummaryGrid";
 import { TransactionsBrowser } from "@/components/transactions/TransactionsBrowser";
 
-export default function TransactionsPage() {
-  const [categoryFilter, setCategoryFilter] = useState<CategorySelection>(null);
+/** Reads `?category=` for deep links from other pages (e.g. Planning's per-category drill-through). */
+function parseInitialCategory(raw: string | null): CategorySelection {
+  if (!raw) return null;
+  if (raw === "uncategorized") return "uncategorized";
+  const id = Number(raw);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+function TransactionsPageContent() {
+  const searchParams = useSearchParams();
+  const [categoryFilter, setCategoryFilter] = useState<CategorySelection>(() =>
+    parseInitialCategory(searchParams.get("category")),
+  );
 
   return (
     <>
@@ -16,5 +28,13 @@ export default function TransactionsPage() {
         <TransactionsBrowser categoryFilter={categoryFilter} onClearFilter={() => setCategoryFilter(null)} />
       </div>
     </>
+  );
+}
+
+export default function TransactionsPage() {
+  return (
+    <Suspense fallback={null}>
+      <TransactionsPageContent />
+    </Suspense>
   );
 }
