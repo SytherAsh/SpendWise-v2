@@ -101,6 +101,13 @@ export function trailingMonths(anchorTo: string, count: number, now = new Date()
   return { from: iso(start), to: iso(end) };
 }
 
+/** Number of calendar months a `[from, to]` window covers, inclusive (e.g. Jul→Jul is 1, Feb→Jul is 6). */
+export function monthSpan(from: string, to: string): number {
+  const f = new Date(`${from}T00:00:00`);
+  const t = new Date(`${to}T00:00:00`);
+  return (t.getFullYear() - f.getFullYear()) * 12 + (t.getMonth() - f.getMonth()) + 1;
+}
+
 /**
  * Adaptive bucket size for `/analytics/trends` by the selected range's span — a sparkline or
  * trend chart over "This month" wants daily buckets, but the same chart over "This financial
