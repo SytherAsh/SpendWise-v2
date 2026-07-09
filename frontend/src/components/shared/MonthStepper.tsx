@@ -9,7 +9,8 @@ import { cn } from "@/lib/cn";
  * to the same `DateRangeProvider` state the top-bar `DateRangePicker` uses — unlike those
  * relative-to-today presets (This month, Last 3 months, …), this is the fast way to land on
  * any specific past month, and since the range is shared app-wide, the other pages pick up
- * the same month if visited next.
+ * the same month if visited next. Used in both the Analytics page header and the Transactions
+ * page header's center slot (`PageHeader`'s `center` prop) — a shared, page-agnostic control.
  *
  * Reads the "current" month off `range.from` rather than tracking its own state — works
  * whether the range got here via a previous step, a fresh page load (defaults to this

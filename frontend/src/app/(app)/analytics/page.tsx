@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/shared/ui";
 import { AnalyticsView } from "@/components/analytics/AnalyticsView";
-import { MonthStepper } from "@/components/analytics/MonthStepper";
+import { MonthStepper } from "@/components/shared/MonthStepper";
 
 export default function AnalyticsPage() {
   return (

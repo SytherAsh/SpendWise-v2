@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/shared/ui";
+import { MonthStepper } from "@/components/shared/MonthStepper";
 import { CategorySummaryGrid, type CategorySelection } from "@/components/transactions/CategorySummaryGrid";
 import { TransactionsHeaderStats } from "@/components/transactions/TransactionsHeaderStats";
 import { TransactionsBrowser } from "@/components/transactions/TransactionsBrowser";
@@ -27,6 +28,7 @@ function TransactionsPageContent() {
       <PageHeader
         title="Transactions"
         subtitle="See where your money went, then drill into any category"
+        center={<MonthStepper />}
         action={<TransactionsHeaderStats />}
       />
       <div className="space-y-6">

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MonthStepper } from "@/components/analytics/MonthStepper";
+import { MonthStepper } from "@/components/shared/MonthStepper";
 
 /**
  * Steps the shared global date range one calendar month at a time. Reads "which month" off
