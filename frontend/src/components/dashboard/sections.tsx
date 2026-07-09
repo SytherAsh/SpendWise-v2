@@ -1,7 +1,22 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { AlertTriangle, AlertCircle, Info, Sparkles, X, Repeat, ArrowRightLeft, Receipt, Store } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
+import {
+  AlertTriangle,
+  AlertCircle,
+  Info,
+  Sparkles,
+  X,
+  Repeat,
+  ArrowRightLeft,
+  Receipt,
+  Store,
+  Bell,
+  TrendingUp,
+  PieChart,
+  PiggyBank,
+  type LucideIcon,
+} from "lucide-react";
 import { CategoryBarChart, type CategoryTotal } from "@/components/charts/CategoryBarChart";
 import { CategoryDonut } from "@/components/charts/CategoryDonut";
 import { TrendLineChart, type TrendBucket } from "@/components/charts/TrendLineChart";
@@ -13,6 +28,29 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
 export { CategoryBarChart };
+
+/**
+ * One accent hue per card, so each is identifiable at a glance instead of every box on the
+ * page reading as an identical neutral container. Reuses the dataviz-validated hues already
+ * shipped for category color (lib/categories.ts CATEGORY_PALETTE) rather than inventing new,
+ * unvalidated ones — this is a fresh per-card assignment, unrelated to any category's color.
+ */
+const CARD_THEME = {
+  trend: "#2a78d6", // blue
+  alerts: "#e34948", // red
+  topSpends: "#eb6834", // orange
+  topPayees: "#7c5cff", // violet
+  categorySummary: "#0891b2", // cyan
+  recommendations: "#16a34a", // green
+  upcomingEmis: "#4f46e5", // indigo
+  recentActivity: "#e0559d", // pink
+  budget: "#eda100", // amber
+} as const;
+
+/** Soft tinted chip background + full-strength icon color for a card's theme hue. */
+function chipStyle(color: string): CSSProperties {
+  return { backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`, color };
+}
 
 interface SectionState<T> {
   data: T | undefined;
@@ -83,6 +121,8 @@ function humanize(type: string): string {
 /** Card shell with a header, loading skeleton, error and empty states. */
 function SectionCard<T>({
   title,
+  icon: Icon,
+  theme,
   action,
   state,
   emptyMessage,
@@ -91,6 +131,9 @@ function SectionCard<T>({
   className,
 }: {
   title: string;
+  /** Card identity — a top accent + a tinted icon chip next to the title. */
+  icon?: LucideIcon;
+  theme?: string;
   action?: ReactNode;
   state: SectionState<T>;
   emptyMessage: string;
@@ -99,9 +142,19 @@ function SectionCard<T>({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-[var(--radius)] border border-border bg-surface p-5 shadow-[var(--shadow-sm)]", className)}>
+    <section
+      className={cn("rounded-[var(--radius)] border border-border bg-surface p-5 shadow-[var(--shadow-sm)]", className)}
+      style={theme ? { borderTopWidth: 3, borderTopColor: theme } : undefined}
+    >
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+        <div className="flex items-center gap-2.5">
+          {Icon && theme && (
+            <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-full" style={chipStyle(theme)}>
+              <Icon className="size-4" />
+            </span>
+          )}
+          <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+        </div>
         {action}
       </div>
       {state.isLoading && state.data === undefined ? (
@@ -146,6 +199,8 @@ export function AlertsSection({ state }: { state: SectionState<Alert[]> }) {
   return (
     <SectionCard
       title="Alerts"
+      icon={Bell}
+      theme={CARD_THEME.alerts}
       state={state}
       emptyMessage="No alerts right now."
       isEmpty={(d) => d.length === 0}
@@ -185,6 +240,8 @@ export function TopSpendsSection({ state }: { state: SectionState<RecentTransact
   return (
     <SectionCard
       title="Top spends"
+      icon={Receipt}
+      theme={CARD_THEME.topSpends}
       state={state}
       emptyMessage="No spending in this period yet."
       isEmpty={(d) => d.length === 0}
@@ -196,7 +253,7 @@ export function TopSpendsSection({ state }: { state: SectionState<RecentTransact
             .slice(0, 5)
             .map((t) => (
               <li key={t.id} className="flex items-center gap-3 rounded-[var(--radius-sm)] border border-border bg-surface-muted p-3 text-sm">
-                <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface text-foreground-muted">
+                <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full" style={chipStyle(CARD_THEME.topSpends)}>
                   <Receipt className="size-4" />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -228,6 +285,8 @@ export function TopPayeesSection({ state }: { state: SectionState<RecentTransact
   return (
     <SectionCard
       title="Top payees"
+      icon={Store}
+      theme={CARD_THEME.topPayees}
       state={state}
       emptyMessage="No spending in this period yet."
       isEmpty={(d) => d.length === 0}
@@ -236,7 +295,7 @@ export function TopPayeesSection({ state }: { state: SectionState<RecentTransact
         <ul className="space-y-2">
           {topPayees(transactions).map(([payee, { total, count }]) => (
             <li key={payee} className="flex items-center gap-3 rounded-[var(--radius-sm)] border border-border bg-surface-muted p-3 text-sm">
-              <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface text-foreground-muted">
+              <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full" style={chipStyle(CARD_THEME.topPayees)}>
                 <Store className="size-4" />
               </span>
               <div className="min-w-0 flex-1">
@@ -262,6 +321,8 @@ export function RecommendationsSection({
   return (
     <SectionCard
       title="Savings recommendations"
+      icon={Sparkles}
+      theme={CARD_THEME.recommendations}
       state={state}
       emptyMessage="No recommendations yet."
       isEmpty={(d) => d.length === 0}
@@ -273,7 +334,7 @@ export function RecommendationsSection({
               key={r.id}
               className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-border bg-surface-muted p-3 text-sm"
             >
-              <Sparkles className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden />
+              <Sparkles className="mt-0.5 size-4 shrink-0" style={{ color: CARD_THEME.recommendations }} aria-hidden />
               <span className="min-w-0 flex-1 text-foreground">{r.text}</span>
               <button
                 type="button"
@@ -301,6 +362,8 @@ export function BudgetSection({
   return (
     <SectionCard
       title="Budget progress"
+      icon={PiggyBank}
+      theme={CARD_THEME.budget}
       state={state}
       emptyMessage="No spending against a budget this period yet."
       isEmpty={(d) => d.filter((p) => p.spent > 0).length === 0}
@@ -335,6 +398,8 @@ export function CategorySummarySection({ state }: { state: SectionState<Category
   return (
     <SectionCard
       title="Spending by category"
+      icon={PieChart}
+      theme={CARD_THEME.categorySummary}
       state={state}
       emptyMessage="No spending to summarize yet."
       isEmpty={(d) => d.filter((c) => Number(c.totalSpend) > 0).length === 0}
@@ -388,6 +453,8 @@ export function TrendSection({
   return (
     <SectionCard
       title="Spending trend"
+      icon={TrendingUp}
+      theme={CARD_THEME.trend}
       action={<SpanToggle span={span} onChange={onSpanChange} disabled={spanDisabled} />}
       state={state}
       emptyMessage="Not enough history to plot a trend yet."
@@ -408,6 +475,8 @@ export function UpcomingEmisSection({ state }: { state: SectionState<Emi[]> }) {
   return (
     <SectionCard
       title="Upcoming EMIs & subscriptions"
+      icon={Repeat}
+      theme={CARD_THEME.upcomingEmis}
       state={state}
       emptyMessage="No upcoming EMIs or subscriptions."
       isEmpty={(d) => scheduled(d).length === 0}
@@ -418,7 +487,7 @@ export function UpcomingEmisSection({ state }: { state: SectionState<Emi[]> }) {
             .slice(0, 5)
             .map(({ emi, due }) => (
               <li key={emi.id} className="flex items-center gap-3 rounded-[var(--radius-sm)] border border-border bg-surface-muted p-3 text-sm">
-                <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface text-foreground-muted">
+                <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full" style={chipStyle(CARD_THEME.upcomingEmis)}>
                   <Repeat className="size-4" />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -441,6 +510,8 @@ export function RecentActivitySection({ state }: { state: SectionState<RecentTra
   return (
     <SectionCard
       title="Recent activity"
+      icon={ArrowRightLeft}
+      theme={CARD_THEME.recentActivity}
       state={state}
       emptyMessage="No transactions in this period yet."
       isEmpty={(d) => d.length === 0}
@@ -451,7 +522,7 @@ export function RecentActivitySection({ state }: { state: SectionState<RecentTra
             const isCredit = t.amount > 0;
             return (
               <li key={t.id} className="flex items-center gap-3 rounded-[var(--radius-sm)] border border-border bg-surface-muted p-3 text-sm">
-                <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface text-foreground-muted">
+                <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full" style={chipStyle(CARD_THEME.recentActivity)}>
                   <ArrowRightLeft className="size-4" />
                 </span>
                 <div className="min-w-0 flex-1">
