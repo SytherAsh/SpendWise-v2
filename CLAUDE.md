@@ -131,6 +131,25 @@ Feature implementation is done (Epics 0–11). Day-to-day work now is **polishin
 
 **Not in scope by default:** new post-MVP features (see [docs/roadmap.md](./docs/roadmap.md)), microservices extraction, changing the ML approach, or adding paid infrastructure. Epic 12 (deployment/monitoring/launch) remains the separate, still-open launch track — see [implementation/tracking/STATUS.md](./implementation/tracking/STATUS.md).
 
+## Frontend Development Workflow
+
+The frontend dev server is already running locally and stays open in the browser while Claude works. This section governs when Claude may start, build, restart, or test it — it is a standing preference, not a one-off instruction, and applies to every future task in this repository.
+
+**Do not, by default:**
+- Run `npm run dev`, `pnpm dev`, `yarn dev`, `bun dev`, or start any other development server.
+- Build the project or run its test suite.
+- Repeatedly build, restart, or relaunch the frontend after every change.
+
+**Claude's responsibility on a frontend change:**
+- Make the required code changes.
+- Check for obvious mistakes without starting the dev server — syntax errors, type errors, import issues, lint issues (via static reading, not by executing `next lint`/`tsc`, unless asked), and logical inconsistencies.
+- Update all affected files, keeping the implementation consistent with the project architecture and this file.
+- Leave layout, styling, responsiveness, spacing, and animation verification to the user — they test manually in the already-open browser and will describe exactly what to change if something looks wrong.
+
+**Only build, run, or test when explicitly asked** — e.g. "build the project," "run the frontend," "start the backend," "run tests," "check the production build." Absent one of those explicit requests, assume the frontend is already running, the user is testing manually, and Claude's job is limited to editing code.
+
+**Interaction with the rest of this file:** for routine frontend/UI work, this default takes precedence over the general "run the relevant test suite(s) before recommending a commit" guidance in **Commit Policy** and **Task Workflow** below — commit without starting the dev server, building, or running tests unless the user has explicitly asked for one of those, and say so when recommending the commit. Backend, Android, and ML changes, and any case where the user does ask for a build/run/test, are unaffected — follow the existing Commit Policy and Task Workflow as written.
+
 ## Git & GitHub Workflow
 
 This is the authoritative process for how Claude Code operates on this repository day to day. **SpendWise is a solo project — the normal workflow is to work directly on `main`; feature branches and pull requests are not required.** Commit-message conventions and code style live in [docs/development_guidelines.md](./docs/development_guidelines.md); test commands live in [docs/testing.md](./docs/testing.md); epic/task tracking lives in [implementation/](./implementation/README.md). This section governs *when* and *how* those are used — it does not restate them.
