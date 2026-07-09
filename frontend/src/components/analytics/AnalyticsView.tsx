@@ -98,7 +98,7 @@ export function AnalyticsView() {
           {trends.error && !trends.data ? (
             <ErrorState message="Could not load the trend." />
           ) : trends.data && trends.data.buckets.length > 0 ? (
-            <TrendLineChart buckets={trends.data.buckets} height={300} />
+            <TrendLineChart buckets={trends.data.buckets} height={280} variant="crisp" />
           ) : trends.isLoading ? (
             <Skeleton className="h-[300px] w-full" />
           ) : (
