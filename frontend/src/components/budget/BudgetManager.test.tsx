@@ -7,7 +7,8 @@ import { BudgetManager } from "@/components/budget/BudgetManager";
  * Required tests for the Planning page's redesigned Budgets tab: the category grid (no scroll,
  * one tile per category with spend-vs-budget progress), the click-to-expand slider (starting at
  * the existing budget, or the suggestion for an unbudgeted category), the "Use" suggestion
- * shortcut, zero-limit validation, and the per-tile drill-through link to Transactions.
+ * shortcut, zero-limit validation, and the per-tile drill-through link to Transactions. The
+ * "total budget this month" header figure lives in BudgetTotalStat (see its own test).
  */
 
 const post = vi.fn();
@@ -58,11 +59,10 @@ afterEach(() => {
 });
 
 describe("BudgetManager", () => {
-  it("renders every category as a tile with spend-vs-budget progress and the total budget header", () => {
+  it("renders every category as a tile with spend-vs-budget progress", () => {
     render(<BudgetManager />);
     expect(screen.getByText("Travel")).toBeInTheDocument();
     expect(screen.getByText(/60%/)).toBeInTheDocument();
-    expect(screen.getByTestId("budget-total")).toHaveTextContent(/total budget this month.*₹2,000/i);
     // A category with no budget set yet still renders, zero-filled.
     expect(screen.getByText("Food / Dine Out")).toBeInTheDocument();
     expect(screen.getByText(/no budget set/i)).toBeInTheDocument();

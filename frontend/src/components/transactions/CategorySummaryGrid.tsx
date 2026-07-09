@@ -21,11 +21,6 @@ interface CategoryTotalRow {
   transactionCount: number;
 }
 
-interface SummaryOverall {
-  totalSpend: number;
-  totalIncome: number;
-}
-
 interface Tile {
   key: number | "uncategorized";
   name: string;
@@ -64,9 +59,6 @@ export function CategorySummaryGrid({
     isStale,
     refresh,
   } = useApi<CategoryTotalRow[]>(`/analytics/categories?from=${range.from}&to=${range.to}`);
-  const { data: summary, isLoading: summaryLoading } = useApi<SummaryOverall>(
-    `/analytics/summary?from=${range.from}&to=${range.to}`,
-  );
 
   const tiles = useMemo<Tile[]>(() => {
     if (categories.length === 0) return [];
@@ -106,9 +98,7 @@ export function CategorySummaryGrid({
     return all.sort((a, b) => b.amount - a.amount);
   }, [categories, rows]);
 
-  const moneySpent = summary?.totalSpend ?? 0;
-  const moneyReceived = summary?.totalIncome ?? 0;
-  const initialLoading = categoriesLoading || rowsLoading || summaryLoading;
+  const initialLoading = categoriesLoading || rowsLoading;
 
   if (error && !rows) {
     return <ErrorState message="Could not load category totals." onRetry={refresh} />;
@@ -117,16 +107,6 @@ export function CategorySummaryGrid({
   return (
     <div className="space-y-3">
       {isStale && <StaleBanner onRetry={refresh} />}
-      {!initialLoading && (
-        <div data-testid="category-summary-totals" className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
-          <p className="text-foreground-muted">
-            Money spent <span className="font-medium text-foreground">{formatCurrency(moneySpent)}</span>
-          </p>
-          <p className="text-foreground-muted">
-            Money received <span className="font-medium text-foreground">{formatCurrency(moneyReceived)}</span>
-          </p>
-        </div>
-      )}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-3">
         {initialLoading
           ? Array.from({ length: TILE_COUNT_ESTIMATE }).map((_, i) => <Skeleton key={i} className="h-[104px]" />)

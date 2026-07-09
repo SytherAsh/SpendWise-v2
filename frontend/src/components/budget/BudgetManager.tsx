@@ -80,7 +80,6 @@ export function BudgetManager() {
 
   const progressByCat = new Map((progress.data ?? []).map((p) => [p.categoryId, p]));
   const suggestionByCat = new Map((suggestions.data ?? []).map((s) => [s.categoryId, s]));
-  const totalBudgeted = (progress.data ?? []).reduce((sum, p) => sum + p.monthlyLimit, 0);
 
   function startEdit(categoryId: number) {
     const existing = progressByCat.get(categoryId);
@@ -118,10 +117,6 @@ export function BudgetManager() {
 
   return (
     <div className="space-y-4">
-      <p data-testid="budget-total" className="text-sm text-foreground-muted">
-        Total budget this month <span className="font-medium text-foreground">{formatCurrency(totalBudgeted)}</span>
-      </p>
-
       <div className="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-3">
         {categories.map((c) => {
           const p = progressByCat.get(c.id);

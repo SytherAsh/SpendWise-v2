@@ -6,9 +6,10 @@ import { CategorySummaryGrid } from "@/components/transactions/CategorySummaryGr
 /**
  * Required tests for the Transactions page's category summary strip: zero-filling categories
  * absent from `/analytics/categories`, the synthetic Uncategorized tile, highest-spend-first
- * sorting, the click-to-select / click-again-to-clear interaction, the money-spent/money-received
- * header (from `/analytics/summary`'s overall totals), and mapping the backend's Material Icons
- * identifiers to a real rendered icon instead of raw text.
+ * sorting, the click-to-select / click-again-to-clear interaction, and mapping the backend's
+ * Material Icons identifiers to a real rendered icon instead of raw text. The money-spent/
+ * money-received header figures live in TransactionsHeaderStats (see its own test) — this
+ * component fetches `/analytics/categories` only.
  */
 
 const useApiMock = vi.fn();
@@ -41,29 +42,20 @@ function apiState(overrides: Record<string, unknown> = {}) {
   return { data: undefined, error: undefined, isLoading: false, isValidating: false, isStale: false, refresh: vi.fn(), ...overrides };
 }
 
-/** `useApi` is called for both `/analytics/categories` and `/analytics/summary` — route by key. */
-function mockApi({ categories, summary }: { categories?: Record<string, unknown>; summary?: Record<string, unknown> } = {}) {
-  useApiMock.mockImplementation((key: string) =>
-    key.includes("/analytics/summary") ? apiState(summary) : apiState(categories),
-  );
+function mockApi(overrides: Record<string, unknown> = {}) {
+  useApiMock.mockImplementation(() => apiState(overrides));
 }
 
 describe("CategorySummaryGrid", () => {
   it("zero-fills categories absent from the response, includes Uncategorized, sorts by spend descending, and renders a real icon (not raw icon-name text)", () => {
     mockApi({
-      categories: {
-        data: [
-          { categoryId: 1, categoryName: "Groceries", totalSpend: 800, totalIncome: 0, transactionCount: 4 },
-          { categoryId: null, categoryName: "Uncategorized", totalSpend: 200, totalIncome: 0, transactionCount: 1 },
-        ],
-      },
-      summary: { data: { totalSpend: 1000, totalIncome: 350 } },
+      data: [
+        { categoryId: 1, categoryName: "Groceries", totalSpend: 800, totalIncome: 0, transactionCount: 4 },
+        { categoryId: null, categoryName: "Uncategorized", totalSpend: 200, totalIncome: 0, transactionCount: 1 },
+      ],
     });
 
     render(<CategorySummaryGrid selected={null} onSelect={vi.fn()} />);
-
-    expect(screen.getByTestId("category-summary-totals")).toHaveTextContent(/money spent.*₹1,000/i);
-    expect(screen.getByTestId("category-summary-totals")).toHaveTextContent(/money received.*₹350/i);
 
     const buttons = screen.getAllByRole("button");
     expect(within(buttons[0]).getByText("Groceries")).toBeInTheDocument();
@@ -80,7 +72,7 @@ describe("CategorySummaryGrid", () => {
 
   it("clicking a tile selects it; clicking the already-selected tile clears it", async () => {
     const user = userEvent.setup();
-    mockApi({ categories: { data: [{ categoryId: 1, categoryName: "Groceries", totalSpend: 800, totalIncome: 0, transactionCount: 4 }] } });
+    mockApi({ data: [{ categoryId: 1, categoryName: "Groceries", totalSpend: 800, totalIncome: 0, transactionCount: 4 }] });
     const onSelect = vi.fn();
     const { rerender } = render(<CategorySummaryGrid selected={null} onSelect={onSelect} />);
 
@@ -94,7 +86,7 @@ describe("CategorySummaryGrid", () => {
 
   it('selecting the Uncategorized tile reports the "uncategorized" sentinel', async () => {
     const user = userEvent.setup();
-    mockApi({ categories: { data: [{ categoryId: null, categoryName: "Uncategorized", totalSpend: 200, totalIncome: 0, transactionCount: 1 }] } });
+    mockApi({ data: [{ categoryId: null, categoryName: "Uncategorized", totalSpend: 200, totalIncome: 0, transactionCount: 1 }] });
     const onSelect = vi.fn();
     render(<CategorySummaryGrid selected={null} onSelect={onSelect} />);
 
@@ -103,9 +95,7 @@ describe("CategorySummaryGrid", () => {
   });
 
   it("shows an error state when the category-totals fetch fails with no data", () => {
-    useApiMock.mockImplementation((key: string) =>
-      key.includes("/analytics/summary") ? apiState() : apiState({ error: new Error("boom") }),
-    );
+    mockApi({ error: new Error("boom") });
     render(<CategorySummaryGrid selected={null} onSelect={vi.fn()} />);
     expect(screen.getByRole("alert")).toHaveTextContent(/could not load category totals/i);
   });

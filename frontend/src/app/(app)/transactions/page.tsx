@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/shared/ui";
 import { CategorySummaryGrid, type CategorySelection } from "@/components/transactions/CategorySummaryGrid";
+import { TransactionsHeaderStats } from "@/components/transactions/TransactionsHeaderStats";
 import { TransactionsBrowser } from "@/components/transactions/TransactionsBrowser";
 
 /** Reads `?category=` for deep links from other pages (e.g. Planning's per-category drill-through). */
@@ -22,7 +23,11 @@ function TransactionsPageContent() {
 
   return (
     <>
-      <PageHeader title="Transactions" subtitle="See where your money went, then drill into any category" />
+      <PageHeader
+        title="Transactions"
+        subtitle="See where your money went, then drill into any category"
+        action={<TransactionsHeaderStats />}
+      />
       <div className="space-y-6">
         <CategorySummaryGrid selected={categoryFilter} onSelect={setCategoryFilter} />
         <TransactionsBrowser categoryFilter={categoryFilter} onClearFilter={() => setCategoryFilter(null)} />
