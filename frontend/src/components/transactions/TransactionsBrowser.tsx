@@ -363,7 +363,11 @@ function TransactionRow({
       <td className="px-4 py-3">
         <span className="flex items-center gap-2">
           {typeof catId === "number" && (
-            <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: categoryColor(categoryName(catId), catId) }} />
+            <span
+              aria-hidden
+              className="size-5 shrink-0 rounded-[var(--radius-sm)]"
+              style={{ backgroundColor: categoryColor(categoryName(catId), catId) }}
+            />
           )}
           <Select
             aria-label={`Category for transaction on ${formatDate(t.transactionDate)}`}
