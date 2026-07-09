@@ -108,6 +108,13 @@ Trigger: when free-tier limits are consistently hit and paid infrastructure beco
 
 ### Phase 9: Counterparty Metadata Enrichment (Analytics/Dashboard)
 
+**Transactions-page slice built 2026-07-09** (UI/UX polish phase) — a `contacts` table
+and `/api/v1/contacts` CRUD (`docs/database.md`, `docs/api.md`), matched client-side
+against `recipient_name`/`upi_id` to group and tag Transfers on the Transactions page.
+The Analytics-layer read-only join described below **remains unbuilt** — this phase
+entry now tracks that remaining Analytics-integration slice specifically, not the
+whole feature.
+
 #### Let users view Transfers broken down by who it's to/from, without expanding the ML category set
 
 - During Epic 4 training-data labeling, a Payee Knowledge Base was built that already

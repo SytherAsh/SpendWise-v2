@@ -77,11 +77,18 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public TransactionPage list(
-            UUID userId, int limit, UUID cursor, Integer categoryId, boolean uncategorizedOnly, Instant from, Instant to) {
+            UUID userId,
+            int limit,
+            UUID cursor,
+            Integer categoryId,
+            boolean uncategorizedOnly,
+            Instant from,
+            Instant to,
+            Boolean creditOnly) {
         Instant cursorDate = cursor == null ? null : transactionRepository.findTransactionDate(userId, cursor).orElse(null);
         UUID effectiveCursorId = cursorDate == null ? null : cursor;
         List<Transaction> rows = transactionRepository.listPage(
-                userId, categoryId, uncategorizedOnly, from, to, cursorDate, effectiveCursorId, limit + 1);
+                userId, categoryId, uncategorizedOnly, from, to, creditOnly, cursorDate, effectiveCursorId, limit + 1);
         boolean hasMore = rows.size() > limit;
         List<Transaction> page = hasMore ? rows.subList(0, limit) : rows;
         UUID nextCursor = hasMore ? page.get(page.size() - 1).id() : null;

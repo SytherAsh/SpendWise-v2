@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { HelpCircle, type LucideIcon } from "lucide-react";
+import { HelpCircle, TrendingUp, type LucideIcon } from "lucide-react";
 import { useApi } from "@/lib/useApi";
 import { useCategories } from "@/lib/useCategories";
 import { useDateRange } from "@/lib/date-range";
@@ -11,7 +11,7 @@ import { ErrorState, StaleBanner } from "@/components/shared/ui";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/cn";
 
-export type CategorySelection = number | "uncategorized" | null;
+export type CategorySelection = number | "uncategorized" | "received" | null;
 
 interface CategoryTotalRow {
   categoryId: number | null;
@@ -22,26 +22,35 @@ interface CategoryTotalRow {
 }
 
 interface Tile {
-  key: number | "uncategorized";
+  key: number | "uncategorized" | "received";
   name: string;
   icon: LucideIcon;
   color: string;
   amount: number;
   count: number;
   sharePct: number;
+  /** Received is a direction, not a spending share — its tile skips the share-of-total bar. */
+  isReceived?: boolean;
 }
 
-const TILE_COUNT_ESTIMATE = 13; // 12 fixed categories + Uncategorized — used only to size the loading skeleton
+/** Bounded, non-paginated read for the Received tile's total (docs/api.md "direction") — fine at
+ * personal-finance volumes; a date range with more credits than this undercounts the tile face
+ * (the "Load more" list below it is unaffected, since TransactionsBrowser paginates separately). */
+const RECEIVED_TILE_LIMIT = 500;
+
+const TILE_COUNT_ESTIMATE = 14; // 12 fixed categories + Uncategorized + Received — used only to size the loading skeleton
 
 /**
  * "Where did my money go" summary strip for the Transactions page — every category (plus
- * Uncategorized) as a tile with its spend and share of the period's total. Deliberately not a
- * trends/comparison view (that's Analytics); clicking a tile just filters the list below.
+ * Uncategorized) as a tile with its spend and share of the period's total, plus a trailing
+ * Received tile. Deliberately not a trends/comparison view (that's Analytics); clicking a tile
+ * just filters the list below.
  *
- * Tiles represent spend only — money received (refunds, incoming transfers) is never attributed
- * to a category tile, even if the underlying transaction happens to carry one. It's surfaced
- * instead as the header's separate "money received" figure, and category-filtered views of the
- * list below never include it (see TransactionRepository.listPage).
+ * The 12+1 category tiles represent spend only — money received (refunds, incoming transfers)
+ * is never attributed to a category tile, even if the underlying transaction happens to carry
+ * one (see TransactionRepository.listPage's category-filter debit-only behavior). Received is
+ * the direction-based complement: every credit-direction transaction regardless of category
+ * (`direction=credit`, docs/api.md), so selecting it shows what the category tiles omit.
  */
 export function CategorySummaryGrid({
   selected,
@@ -59,6 +68,9 @@ export function CategorySummaryGrid({
     isStale,
     refresh,
   } = useApi<CategoryTotalRow[]>(`/analytics/categories?from=${range.from}&to=${range.to}`);
+  const { data: receivedPage, isLoading: receivedLoading } = useApi<{ data: Array<{ amount: number }> }>(
+    `/transactions?direction=credit&from=${range.from}&to=${range.to}&limit=${RECEIVED_TILE_LIMIT}`,
+  );
 
   const tiles = useMemo<Tile[]>(() => {
     if (categories.length === 0) return [];
@@ -95,10 +107,26 @@ export function CategorySummaryGrid({
     for (const t of all) {
       t.sharePct = total > 0 ? (t.amount / total) * 100 : 0;
     }
-    return all.sort((a, b) => b.amount - a.amount);
-  }, [categories, rows]);
+    const sortedSpendTiles = all.sort((a, b) => b.amount - a.amount);
 
-  const initialLoading = categoriesLoading || rowsLoading;
+    // Received is a direction (every credit, any category — docs/api.md "direction"), not a
+    // spending share, so it's excluded from the spend total/sort above and appended last.
+    const receivedRows = receivedPage?.data ?? [];
+    const received: Tile = {
+      key: "received",
+      name: "Received",
+      icon: TrendingUp,
+      color: "var(--color-positive)",
+      amount: receivedRows.reduce((sum, t) => sum + t.amount, 0),
+      count: receivedRows.length,
+      sharePct: 0,
+      isReceived: true,
+    };
+
+    return [...sortedSpendTiles, received];
+  }, [categories, rows, receivedPage]);
+
+  const initialLoading = categoriesLoading || rowsLoading || receivedLoading;
 
   if (error && !rows) {
     return <ErrorState message="Could not load category totals." onRetry={refresh} />;
@@ -152,19 +180,31 @@ function CategoryTile({ tile, active, onClick }: { tile: Tile; active: boolean; 
         </span>
         <span className="truncate text-sm font-medium text-foreground">{tile.name}</span>
       </div>
-      <div className="tnum text-lg font-semibold text-foreground">{formatCurrency(tile.amount)}</div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
-        <div
-          className="h-full rounded-full transition-[width] duration-500"
-          style={{ width: `${Math.min(tile.sharePct, 100)}%`, backgroundColor: tile.color }}
-        />
+      <div className={cn("tnum text-lg font-semibold", tile.isReceived ? "text-[var(--color-positive)]" : "text-foreground")}>
+        {formatCurrency(tile.amount)}
       </div>
-      <div className="flex items-center justify-between text-xs text-foreground-subtle">
-        <span>{tile.sharePct.toFixed(0)}%</span>
-        <span>
-          {tile.count} {tile.count === 1 ? "txn" : "txns"}
-        </span>
-      </div>
+      {tile.isReceived ? (
+        <div className="flex items-center justify-end text-xs text-foreground-subtle">
+          <span>
+            {tile.count} {tile.count === 1 ? "txn" : "txns"}
+          </span>
+        </div>
+      ) : (
+        <>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
+            <div
+              className="h-full rounded-full transition-[width] duration-500"
+              style={{ width: `${Math.min(tile.sharePct, 100)}%`, backgroundColor: tile.color }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-xs text-foreground-subtle">
+            <span>{tile.sharePct.toFixed(0)}%</span>
+            <span>
+              {tile.count} {tile.count === 1 ? "txn" : "txns"}
+            </span>
+          </div>
+        </>
+      )}
     </button>
   );
 }

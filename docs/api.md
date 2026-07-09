@@ -46,6 +46,17 @@ Authorization: Bearer <access_token>
 
 > **Onboarding response** includes the raw device API key (see Key Schemas below). The client must persist it in device secure storage immediately — it is never returned again. Only the hash is stored server-side in `device_api_keys`. The DPDP consent record is written to the `user_consent` table at this step.
 
+### `/contacts` — Counterparty Metadata
+
+| Method | Path | Description | Auth |
+| --- | --- | --- | --- |
+| GET | `/contacts` | List all contacts for the current user | User |
+| POST | `/contacts` | Create a contact | User |
+| PUT | `/contacts/:id` | Update a contact (full replace) | User |
+| DELETE | `/contacts/:id` | Delete a contact | User |
+
+> Served by the User module (`com.spendwise.user`) per [ADR-010](./decisions.md#adr-010-counterparty-metadata-is-not-an-ml-category) — this is deliberately **not** part of the Transaction or Categorization module, and never writes to `categories`/`transaction_categories`. A contact has `name`, `relationshipType` (one of `family`, `friend`, `self`, `settlement`), and at least one of `recipientNamePattern`, `upiId`, `phoneNumber` — enforced server-side as 400 `CONTACT_MISSING_IDENTIFIER` if all three are absent. The frontend fetches the full list and matches it against a transaction's `recipient_name`/`upi_id` client-side to group and tag Transfer transactions in the Transactions page UI; the backend performs no matching and stores no link between a contact and any transaction. `PUT`/`DELETE` scope to the caller's own contacts and return 404 `CONTACT_NOT_FOUND` (not 403) for another user's contact id, matching the `TransactionNotFoundException` existence-hiding convention.
+
 ### `/ingest` — SMS Transaction Ingestion
 
 | Method | Path | Description | Auth |
@@ -60,7 +71,7 @@ Authorization: Bearer <access_token>
 
 | Method | Path | Description | Auth |
 | --- | --- | --- | --- |
-| GET | `/transactions` | List transactions (paginated, 50/page, cursor-based); supports optional filters: `category` (category_id, or the literal `uncategorized`), `from`, `to` (ISO 8601 dates), `sort` (`date_desc` default, or `amount_desc`) | User |
+| GET | `/transactions` | List transactions (paginated, 50/page, cursor-based); supports optional filters: `category` (category_id, or the literal `uncategorized`), `direction` (`credit` or `debit`), `from`, `to` (ISO 8601 dates), `sort` (`date_desc` default, or `amount_desc`) | User |
 | GET | `/transactions/:id` | Get single transaction | User |
 | POST | `/transactions` | Manually create a transaction | User |
 | PUT | `/transactions/:id/category` | Correct a transaction's category; writes a labeled example to `ml_corrections` for the next retraining cycle | User |
@@ -70,6 +81,8 @@ Authorization: Bearer <access_token>
 > **`category=uncategorized` (added for the Transactions page redesign):** `GET /transactions`'s `category` filter accepts a numeric category id, the literal string `uncategorized` (filters to transactions with no `transaction_categories` row at all), or is omitted (no filter). Any other non-numeric value is a 400 (`INVALID_CATEGORY_FILTER`). Backward compatible — numeric filtering is unchanged.
 >
 > **Category filters are debit-only:** whenever `category` is set (a numeric id or `uncategorized`), the result additionally excludes any transaction where `debit` is not positive — money received (a refund, an incoming transfer) never appears in a category-filtered view, even if it happens to carry that category. This only applies when a category filter is active; the unfiltered list (no `category` param) is unaffected and still returns every transaction, spend or income.
+>
+> **`direction` (added for the Transactions page "Received" tile, UI/UX polish phase):** `credit` restricts the result to credit-direction transactions (`credit > 0`), `debit` to debit-direction (`debit > 0`); omitted applies no direction filter. Independent of `category`/`uncategorized` — passing both is accepted but the two filters simply AND together (a category filter's own implicit `debit > 0` combined with `direction=credit` yields no rows, since a transaction can't be both). The Received tile calls this with `direction=credit` and no `category`, deliberately pulling every credit-direction transaction across all categories — see `docs/decisions.md` ADR-010's status update. Any value other than `credit`/`debit` is a 400 (`INVALID_DIRECTION`).
 >
 > **`sort=amount_desc` (added for the Analytics category deep-dive's "biggest transactions"):** ranks by `ABS(amount)` descending instead of the default `transaction_date DESC, id DESC`. This is a **bounded, non-paginated top-N read**, not a second pagination mode — `cursor` cannot be combined with it (400 `INVALID_SORT`; ranking by magnitude has no stable keyset seek across concurrent inserts the way `(transaction_date, id)` does), and the response always has `nextCursor: null`, `hasMore: false` regardless of how many rows actually match. Ask for a bigger `limit` if you need more than one "page." Any `sort` value other than `date_desc` (the default) or `amount_desc` is a 400 (`INVALID_SORT`).
 

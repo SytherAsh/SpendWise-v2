@@ -180,6 +180,7 @@ public class TransactionRepository {
             boolean uncategorizedOnly,
             Instant from,
             Instant to,
+            Boolean creditOnly,
             Instant cursorDate,
             UUID cursorId,
             int limitPlusOne) {
@@ -190,6 +191,13 @@ public class TransactionRepository {
         List<Object> args = new ArrayList<>();
         args.add(userId);
         appendCategoryAndDateFilters(sql, args, categoryId, uncategorizedOnly, from, to);
+        // Independent of the category filter above (which, when active, already forces
+        // debit > 0 — see appendCategoryAndDateFilters). This is the "Received" tile's filter
+        // (docs/api.md "direction" — ADR-010's Transactions-page slice): every credit
+        // transaction regardless of category, so it's applied with no categoryId set.
+        if (creditOnly != null) {
+            sql.append(creditOnly ? " AND t.credit > 0" : " AND t.debit > 0");
+        }
         if (cursorDate != null && cursorId != null) {
             sql.append(" AND (t.transaction_date, t.id) < (?, ?::uuid)");
             args.add(Timestamp.from(cursorDate));

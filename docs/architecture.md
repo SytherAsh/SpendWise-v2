@@ -239,11 +239,16 @@ Dashboard and budget suggestions reflect imported data
 | ML retraining | Categorization | Weekly (configurable) | Sends `ml_corrections` data to FastAPI /retrain |
 | Categorization retry | Categorization | Every 30 minutes | Re-triggers ML categorization for transactions ingested but not yet categorized (e.g., FastAPI unavailable during ingest) |
 
-## Future Enhancement (Post-MVP): Counterparty Metadata Enrichment
+## Counterparty Metadata Enrichment (built 2026-07-09, UI/UX polish phase)
 
-**Not built. Not scoped into any current epic.** Recorded here as a design sketch so
-the idea isn't lost — see `docs/roadmap.md` Phase 9 and ADR-010 in `docs/decisions.md`
-for the product framing and rationale.
+**Built, per the sketch below.** Originally recorded here as a not-yet-built design
+sketch — see `docs/roadmap.md` Phase 9 and ADR-010 in `docs/decisions.md` for the
+product framing, rationale, and build status. The sketch is left in place because the
+shipped implementation follows it closely: a `contacts` table (`docs/database.md`)
+owned by the User module, served by `/api/v1/contacts` (`docs/api.md`), matched against
+`transactions.recipient_name`/`upi_id` **client-side by the frontend** rather than by a
+server-side join — the Analytics module's read-only join described just below remains
+unbuilt and out of scope for this slice (Transactions-page-only for v1).
 
 **Problem:** the 12 ML transaction categories (`docs/requirements.md`) intentionally
 don't distinguish *who* a Transfer went to or came from — Transfers is one ML class

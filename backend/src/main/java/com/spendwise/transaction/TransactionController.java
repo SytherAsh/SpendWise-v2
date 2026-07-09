@@ -45,8 +45,10 @@ public class TransactionController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
-            @RequestParam(required = false) String sort) {
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) String direction) {
         CategoryFilter filter = parseCategoryFilter(category);
+        Boolean creditOnly = parseDirection(direction);
         int effectiveLimit = limit != null ? limit : DEFAULT_PAGE_SIZE;
         if (isAmountDescSort(sort)) {
             if (cursor != null) {
@@ -63,9 +65,30 @@ public class TransactionController {
             throw new InvalidSortException("sort must be \"date_desc\" or \"amount_desc\", got: " + sort);
         }
         TransactionPage page = transactionService.list(
-                userId, effectiveLimit, cursor, filter.categoryId(), filter.uncategorizedOnly(), parseDate(from), parseDate(to));
+                userId,
+                effectiveLimit,
+                cursor,
+                filter.categoryId(),
+                filter.uncategorizedOnly(),
+                parseDate(from),
+                parseDate(to),
+                creditOnly);
         List<TransactionResponse> data = page.data().stream().map(TransactionResponse::from).toList();
         return new TransactionListResponse(data, page.nextCursor(), page.hasMore());
+    }
+
+    /** {@code direction} is either {@code "credit"}, {@code "debit"}, or absent (docs/api.md "direction"). */
+    private static Boolean parseDirection(String direction) {
+        if (direction == null || direction.isBlank()) {
+            return null;
+        }
+        if (direction.equalsIgnoreCase("credit")) {
+            return true;
+        }
+        if (direction.equalsIgnoreCase("debit")) {
+            return false;
+        }
+        throw new InvalidDirectionException(direction);
     }
 
     private static boolean isAmountDescSort(String sort) {

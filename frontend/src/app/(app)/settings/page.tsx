@@ -1,16 +1,20 @@
 "use client";
 
-import { User, SlidersHorizontal, Download } from "lucide-react";
+import { User, SlidersHorizontal, Users, Download } from "lucide-react";
 import { PageHeader } from "@/components/shared/ui";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ProfileTab } from "@/components/settings/ProfileTab";
 import { PreferencesTab } from "@/components/settings/PreferencesTab";
+import { ContactsTab } from "@/components/settings/ContactsTab";
 import { ExportForm } from "@/components/export/ExportForm";
 
 export default function SettingsPage() {
   return (
     <>
-      <PageHeader title="Settings" subtitle="Your profile, alert and payment-source preferences, appearance, and data export" />
+      <PageHeader
+        title="Settings"
+        subtitle="Your profile, alert and payment-source preferences, contacts, appearance, and data export"
+      />
       <Tabs defaultValue="profile">
         <TabsList>
           <TabsTrigger value="profile">
@@ -20,6 +24,10 @@ export default function SettingsPage() {
           <TabsTrigger value="preferences">
             <SlidersHorizontal className="size-4" />
             Preferences
+          </TabsTrigger>
+          <TabsTrigger value="contacts">
+            <Users className="size-4" />
+            Contacts
           </TabsTrigger>
           <TabsTrigger value="export">
             <Download className="size-4" />
@@ -31,6 +39,9 @@ export default function SettingsPage() {
         </TabsContent>
         <TabsContent value="preferences">
           <PreferencesTab />
+        </TabsContent>
+        <TabsContent value="contacts">
+          <ContactsTab />
         </TabsContent>
         <TabsContent value="export">
           <ExportForm />

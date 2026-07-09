@@ -33,9 +33,19 @@ public interface TransactionService {
      * @param cursor last-seen transaction id from a prior page, or null for the first page
      * @param categoryId filter to this category id; ignored when {@code uncategorizedOnly} is true
      * @param uncategorizedOnly filter to transactions with no category assigned at all
+     * @param creditOnly {@code true} for credit-only, {@code false} for debit-only, {@code null} for no
+     *     direction filter — independent of {@code categoryId}/{@code uncategorizedOnly} (docs/api.md
+     *     "direction"; backs the Received view, ADR-010's Transactions-page slice)
      */
     TransactionPage list(
-            UUID userId, int limit, UUID cursor, Integer categoryId, boolean uncategorizedOnly, Instant from, Instant to);
+            UUID userId,
+            int limit,
+            UUID cursor,
+            Integer categoryId,
+            boolean uncategorizedOnly,
+            Instant from,
+            Instant to,
+            Boolean creditOnly);
 
     /**
      * Top-{@code limit} transactions by absolute amount, largest first (E10 Analytics category

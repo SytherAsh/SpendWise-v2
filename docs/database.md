@@ -323,6 +323,27 @@ CREATE INDEX idx_device_keys_user ON device_api_keys(user_id, is_active);
 
 Registered once per device at onboarding. The raw key is generated on-device and stored in device secure storage; only the hash is persisted here. Validation at `/ingest`: hash the incoming key → `SELECT WHERE user_id = ? AND is_active = TRUE AND key_hash = ?` → reject with 401 if not found.
 
+### `contacts`
+
+```sql
+CREATE TABLE contacts (
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id                 UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name                    VARCHAR NOT NULL,
+    relationship_type       VARCHAR NOT NULL CHECK (relationship_type IN ('family', 'friend', 'self', 'settlement')),
+    recipient_name_pattern  VARCHAR,  -- matched case-insensitively against transactions.recipient_name
+    upi_id                  VARCHAR,  -- matched exactly against transactions.upi_id
+    phone_number            VARCHAR,  -- matched as a prefix of transactions.upi_id (common <phone>@bank UPI format)
+    created_at              TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_contact_has_identifier CHECK (
+        recipient_name_pattern IS NOT NULL OR upi_id IS NOT NULL OR phone_number IS NOT NULL
+    )
+);
+CREATE INDEX idx_contacts_user_id ON contacts(user_id);
+```
+
+Added V10, UI/UX polish phase (2026-07-09) — this is the counterparty-metadata table sketched (and deliberately deferred) in [ADR-010](./decisions.md#adr-010-counterparty-metadata-is-not-an-ml-category) and the "Future Enhancement: Counterparty Metadata Enrichment" note in [architecture.md](./architecture.md). Per that ADR, `contacts` is **never** a new ML category or a new `categories` row, and it is **never** joined onto `transactions`/`transaction_categories` server-side. The Transaction module has no dependency on it. The frontend fetches the full list via `GET /api/v1/contacts` and matches it against a transaction's `recipient_name`/`upi_id` client-side (see `docs/api.md` "Contacts") to group and tag Transfer-category transactions in the UI — matching is always computed live at read time, never written back onto a transaction row, so editing or deleting a contact takes effect immediately with no backfill step. `relationship_type` is intentionally a free-standing, growable list (unlike the frozen 12-category spending taxonomy) — see ADR-010's "Extensibility" rationale.
+
 ### Auth login lookup addendum (V6, added during Epic 1 implementation)
 
 `V5__row_level_security.sql`'s `users` policy only permits access when `id = current_setting('app.current_user_id')`. Login (OTP verify / Google login) must find an existing user **by phone or google_id** before any `app.current_user_id` exists — that policy can never match during this lookup, and under `FORCE ROW LEVEL SECURITY` the query would always return zero rows. `V6__auth_lookup_policy.sql` adds a second, permissive, SELECT-only policy on `users` (Postgres SELECT policies OR together): a row is visible only when the caller first sets `app.auth_lookup_identifier` to the exact phone/google_id being searched for. The same gap exists on `refresh_tokens` — `/auth/token/refresh` and `/auth/logout` must find a row **by `token_hash`** before knowing its `user_id` — so V6 adds an analogous SELECT-only policy there too, gated by `app.auth_lookup_token_hash`; exposing "a row with this exact SHA-256 hash exists" grants no capability beyond what already holding that raw token implies. See `docs/security.md` Supabase Row-Level Security for the full rationale. Approved by project owner 2026-07-02 as a deviation from this document's original RLS design.

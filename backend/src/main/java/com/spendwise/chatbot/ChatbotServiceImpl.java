@@ -95,7 +95,7 @@ public class ChatbotServiceImpl implements ChatbotService {
         AnalyticsSummary previousMonthSummary =
                 analyticsService.summary(userId, previousMonthStart, currentMonthStart.minusMillis(1));
         List<Transaction> recentTransactions = transactionService
-                .list(userId, RECENT_TRANSACTIONS_LIMIT, null, null, false, previousMonthStart, now)
+                .list(userId, RECENT_TRANSACTIONS_LIMIT, null, null, false, previousMonthStart, now, null)
                 .data();
 
         return Map.of(

@@ -231,6 +231,16 @@ categories. Counterparty type is deliberately kept out of the ML problem entirel
 post-MVP enhancement (`docs/roadmap.md` Phase 9), most naturally landing in Epic 7
 (Analytics) or a dedicated future epic once prioritized — not built or scoped now.
 
+**Status update (2026-07-09, UI/UX polish phase):** the deferred sketch above has now
+been built, per this ADR's own Option 2 shape — see `docs/database.md`'s `contacts`
+table and `docs/api.md`'s `/contacts` endpoint group. It landed as a plain per-user
+CRUD table owned by the User module, matched against `transactions.recipient_name`/
+`upi_id` client-side by the frontend — never as an ML category, never joined onto
+`transactions`/`transaction_categories` server-side, and with no dependency added from
+the Transaction or Categorization module onto it. This ADR's decision and rationale
+remain the governing record for *why* it's shaped this way; only its "not built" status
+is now out of date.
+
 ---
 
 ## ADR-011: Alert Evaluation Stays Scheduled — Event-Driven Is a Deferred, Unimplemented Optimization

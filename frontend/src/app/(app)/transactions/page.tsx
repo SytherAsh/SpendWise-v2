@@ -11,6 +11,7 @@ import { TransactionsBrowser } from "@/components/transactions/TransactionsBrows
 function parseInitialCategory(raw: string | null): CategorySelection {
   if (!raw) return null;
   if (raw === "uncategorized") return "uncategorized";
+  if (raw === "received") return "received";
   const id = Number(raw);
   return Number.isInteger(id) && id > 0 ? id : null;
 }
