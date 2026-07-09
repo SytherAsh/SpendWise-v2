@@ -85,6 +85,12 @@
   --glow-brand-md: 0 0 26px -4px color-mix(in oklab, var(--color-brand-400) 28%, transparent);
   --gradient-brand: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-700));
   --gradient-brand-vivid: linear-gradient(135deg, var(--color-brand-400), var(--color-brand-600));
+
+  /* Chart ink — theme-aware so the brand line/fill stay legible on both grounds.
+     Light uses the interactive brand; dark uses the bright signal green. */
+  --chart-line: var(--color-brand-600);
+  --chart-line-strong: var(--color-brand-700);
+  --chart-fill: var(--color-brand-500);
 }
 
 /* Dark seam — first-class "command center". Deep green-black surfaces; the glow
@@ -116,6 +122,10 @@
   --glow-brand-sm: 0 0 0 1px color-mix(in oklab, var(--color-brand-400) 35%, transparent),
     0 0 18px -4px color-mix(in oklab, var(--color-brand-400) 55%, transparent);
   --glow-brand-md: 0 0 30px -4px color-mix(in oklab, var(--color-brand-400) 60%, transparent);
+
+  --chart-line: var(--color-brand-400);
+  --chart-line-strong: var(--color-brand-300);
+  --chart-fill: var(--color-brand-400);
 }
 
 /* Expose CSS vars to Tailwind v4 utilities (bg-brand-600, text-foreground, etc.) */
@@ -211,6 +221,13 @@ body {
   );
   background-size: 200% 100%;
   animation: sw-shimmer 1.4s linear infinite;
+}
+
+/* Signature glow on the brand line of a Recharts area/line chart. Applied via a
+   wrapper class so it targets the generated curve path reliably. */
+.chart-glow .recharts-area-curve,
+.chart-glow .recharts-line-curve {
+  filter: drop-shadow(0 0 5px color-mix(in oklab, var(--chart-line) 60%, transparent));
 }
 
 /* Consistent, visible focus ring for keyboard users (WCAG AA). */

@@ -19,7 +19,7 @@ export function TrendLineChart({ buckets, height = 260 }: { buckets: TrendBucket
   const latest = data.length ? data[data.length - 1] : null;
 
   return (
-    <div data-testid="trend-line-chart">
+    <div data-testid="trend-line-chart" className="chart-glow">
       {/* Accessible caption doubles as a stable assertion point in jsdom, where Recharts'
           SVG has no measured dimensions. */}
       <p className="sr-only">
@@ -29,8 +29,8 @@ export function TrendLineChart({ buckets, height = 260 }: { buckets: TrendBucket
         <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
           <defs>
             <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={CHART.brand} stopOpacity={0.22} />
-              <stop offset="100%" stopColor={CHART.brand} stopOpacity={0} />
+              <stop offset="0%" stopColor={CHART.fill} stopOpacity={0.34} />
+              <stop offset="100%" stopColor={CHART.fill} stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid stroke={CHART.grid} vertical={false} />
@@ -46,10 +46,10 @@ export function TrendLineChart({ buckets, height = 260 }: { buckets: TrendBucket
           <Area
             type="monotone"
             dataKey="spend"
-            stroke={CHART.brandStrong}
-            strokeWidth={2}
+            stroke={CHART.brand}
+            strokeWidth={2.4}
             fill="url(#trendFill)"
-            activeDot={{ r: 4, strokeWidth: 0 }}
+            activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--surface)", fill: CHART.brand }}
             dot={false}
           />
         </AreaChart>

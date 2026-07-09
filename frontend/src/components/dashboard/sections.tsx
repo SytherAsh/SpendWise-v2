@@ -206,7 +206,7 @@ export function BudgetSection({
                     <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: categoryColor(name, p.categoryId) }} />
                     <span className="truncate text-foreground">{name}</span>
                   </span>
-                  <span className="tnum shrink-0 text-foreground-muted">
+                  <span className="mono shrink-0 text-foreground-muted">
                     {formatCurrency(p.spent)} / {formatCurrency(p.monthlyLimit)}
                   </span>
                 </div>

@@ -1,8 +1,11 @@
 /** Shared chart theming so every Recharts surface reads as one system (dataviz method). */
 
 export const CHART = {
-  brand: "var(--color-brand-600)",
-  brandStrong: "var(--color-brand-700)",
+  // Theme-aware brand ink (see --chart-* in globals.css): the interactive brand on
+  // light, the bright signal green on dark, so lines stay legible on both grounds.
+  brand: "var(--chart-line)",
+  brandStrong: "var(--chart-line-strong)",
+  fill: "var(--chart-fill)",
   grid: "var(--border)",
   axis: "var(--color-foreground-subtle)",
   ink: "var(--color-foreground)",
