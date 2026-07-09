@@ -6,9 +6,12 @@ import { CategoryDeepDive } from "@/components/analytics/CategoryDeepDive";
 /**
  * The category deep-dive reached by clicking a CategoryTrendGrid tile: trend chart, a
  * this-period-vs-previous delta (computed client-side, not via /analytics/comparison — see
- * docs/api.md's "category is /analytics/trends-only" note), budget progress, biggest
- * transactions, and any recommendations scoped to this category. The "uncategorized" sentinel
- * gets a reduced view — no trend/budget/recommendations, since none of those concepts apply.
+ * docs/api.md's "category is /analytics/trends-only" note), average spend per transaction,
+ * a daily/monthly/share-of-total picture, counterparties grouped by person (not one row per
+ * transaction — that detail lives on the Transactions page), and any recommendations scoped to
+ * this category. No budget section — deliberately removed per user feedback that it didn't
+ * belong on this page. The "uncategorized" sentinel gets a reduced view (no trend/pattern/
+ * share/monthly charts, no recommendations) but still totals and counterparties.
  */
 
 vi.mock("recharts", async (importOriginal) => {
@@ -45,6 +48,7 @@ vi.mock("@/lib/date-range", async (importOriginal) => {
       range: { from: "2026-06-01", to: "2026-06-30", preset: "this-month", label: "This month" },
       setPreset: vi.fn(),
       setCustom: vi.fn(),
+      setMonth: vi.fn(),
     }),
   };
 });
@@ -65,15 +69,17 @@ afterEach(() => {
 function mockEndpoints({
   now,
   prev,
-  trend = { granularity: "day", buckets: [] },
-  budgets = [],
+  categoryTrend = { granularity: "day", buckets: [] },
+  overallTrend = { granularity: "day", buckets: [] },
+  monthlyTrend = { granularity: "month", buckets: [] },
   recommendations = [],
   transactions = [],
 }: {
   now: unknown[];
   prev: unknown[];
-  trend?: { granularity: string; buckets: unknown[] };
-  budgets?: unknown[];
+  categoryTrend?: { granularity: string; buckets: unknown[] };
+  overallTrend?: { granularity: string; buckets: unknown[] };
+  monthlyTrend?: { granularity: string; buckets: unknown[] };
   recommendations?: unknown[];
   transactions?: unknown[];
 }) {
@@ -81,8 +87,9 @@ function mockEndpoints({
     if (key === null) return ok(undefined);
     if (key.includes("from=2026-06-01") && key.startsWith("/analytics/categories")) return ok(now);
     if (key.startsWith("/analytics/categories")) return ok(prev);
-    if (key.startsWith("/analytics/trends")) return ok(trend);
-    if (key === "/budgets/progress") return ok(budgets);
+    if (key.startsWith("/analytics/trends") && key.includes("granularity=month")) return ok(monthlyTrend);
+    if (key.startsWith("/analytics/trends") && key.includes("category=")) return ok(categoryTrend);
+    if (key.startsWith("/analytics/trends")) return ok(overallTrend);
     if (key === "/recommendations") return ok(recommendations);
     if (key.startsWith("/transactions")) return ok({ data: transactions });
     return ok(undefined);
@@ -90,49 +97,74 @@ function mockEndpoints({
 }
 
 describe("CategoryDeepDive", () => {
-  it("renders the category header, spend, delta, budget progress, top transactions, and its own recommendations only", () => {
+  it("renders spend, average per transaction, delta, counterparties grouped by person (not one row per transaction), its own recommendations only, and no budget content", () => {
     mockEndpoints({
       now: [{ categoryId: 1, categoryName: "Groceries", totalSpend: 800, totalIncome: 0, transactionCount: 4 }],
       prev: [{ categoryId: 1, categoryName: "Groceries", totalSpend: 400, totalIncome: 0, transactionCount: 2 }],
-      trend: { granularity: "day", buckets: [{ bucketStart: "2026-06-01", totalSpend: 800 }] },
-      budgets: [{ categoryId: 1, monthlyLimit: 2000, spent: 800, percentSpent: 40 }],
+      categoryTrend: { granularity: "day", buckets: [{ bucketStart: "2026-06-01", totalSpend: 800 }] },
+      overallTrend: { granularity: "day", buckets: [{ bucketStart: "2026-06-01", totalSpend: 2000 }] },
       recommendations: [
         { id: "r1", categoryId: 1, text: "Cut back on groceries", priority: "medium" },
         { id: "r2", categoryId: 2, text: "Unrelated category tip", priority: "low" },
       ],
-      transactions: [{ id: "t1", transactionDate: "2026-06-10T00:00:00Z", amount: -500, recipientName: "BigMart", upiId: null, note: null }],
+      transactions: [
+        { id: "t1", transactionDate: "2026-06-10T00:00:00Z", amount: -300, recipientName: "BigMart", upiId: null, note: null },
+        { id: "t2", transactionDate: "2026-06-12T00:00:00Z", amount: -200, recipientName: "BigMart", upiId: null, note: null },
+        { id: "t3", transactionDate: "2026-06-05T00:00:00Z", amount: -300, recipientName: "Zomato", upiId: null, note: null },
+      ],
     });
 
     render(<CategoryDeepDive categoryId={1} onClose={vi.fn()} />);
 
     expect(screen.getByRole("heading", { name: "Groceries" })).toBeInTheDocument();
-    // The trend chart's own axis tick can also read "₹800" — scope to the header's MiniStat.
+    // The trend/share charts' own axis ticks can also read these figures — scope to the MiniStats.
     expect(within(screen.getByText("Spent").closest("div")!).getByText("₹800")).toBeInTheDocument();
+    expect(within(screen.getByText(/Avg/).closest("div")!).getByText("₹200")).toBeInTheDocument();
     expect(screen.getByText(/▲ 100% vs previous period/)).toBeInTheDocument();
-    expect(screen.getByText(/₹800 \/ ₹2,000/)).toBeInTheDocument();
-    expect(screen.getByText("BigMart")).toBeInTheDocument();
+
+    // BigMart's two transactions (₹300 + ₹200) collapse into one row summing to ₹500 — not
+    // two separate rows, which is what the Transactions page is for.
+    const bigMartRow = screen.getByText("BigMart").closest("li")!;
+    expect(within(bigMartRow).getByText("2 txns")).toBeInTheDocument();
+    expect(within(bigMartRow).getByText("₹500")).toBeInTheDocument();
+    const zomatoRow = screen.getByText("Zomato").closest("li")!;
+    expect(within(zomatoRow).getByText("1 txn")).toBeInTheDocument();
+    expect(within(zomatoRow).getByText("₹300")).toBeInTheDocument();
+
     expect(screen.getByText("Cut back on groceries")).toBeInTheDocument();
     expect(screen.queryByText("Unrelated category tip")).not.toBeInTheDocument();
+
+    expect(screen.queryByText(/budget/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /set a budget/i })).not.toBeInTheDocument();
   });
 
-  it('shows a "set a budget" prompt when this category has no budget', () => {
+  it("renders the daily pattern, share-of-total, and last-6-months sections for a real category", () => {
     mockEndpoints({
       now: [{ categoryId: 1, categoryName: "Groceries", totalSpend: 800, totalIncome: 0, transactionCount: 4 }],
       prev: [],
-      budgets: [],
+      categoryTrend: { granularity: "day", buckets: [{ bucketStart: "2026-06-01", totalSpend: 800 }] },
+      overallTrend: { granularity: "day", buckets: [{ bucketStart: "2026-06-01", totalSpend: 2000 }] },
+      monthlyTrend: {
+        granularity: "month",
+        buckets: [
+          { bucketStart: "2026-05-01", totalSpend: 600 },
+          { bucketStart: "2026-06-01", totalSpend: 800 },
+        ],
+      },
     });
 
     render(<CategoryDeepDive categoryId={1} onClose={vi.fn()} />);
 
-    expect(screen.getByText(/no budget set for this category/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /set a budget/i })).toHaveAttribute("href", "/planning");
+    expect(screen.getByRole("heading", { name: "Daily pattern" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Share of total spend" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Last 6 months" })).toBeInTheDocument();
   });
 
-  it("the uncategorized view has no trend, budget, or recommendations sections, but still shows totals and transactions", () => {
+  it("the uncategorized view has no trend, pattern, share, monthly, budget, or recommendations sections, but still shows totals and grouped counterparties", () => {
     mockEndpoints({
-      now: [{ categoryId: null, categoryName: "Uncategorized", totalSpend: 300, totalIncome: 0, transactionCount: 2 }],
+      now: [{ categoryId: null, categoryName: "Uncategorized", totalSpend: 300, totalIncome: 0, transactionCount: 1 }],
       prev: [],
-      transactions: [{ id: "t2", transactionDate: "2026-06-05T00:00:00Z", amount: -300, recipientName: null, upiId: "someone@upi", note: null }],
+      transactions: [{ id: "t4", transactionDate: "2026-06-05T00:00:00Z", amount: -300, recipientName: null, upiId: "someone@upi", note: null }],
     });
 
     render(<CategoryDeepDive categoryId="uncategorized" onClose={vi.fn()} />);
@@ -141,8 +173,14 @@ describe("CategoryDeepDive", () => {
     // The one transaction fixture also totals ₹300 — scope to the header's MiniStat.
     expect(within(screen.getByText("Spent").closest("div")!).getByText("₹300")).toBeInTheDocument();
     expect(screen.getByText(/don't have a category-level trend/i)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Daily pattern" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Share of total spend" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Last 6 months" })).not.toBeInTheDocument();
     expect(screen.queryByText(/budget/i)).not.toBeInTheDocument();
-    expect(screen.getByText("someone@upi")).toBeInTheDocument();
+
+    const row = screen.getByText("someone@upi").closest("li")!;
+    expect(within(row).getByText("1 txn")).toBeInTheDocument();
+    expect(within(row).getByText("₹300")).toBeInTheDocument();
   });
 
   it("the back button calls onClose", async () => {

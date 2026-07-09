@@ -45,6 +45,7 @@ vi.mock("@/lib/date-range", async (importOriginal) => {
       range: { from: "2026-06-01", to: "2026-06-30", preset: "this-month", label: "This month" },
       setPreset: vi.fn(),
       setCustom: vi.fn(),
+      setMonth: vi.fn(),
     }),
   };
 });

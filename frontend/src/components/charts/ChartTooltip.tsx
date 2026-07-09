@@ -12,14 +12,16 @@ interface ChartTooltipProps {
   active?: boolean;
   label?: string | number;
   payload?: TooltipEntry[];
+  /** Value formatter — defaults to INR currency; pass e.g. a percent formatter for non-money charts. */
+  formatValue?: (n: number) => string;
 }
 
 /**
  * Shared, tokenized tooltip for all charts — a small elevated card with the point label
- * and an INR-formatted value. Text stays in ink tokens; the series color rides the swatch.
- * Recharts injects `active`/`payload`/`label` at render time.
+ * and a formatted value (INR by default). Text stays in ink tokens; the series color rides
+ * the swatch. Recharts injects `active`/`payload`/`label` at render time.
  */
-export function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
+export function ChartTooltip({ active, payload, label, formatValue = formatCurrency }: ChartTooltipProps) {
   if (!active || !payload || payload.length === 0) return null;
   return (
     <div className="rounded-[var(--radius-sm)] border border-border bg-surface-elevated px-3 py-2 shadow-[var(--shadow-md)]">
@@ -29,7 +31,7 @@ export function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
           {entry.color && (
             <span aria-hidden className="size-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
           )}
-          <span className="mono font-medium text-foreground">{formatCurrency(Number(entry.value))}</span>
+          <span className="mono font-medium text-foreground">{formatValue(Number(entry.value))}</span>
         </div>
       ))}
     </div>

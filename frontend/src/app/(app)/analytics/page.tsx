@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/shared/ui";
 import { AnalyticsView } from "@/components/analytics/AnalyticsView";
-import { TransactionsHeaderStats } from "@/components/transactions/TransactionsHeaderStats";
+import { MonthStepper } from "@/components/analytics/MonthStepper";
 
 export default function AnalyticsPage() {
   return (
@@ -8,7 +8,7 @@ export default function AnalyticsPage() {
       <PageHeader
         title="Analytics"
         subtitle="Dive into trends for each spending category"
-        action={<TransactionsHeaderStats />}
+        action={<MonthStepper />}
       />
       <AnalyticsView />
     </>

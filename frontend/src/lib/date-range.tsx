@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
-export type RangePreset = "this-month" | "last-month" | "last-3-months" | "last-6-months" | "this-fy" | "ytd" | "custom";
+export type RangePreset = "this-month" | "last-month" | "last-3-months" | "last-6-months" | "this-fy" | "ytd" | "month" | "custom";
 
 export interface DateRange {
   /** ISO date (YYYY-MM-DD), inclusive start. */
@@ -13,8 +13,18 @@ export interface DateRange {
   label: string;
 }
 
-function iso(d: Date): string {
-  return d.toISOString().slice(0, 10);
+/**
+ * `Date` → inclusive `YYYY-MM-DD`, in the convention every `DateRange` field uses — built from
+ * the date's *local* year/month/day, not `toISOString()` (which converts to UTC first). Every
+ * `Date` in this file is constructed via the local `new Date(year, month, day)` form, so
+ * formatting through UTC would silently shift the result by a day in any timezone ahead of UTC
+ * (IST included) — e.g. `monthRange(2026, 3)` (April) would format its 1st as `"2026-03-31"`.
+ */
+export function iso(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 /** Indian financial year starts 1 April. */
@@ -23,7 +33,7 @@ function financialYearStart(now: Date): Date {
   return new Date(y, 3, 1);
 }
 
-export function computeRange(preset: Exclude<RangePreset, "custom">, now = new Date()): DateRange {
+export function computeRange(preset: Exclude<RangePreset, "custom" | "month">, now = new Date()): DateRange {
   const end = iso(now);
   switch (preset) {
     case "this-month":
@@ -44,6 +54,20 @@ export function computeRange(preset: Exclude<RangePreset, "custom">, now = new D
   }
 }
 
+/**
+ * A single calendar month, `year`/`monthIndex` (0-based, matching `Date`) — backs the
+ * Analytics page's month-stepper card. Caps `to` at today when `monthIndex` is the current
+ * real-world month (same convention as `computeRange("this-month")`), so a not-yet-finished
+ * month never implies data for days that haven't happened; past months use the full month.
+ */
+export function monthRange(year: number, monthIndex: number, now = new Date()): DateRange {
+  const first = new Date(year, monthIndex, 1);
+  const lastDay = new Date(year, monthIndex + 1, 0);
+  const isCurrentMonth = year === now.getFullYear() && monthIndex === now.getMonth();
+  const label = first.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  return { preset: "month", from: iso(first), to: iso(isCurrentMonth ? now : lastDay), label };
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -54,12 +78,27 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * regardless of the selected range.
  */
 export function previousPeriod(from: string, to: string): { from: string; to: string } {
-  const fromMs = Date.parse(`${from}T00:00:00Z`);
-  const toMs = Date.parse(`${to}T00:00:00Z`);
+  const fromMs = new Date(`${from}T00:00:00`).getTime();
+  const toMs = new Date(`${to}T00:00:00`).getTime();
   const spanDays = Math.round((toMs - fromMs) / DAY_MS) + 1;
   const prevTo = new Date(fromMs - DAY_MS);
   const prevFrom = new Date(fromMs - spanDays * DAY_MS);
   return { from: iso(prevFrom), to: iso(prevTo) };
+}
+
+/**
+ * A window of `count` calendar months ending at the month containing `anchorTo` (inclusive) —
+ * e.g. `trailingMonths("2026-07-15", 6)` is Feb–Jul 2026. `to` is capped at today so a
+ * not-yet-finished anchor month never requests future dates. Used for "last N months side by
+ * side" bar charts that should shift along with whatever month is currently being viewed
+ * (e.g. via the Analytics month-stepper), rather than always being anchored to today.
+ */
+export function trailingMonths(anchorTo: string, count: number, now = new Date()): { from: string; to: string } {
+  const anchor = new Date(`${anchorTo}T00:00:00`);
+  const start = new Date(anchor.getFullYear(), anchor.getMonth() - (count - 1), 1);
+  const endOfAnchorMonth = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+  const end = endOfAnchorMonth > now ? now : endOfAnchorMonth;
+  return { from: iso(start), to: iso(end) };
 }
 
 /**
@@ -69,7 +108,8 @@ export function previousPeriod(from: string, to: string): { from: string; to: st
  * weekly, so the granularity scales with how much time is actually being covered.
  */
 export function pickTrendGranularity(from: string, to: string): "day" | "week" | "month" | "year" {
-  const spanDays = Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS) + 1;
+  const spanDays =
+    Math.round((new Date(`${to}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime()) / DAY_MS) + 1;
   if (spanDays <= 45) return "day";
   if (spanDays <= 200) return "week";
   if (spanDays <= 800) return "month";
@@ -78,8 +118,10 @@ export function pickTrendGranularity(from: string, to: string): "day" | "week" |
 
 interface DateRangeContextValue {
   range: DateRange;
-  setPreset: (preset: Exclude<RangePreset, "custom">) => void;
+  setPreset: (preset: Exclude<RangePreset, "custom" | "month">) => void;
   setCustom: (from: string, to: string) => void;
+  /** Sets the shared range to one calendar month — the Analytics month-stepper's control. */
+  setMonth: (year: number, monthIndex: number) => void;
 }
 
 const DateRangeContext = createContext<DateRangeContextValue | null>(null);
@@ -93,6 +135,7 @@ export function DateRangeProvider({ children }: { children: ReactNode }) {
       setPreset: (preset) => setRange(computeRange(preset)),
       setCustom: (from, to) =>
         setRange({ preset: "custom", from, to, label: `${from} → ${to}` }),
+      setMonth: (year, monthIndex) => setRange(monthRange(year, monthIndex)),
     }),
     [range],
   );

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useDateRange, type RangePreset } from "@/lib/date-range";
 import { cn } from "@/lib/cn";
 
-const PRESETS: Array<{ id: Exclude<RangePreset, "custom">; label: string }> = [
+const PRESETS: Array<{ id: Exclude<RangePreset, "custom" | "month">; label: string }> = [
   { id: "this-month", label: "This month" },
   { id: "last-month", label: "Last month" },
   { id: "last-3-months", label: "Last 3 months" },

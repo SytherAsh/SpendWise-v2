@@ -22,10 +22,13 @@ export function TrendLineChart({
   buckets,
   height = 260,
   variant = "hero",
+  formatValue = formatCurrency,
 }: {
   buckets: TrendBucket[];
   height?: number;
   variant?: "hero" | "crisp";
+  /** Y-axis tick + tooltip formatter — defaults to INR currency; pass e.g. a percent formatter for a non-money series (the `totalSpend` field is reused as a generic plotted value). */
+  formatValue?: (n: number) => string;
 }) {
   const data = buckets.map((b) => ({
     label: formatDate(b.bucketStart),
@@ -40,7 +43,7 @@ export function TrendLineChart({
       {/* Accessible caption doubles as a stable assertion point in jsdom, where Recharts'
           SVG has no measured dimensions. */}
       <p className="sr-only">
-        Spending trend across {data.length} periods{latest ? `, latest ${formatCurrency(latest.spend)}` : ""}.
+        Spending trend across {data.length} periods{latest ? `, latest ${formatValue(latest.spend)}` : ""}.
       </p>
       <ResponsiveContainer width="100%" height={height}>
         <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
@@ -57,9 +60,9 @@ export function TrendLineChart({
             tickLine={false}
             axisLine={false}
             width={64}
-            tickFormatter={(v) => formatCurrency(Number(v))}
+            tickFormatter={(v) => formatValue(Number(v))}
           />
-          <Tooltip content={<ChartTooltip />} cursor={{ stroke: CHART.axis, strokeDasharray: "4 4" }} />
+          <Tooltip content={<ChartTooltip formatValue={formatValue} />} cursor={{ stroke: CHART.axis, strokeDasharray: "4 4" }} />
           <Area
             type="monotone"
             dataKey="spend"
