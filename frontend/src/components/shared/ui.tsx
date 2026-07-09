@@ -4,8 +4,12 @@ import type { ReactNode } from "react";
 import { Loader2, AlertTriangle, Inbox } from "lucide-react";
 import { cn } from "@/lib/cn";
 
-/** `center` is an optional slot between the title block and `action` — e.g. a page-level
- * control like `MonthStepper` that shouldn't crowd into either end. Omit it and the header
+/** `center` is an optional slot for a page-level control (e.g. `MonthStepper`) that should sit
+ * at the true horizontal center of the header, regardless of how wide `action` is (or whether
+ * it's present at all) — pinned via absolute positioning on `sm+` screens so it lines up the
+ * same way on every page that uses it, rather than drifting based on each page's own title/
+ * action widths the way a plain flex `justify-between` slot would. Falls back to flowing
+ * in-line on narrow screens (wraps under the title, `flex-wrap`). Omit `center` and the header
  * lays out exactly as before (title left, action right). */
 export function PageHeader({
   title,
@@ -19,12 +23,12 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <div className="relative mb-6 flex flex-wrap items-start justify-between gap-4">
       <div>
         <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-foreground-muted">{subtitle}</p>}
       </div>
-      {center && <div className="flex items-center">{center}</div>}
+      {center && <div className="flex items-center sm:absolute sm:left-1/2 sm:top-0 sm:-translate-x-1/2">{center}</div>}
       {action}
     </div>
   );

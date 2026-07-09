@@ -8,7 +8,7 @@ export default function AnalyticsPage() {
       <PageHeader
         title="Analytics"
         subtitle="Dive into trends for each spending category"
-        action={<MonthStepper />}
+        center={<MonthStepper />}
       />
       <AnalyticsView />
     </>
