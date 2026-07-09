@@ -8,8 +8,10 @@ import {
   ArrowLeftRight,
   ChartPie,
   Target,
+  User,
   Settings as SettingsIcon,
   Plus,
+  Upload,
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
@@ -22,6 +24,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   ArrowLeftRight,
   ChartPie,
   Target,
+  User,
   Settings: SettingsIcon,
 };
 
@@ -30,7 +33,7 @@ const itemClass =
 
 export function CommandPalette() {
   const router = useRouter();
-  const { commandOpen, setCommandOpen, setQuickAddOpen, setAssistantOpen } = useShell();
+  const { commandOpen, setCommandOpen, setQuickAddOpen, setUploadOpen, setAssistantOpen } = useShell();
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -88,6 +91,10 @@ export function CommandPalette() {
                 <Command.Item value="Add transaction" onSelect={() => run(() => setQuickAddOpen(true))} className={itemClass}>
                   <Plus className="size-4 text-foreground-subtle" />
                   Add a transaction
+                </Command.Item>
+                <Command.Item value="Upload bank statement" onSelect={() => run(() => setUploadOpen(true))} className={itemClass}>
+                  <Upload className="size-4 text-foreground-subtle" />
+                  Upload a bank statement
                 </Command.Item>
                 <Command.Item value="Ask the assistant" onSelect={() => run(() => setAssistantOpen(true))} className={cn(itemClass)}>
                   <Sparkles className="size-4 text-foreground-subtle" />

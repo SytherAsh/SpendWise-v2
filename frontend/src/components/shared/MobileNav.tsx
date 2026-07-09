@@ -8,6 +8,7 @@ import {
   ArrowLeftRight,
   ChartPie,
   Target,
+  User,
   Settings,
   LogOut,
   type LucideIcon,
@@ -22,6 +23,7 @@ const ICONS: Record<string, LucideIcon> = {
   ArrowLeftRight,
   ChartPie,
   Target,
+  User,
   Settings,
 };
 

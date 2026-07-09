@@ -12,6 +12,8 @@ interface ShellContextValue {
   setCommandOpen: (v: boolean) => void;
   quickAddOpen: boolean;
   setQuickAddOpen: (v: boolean) => void;
+  uploadOpen: boolean;
+  setUploadOpen: (v: boolean) => void;
   assistantOpen: boolean;
   setAssistantOpen: (v: boolean) => void;
   mobileNavOpen: boolean;
@@ -23,6 +25,7 @@ const ShellContext = createContext<ShellContextValue | null>(null);
 export function ShellProvider({ children }: { children: ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -32,12 +35,14 @@ export function ShellProvider({ children }: { children: ReactNode }) {
       setCommandOpen,
       quickAddOpen,
       setQuickAddOpen,
+      uploadOpen,
+      setUploadOpen,
       assistantOpen,
       setAssistantOpen,
       mobileNavOpen,
       setMobileNavOpen,
     }),
-    [commandOpen, quickAddOpen, assistantOpen, mobileNavOpen],
+    [commandOpen, quickAddOpen, uploadOpen, assistantOpen, mobileNavOpen],
   );
 
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;
@@ -56,9 +61,12 @@ export const NAV_ITEMS = [
   { href: "/transactions", label: "Transactions", icon: "ArrowLeftRight" },
   { href: "/analytics", label: "Analytics", icon: "ChartPie" },
   { href: "/planning", label: "Planning", icon: "Target" },
+  { href: "/profile", label: "Profile", icon: "User" },
   { href: "/settings", label: "Settings", icon: "Settings" },
 ] as const;
 
-/** Primary destinations shown in the top nav. Settings lives in the user menu
- *  (see UserMenu), so it is intentionally excluded here. */
-export const PRIMARY_NAV = NAV_ITEMS.filter((i) => i.href !== "/settings");
+const USER_MENU_ROUTES = new Set(["/profile", "/settings"]);
+
+/** Primary destinations shown in the top nav. Profile and Settings live in the
+ *  user menu (see UserMenu), so they are intentionally excluded here. */
+export const PRIMARY_NAV = NAV_ITEMS.filter((i) => !USER_MENU_ROUTES.has(i.href));

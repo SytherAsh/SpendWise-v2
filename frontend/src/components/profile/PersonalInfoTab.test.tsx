@@ -1,9 +1,14 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ProfileTab } from "@/components/settings/ProfileTab";
+import { PersonalInfoTab } from "@/components/profile/PersonalInfoTab";
 
-/** E10-S2-T7 required test coverage, split out of the old SettingsForm: profile load/edit/save. */
+/**
+ * E10-S2-T7 required test coverage, split out of the old SettingsForm: profile load/edit/save.
+ * The appearance toggle and privacy-policy link moved to Settings > Appearance/Privacy & Data
+ * (see AppearanceTab.tsx / PrivacyTab.tsx) as part of the Profile/Settings IA split — this file
+ * only covers the personal-info fields that stayed behind.
+ */
 
 const put = vi.fn();
 vi.mock("@/lib/apiClient", () => ({
@@ -14,10 +19,6 @@ const refresh = vi.fn();
 const useApi = vi.fn();
 vi.mock("@/lib/useApi", () => ({
   useApi: () => useApi(),
-}));
-
-vi.mock("next-themes", () => ({
-  useTheme: () => ({ theme: "system", setTheme: vi.fn() }),
 }));
 
 const profile = {
@@ -33,10 +34,10 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("ProfileTab", () => {
+describe("PersonalInfoTab", () => {
   it("shows the read-only phone number and member-since date", () => {
     useApi.mockReturnValue({ data: profile, error: undefined, isLoading: false, refresh });
-    render(<ProfileTab />);
+    render(<PersonalInfoTab />);
 
     expect(screen.getByText("+919876543210")).toBeInTheDocument();
     expect(screen.getByText(/15 jan 2026/i)).toBeInTheDocument();
@@ -47,7 +48,7 @@ describe("ProfileTab", () => {
     useApi.mockReturnValue({ data: profile, error: undefined, isLoading: false, refresh });
     put.mockResolvedValue({ ...profile, email: "new@example.com" });
 
-    render(<ProfileTab />);
+    render(<PersonalInfoTab />);
     const emailInput = screen.getByLabelText(/^email$/i);
     await user.clear(emailInput);
     await user.type(emailInput, "new@example.com");
@@ -64,19 +65,9 @@ describe("ProfileTab", () => {
     useApi.mockReturnValue({ data: profile, error: undefined, isLoading: false, refresh });
     put.mockRejectedValue(new Error("500"));
 
-    render(<ProfileTab />);
+    render(<PersonalInfoTab />);
     await user.click(screen.getByRole("button", { name: /save email/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/could not save/i);
-  });
-
-  it("renders a privacy policy link and the appearance toggle", () => {
-    useApi.mockReturnValue({ data: profile, error: undefined, isLoading: false, refresh });
-    render(<ProfileTab />);
-
-    expect(screen.getByRole("link", { name: /privacy policy/i })).toHaveAttribute("href");
-    expect(screen.getByRole("button", { name: /^light$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^dark$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^system$/i })).toBeInTheDocument();
   });
 });

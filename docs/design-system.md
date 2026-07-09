@@ -319,18 +319,23 @@ Planning · Assistant) with clear active state (emerald underline/pill + glow) �
 **global search / ⌘K** · **notifications bell** (badge count) · **avatar menu**.
 
 ### 7.2 Contextual sidebar (per section)
-Sections with sub-views (Analytics → Overview/Categories/Trends/Export; Settings → Profile/
-Preferences/Budgets/Devices/Security) get a **left contextual sidebar** with the sub-nav; simple
-sections (Dashboard) render full-width with no sidebar. Sidebar is collapsible to an icon rail
-(density for power users); active item shows the emerald edge + tint.
+Sections with sub-views (Analytics → Overview/Categories/Trends/Export; Profile → Personal
+Info/Contacts; Settings → Preferences/Appearance/Security/Privacy & Data/Export) get a **left
+contextual sidebar** with the sub-nav; simple sections (Dashboard) render full-width with no
+sidebar. Sidebar is collapsible to an icon rail (density for power users); active item shows the
+emerald edge + tint. (In the current implementation, Profile and Settings use top tabs rather
+than a left sidebar — see `docs/user_flows.md`'s Web IA note.)
 
 ### 7.3 Breadcrumbs
 Under the top bar on **deep pages** (e.g. `Analytics › Categories › Food`), mono/label styling,
 last crumb non-link. Not shown on top-level pages.
 
 ### 7.4 Avatar / user menu (top-right, always available)
-Avatar (photo or mark-fallback initials) → menu: **Profile · Settings · Help · Theme (toggle) ·
-Log out**. Theme toggle is inline (sun/moon), persists choice.
+Avatar (photo or mark-fallback initials) → menu: **Profile (`/profile`) · Settings (`/settings`)
+· Help & assistant · Upload statement · Theme (toggle) · Log out**. Theme toggle is inline
+(sun/moon), persists choice. "Upload statement" opens a dialog for importing a PDF/CSV bank
+statement — UI only for now, since the backing endpoint isn't implemented server-side yet (see
+`implementation/tracking/STATUS.md`).
 
 ### 7.5 Command palette / global search (⌘K)
 Elevate the existing `CommandPalette.tsx`: fuzzy search across **transactions, pages, actions,

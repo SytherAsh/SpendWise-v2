@@ -7,7 +7,6 @@ import { formatDate } from "@/lib/format";
 import { Card, ErrorState, Spinner } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ThemeToggle } from "./ThemeToggle";
 
 /** Matches UserProfileResponse (backend). */
 interface Profile {
@@ -17,10 +16,7 @@ interface Profile {
   createdAt: string;
 }
 
-// The real hosted policy URL is set at deploy time; this is the documented placeholder.
-export const PRIVACY_POLICY_URL = "https://spendwise.app/privacy";
-
-export function ProfileTab() {
+export function PersonalInfoTab() {
   const { data, error, isLoading, refresh } = useApi<Profile>("/users/me");
   const [emailDraft, setEmailDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -92,17 +88,6 @@ export function ProfileTab() {
           </div>
         </form>
       </Card>
-
-      <Card>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Appearance</h2>
-        <ThemeToggle />
-      </Card>
-
-      <p className="text-sm">
-        <a href={PRIVACY_POLICY_URL} target="_blank" rel="noreferrer" className="text-brand-700 underline">
-          Privacy policy
-        </a>
-      </p>
     </div>
   );
 }

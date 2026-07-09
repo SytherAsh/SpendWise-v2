@@ -6,6 +6,7 @@ import { MobileNav } from "@/components/shared/MobileNav";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 import { CommandPalette } from "@/components/shared/CommandPalette";
 import { QuickAddTransaction } from "@/components/shared/QuickAddTransaction";
+import { UploadStatementDialog } from "@/components/shared/UploadStatementDialog";
 import { ChatAssistant } from "@/components/chatbot/ChatAssistant";
 import { DateRangeProvider } from "@/lib/date-range";
 import { ShellProvider } from "@/lib/shell";
@@ -21,6 +22,7 @@ function Shell({ children }: { children: ReactNode }) {
       </main>
       <CommandPalette />
       <QuickAddTransaction />
+      <UploadStatementDialog />
       <ChatAssistant />
     </div>
   );

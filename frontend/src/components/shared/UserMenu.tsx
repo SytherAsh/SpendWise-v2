@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { User, Settings as SettingsIcon, LifeBuoy, LogOut, Moon, Sun } from "lucide-react";
+import { User, Settings as SettingsIcon, LifeBuoy, Upload, LogOut, Moon, Sun } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useApi } from "@/lib/useApi";
 import { useShell } from "@/lib/shell";
@@ -30,7 +30,7 @@ const itemClass =
 
 export function UserMenu() {
   const router = useRouter();
-  const { setAssistantOpen } = useShell();
+  const { setAssistantOpen, setUploadOpen } = useShell();
   const { data } = useApi<Profile>("/users/me");
   const [open, setOpen] = React.useState(false);
 
@@ -63,7 +63,7 @@ export function UserMenu() {
 
         <div className="my-1.5 h-px bg-border" />
 
-        <Link href="/settings" onClick={() => setOpen(false)} className={itemClass}>
+        <Link href="/profile" onClick={() => setOpen(false)} className={itemClass}>
           <User className="size-4 text-foreground-subtle" /> Profile
         </Link>
         <Link href="/settings" onClick={() => setOpen(false)} className={itemClass}>
@@ -78,6 +78,16 @@ export function UserMenu() {
           className={itemClass}
         >
           <LifeBuoy className="size-4 text-foreground-subtle" /> Help &amp; assistant
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            setUploadOpen(true);
+          }}
+          className={itemClass}
+        >
+          <Upload className="size-4 text-foreground-subtle" /> Upload statement
         </button>
 
         <div className="my-1.5 h-px bg-border" />

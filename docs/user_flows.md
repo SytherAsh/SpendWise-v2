@@ -117,17 +117,22 @@ User goes to the Export tab within Settings (web dashboard) or the Export screen
 → File downloaded or shared
 ```
 
-> **Web IA note (UI/UX redesign):** On the web dashboard, Export is a **tab within Settings**
-> (`/settings` → Export), not a standalone `/export` route. Settings is organized into three
-> tabs — **Profile** (phone read-only, editable email, member-since, appearance/theme toggle,
-> privacy policy link), **Preferences** (alert channels, payment apps, banks, monthly spend
-> estimate), and **Export**. The former standalone `/budget`, `/emis`, and `/export` routes were
-> removed once Planning (Budgets + EMIs tabs) and Settings (Export tab) fully absorbed them.
+> **Web IA note (UI/UX redesign, updated 2026-07-09 — Profile/Settings split):** On the web
+> dashboard, Export is a **tab within Settings** (`/settings` → Export), not a standalone
+> `/export` route. Personal identity and counterparty contacts moved to their own top-level
+> **Profile** page (`/profile`, reached from the avatar menu) — separate from **Settings**, which
+> is now app-wide configuration: **Preferences** (alert channels, payment apps, banks, monthly
+> spend estimate), **Appearance** (theme), **Security** and **Privacy & Data** (placeholders —
+> not wired to any endpoint yet), and **Export**. `/profile` has two tabs: **Personal Info**
+> (phone read-only, editable email, member-since) and **Contacts** (family/friend/self/settlement
+> tagging for Transfer transactions — ADR-010). The former standalone `/budget`, `/emis`, and
+> `/export` routes were removed once Planning (Budgets + EMIs tabs) and Settings (Export tab)
+> fully absorbed them.
 
 ### Appearance / Theme (web dashboard)
 
 ```text
-User opens Settings → Profile → Appearance
+User opens Settings → Appearance
 → Chooses Light, Dark, or System (default: System, follows the OS preference)
 → Choice persists across sessions (stored client-side) and applies app-wide immediately
 ```
