@@ -105,9 +105,16 @@ export function DashboardView() {
           ))
         ) : (
           <>
-            <StatTile label={`Spent · ${range.label}`} value={totalSpend} format={(n) => formatCurrency(n)} delta={spendDelta} icon={<TrendingDown className="size-4" />} />
-            <StatTile label="Income" value={totalIncome} format={(n) => formatCurrency(n)} icon={<Wallet className="size-4" />} />
-            <StatTile label="Net" value={net} format={(n) => formatCurrency(n)} accent={net >= 0 ? "var(--color-brand-700)" : "var(--color-danger)"} icon={<ArrowDownUp className="size-4" />} />
+            <StatTile
+              label={`Spent · ${range.label}`}
+              value={totalSpend}
+              format={(n) => formatCurrency(n)}
+              delta={spendDelta}
+              accent="var(--color-danger)"
+              icon={<TrendingDown className="size-4" />}
+            />
+            <StatTile label="Income" value={totalIncome} format={(n) => formatCurrency(n)} accent="var(--color-positive)" icon={<Wallet className="size-4" />} />
+            <StatTile label="Net" value={net} format={(n) => formatCurrency(n)} accent={net >= 0 ? "var(--color-positive)" : "var(--color-danger)"} icon={<ArrowDownUp className="size-4" />} />
             {top ? (
               <StatTile
                 label={`Top · ${top.categoryName}`}

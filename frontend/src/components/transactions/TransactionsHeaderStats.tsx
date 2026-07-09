@@ -33,7 +33,13 @@ export function TransactionsHeaderStats() {
 
   return (
     <div data-testid="transactions-header-stats" className="flex flex-wrap gap-3">
-      <MiniStat label="Money spent" value={data.totalSpend} format={formatCurrency} icon={<TrendingDown className="size-4" />} />
+      <MiniStat
+        label="Money spent"
+        value={data.totalSpend}
+        format={formatCurrency}
+        icon={<TrendingDown className="size-4" />}
+        tone="negative"
+      />
       <MiniStat
         label="Money received"
         value={data.totalIncome}

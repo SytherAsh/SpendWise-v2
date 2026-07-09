@@ -51,6 +51,11 @@
   --color-danger: #dc2626; /* over-budget / destructive */
   --color-danger-surface: #fef2f2;
   --color-danger-border: #fecaca;
+  /* Money credited/received — text-safe brand-700 on light. A theme-flipping token
+     (unlike a bare `--color-brand-700` reference) so inline `style` colors — which can't
+     use a `dark:` Tailwind pair — stay legible on both grounds, same reasoning as
+     `--chart-line`/`--chart-line-strong` above. */
+  --color-positive: var(--color-brand-700);
 
   /* Category palette — 12 fixed categories, keyed by name (see src/lib/categories.ts).
      dataviz-validated: an 8–12 categorical set is legal ONLY with the secondary
@@ -114,6 +119,7 @@
   --color-danger: #ff6b6b;
   --color-danger-surface: #2a1414;
   --color-danger-border: #4d2020;
+  --color-positive: var(--color-brand-300); /* text-safe on dark */
 
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
   --shadow-md: 0 2px 8px -2px rgb(0 0 0 / 0.5);
@@ -158,6 +164,7 @@
   --color-danger: var(--color-danger);
   --color-danger-surface: var(--color-danger-surface);
   --color-danger-border: var(--color-danger-border);
+  --color-positive: var(--color-positive);
 
   --radius-DEFAULT: var(--radius);
   --radius-sm: var(--radius-sm);

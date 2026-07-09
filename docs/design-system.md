@@ -132,15 +132,25 @@ Mercury base of the current build, nudged green; dark is a deep green-black.
 
 ### 3.3 Semantic (meaning-only, never the accent)
 
-Positive/healthy **folds into brand emerald** — there is no separate "success" hue to collide with
-the brand. Only warning and danger are distinct.
+Warning and danger are distinct hues. Positive/healthy mostly **folds into brand emerald** — there
+is no separate "success" hue competing with the brand — **except money direction**, which is a
+deliberate exception: **updated 2026-07-09, at the user's explicit request.** Wherever a figure's
+sign is meaningful and both directions can appear in the same view (a transaction row, a "money
+spent" + "money received" pair), credited/received money is green and debited/spent money is
+`--danger` red — not neutral ink. Before this change, spend was neutral and only credit was green;
+users found that gave too little contrast to tell the two apart at a glance ("everything is green").
+This does **not** apply to spend-only surfaces with nothing to contrast against — a category tile,
+a category deep-dive's "Spent" figure, a budget total — those stay neutral/brand as before; painting
+every spend figure red when there's no credit alongside it doesn't add information, it just makes
+red ambient (see the rule this whole section opens with).
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
 | `--warning` | `#B45309` | `#F5B547` | approaching limit, stale data |
 | `--warning-surface` | `#FFF7ED` | `#2A2011` | |
-| `--danger` | `#DC2626` | `#FF6B6B` | over-budget, destructive |
+| `--danger` | `#DC2626` | `#FF6B6B` | over-budget, destructive, **money spent (in a mixed credit/debit view)** |
 | `--danger-surface` | `#FEF2F2` | `#2A1414` | |
+| `--positive` | `--brand-700` | `--brand-300` | **money received/credited (in a mixed credit/debit view)** — a theme-flipping alias so inline (non-Tailwind) color values stay text-safe on both grounds, same reasoning as `--chart-line`/`--chart-line-strong` |
 
 Semantic colors always ship with an **icon + label**, never color alone.
 
@@ -258,7 +268,7 @@ the dashboard. Summary-before-detail: tiles row sits above every detail grid.
 ### 6.4 Tables (dense, financial)
 - Sticky header in `surface-muted`, uppercase `label` columns, hairline row dividers, zebra optional
   via `surface-muted` at 50%.
-- **Amount column:** right-aligned mono tabular; debits neutral ink, credits `brand-700`.
+- **Amount column:** right-aligned mono tabular; debits `--danger` red, credits `--positive` (§3.3) — updated 2026-07-09, was "debits neutral ink" before.
 - Row hover: `surface-muted` + left 2px brand edge. Row density: comfortable (44) / compact (36) toggle.
 - Sortable headers (caret), multi-select checkboxes, sticky bulk-action bar, pagination footer
   (mono page numbers), CSV/export action in the toolbar.
@@ -449,7 +459,7 @@ Extends the existing `globals.css` token seam. Illustrative (final hexes per §3
   --color-brand-600:#06A052; --color-brand-700:#067A45; --color-brand-800:#0A6338;
   --color-brand-900:#0B4A2C;
   /* semantic */
-  --color-warning:#B45309; --color-danger:#DC2626;
+  --color-warning:#B45309; --color-danger:#DC2626; --color-positive:var(--color-brand-700);
   /* shape */
   --radius-sm:.375rem; --radius:.5rem; --radius-lg:.75rem;
   /* glow */

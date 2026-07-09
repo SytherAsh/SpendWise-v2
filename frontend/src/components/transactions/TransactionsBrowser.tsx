@@ -210,7 +210,12 @@ export function TransactionsBrowser({
                         <span className="block text-xs text-foreground-subtle">{t.upiId ?? t.bank}</span>
                       )}
                     </td>
-                    <td className={cn("tnum whitespace-nowrap px-4 py-3 text-right font-medium", t.amount < 0 ? "text-foreground" : "text-brand-700")}>
+                    <td
+                      className={cn(
+                        "tnum whitespace-nowrap px-4 py-3 text-right font-medium",
+                        t.amount < 0 ? "text-[var(--color-danger)]" : "text-brand-700 dark:text-brand-300",
+                      )}
+                    >
                       {formatCurrency(t.amount, true)}
                     </td>
                     <td className="px-4 py-3">
