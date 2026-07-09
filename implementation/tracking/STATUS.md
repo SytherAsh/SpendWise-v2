@@ -951,20 +951,45 @@ is not part of the Epic 0–12 backlog — it's the "UI/UX Refinement & Product 
 `CLAUDE.md`. Recorded here only so the redesign's cross-cutting changes aren't lost. Nothing below
 changes any Epic's done/not-done state.
 
-**Pages redesigned so far:**
+**Pages redesigned so far (updated 2026-07-09 — Contacts/Received/grouping, Profile/Settings split):**
 
 - **Transactions** — category-summary tile grid (per-category spend + share of total, click a tile
-  to filter the list, click again to clear; Uncategorized as a 13th tile); a money-spent /
-  money-received header; wired to the global date-range picker. Category-filtered views are
-  **debit-only** (money received never shows inside a category filter).
+  to filter the list, click again to clear; Uncategorized as a 13th tile), plus a trailing
+  **Received** tile (every credit-direction transaction, any category — `GET /transactions?direction=credit`);
+  a money-spent/money-received header, with a centered **month-stepper** (`MonthStepper`, shared
+  with Analytics) alongside it. Selecting any tile now shows a **grouped, expandable list** instead
+  of a flat table — transactions group by matched contact or fall back to the raw payee string, with
+  summed totals per group; Transfers/Received additionally get **Family/Friend/Self/Settlement/Other**
+  filter chips sourced from Contacts. Category-filtered (non-Received) views remain **debit-only**
+  (money received never shows inside a category filter). Each transaction's category shows as a
+  color swatch **box** next to its dropdown (not the earlier tiny circle). Spend renders red, credit
+  renders green, wherever both directions appear together in one view (design-system.md §3.3/§6.4).
+- **Analytics** — category deep-dive rework; a centered month-stepper in its header (same
+  `MonthStepper` component now shared with Transactions, promoted from Analytics-only to
+  `components/shared/`).
 - **Planning / Budgets** — no-scroll category grid, per-category budget slider (₹100 steps, max
   scaled from the suggestion) pre-filled from a **6-month** suggestion average; read-only total-budget
   header; per-category drill-through to the filtered Transactions view.
 - **Planning / EMIs & Subscriptions** — restyled to the shared card/component language (data +
   interactions unchanged).
-- **Settings** — split into **Profile / Preferences / Export** tabs; added a real **Light/Dark/System
-  theme toggle** (`next-themes`, `data-theme` seam). The standalone `/budget`, `/emis`, `/export`
-  routes were removed (Planning + Settings tabs now cover them).
+- **Profile** (new page, `/profile`, reached from the avatar menu — not the top nav) —
+  **Personal Info** (phone read-only, editable email, member-since) and **Contacts** (family/
+  friend/self/settlement tagging for Transfer transactions, matched client-side against
+  `recipient_name`/`upi_id` — ADR-010) tabs. Split out of the old Settings "Profile" tab, which no
+  longer exists; `/profile` and `/settings` used to both route to the same place and are now distinct.
+- **Settings** — now **Preferences / Appearance / Security / Privacy & Data / Export** tabs
+  (Profile and Contacts moved to the new Profile page above). Appearance carries the real
+  **Light/Dark/System theme toggle** (`next-themes`, `data-theme` seam), relocated from the old
+  Profile tab. Security and Privacy & Data are **placeholders** — styled like a real settings page
+  (login methods, 2FA, active sessions, data export, account deletion), not wired to any endpoint,
+  deliberately deferred per the project owner's instruction. The standalone `/budget`, `/emis`,
+  `/export` routes were removed (Planning + Settings tabs cover them).
+- **Account menu** (avatar, top-right) — Profile · Settings · Help & assistant · **Upload statement**
+  (new) · theme toggle · Log out. Upload statement opens a dialog with a PDF/CSV file-picker shape
+  but is **UI-only**: `POST /users/me/bank-statement` is documented in `docs/api.md` but has no
+  server-side implementation at all (no controller, no PDF parser, no CSV parser) — an acknowledged,
+  unscoped gap (same category as the earlier FCM-token gap this file already tracked), matching the
+  soft-fail treatment the Android app already uses for this endpoint.
 
 **Backend/API changes made in service of the above (all additive, docs/api.md updated):**
 
@@ -973,10 +998,23 @@ changes any Epic's done/not-done state.
   unchanged.
 - `GET /transactions?category=` now accepts the literal `uncategorized` (no-category filter) in
   addition to a numeric id; and whenever a category filter is active, the list is debit-only.
+- `GET /transactions` gained a `direction` query param (`credit`/`debit`), independent of `category`
+  — backs the Received tile/view. Invalid values 400 with `INVALID_DIRECTION`.
+- New `contacts` table (V10 migration, user-scoped RLS) + `GET/POST/PUT/DELETE /api/v1/contacts`
+  CRUD, owned by the User module (`com.spendwise.user`) — per-user counterparty metadata (ADR-010).
+  Never a new ML category; never joined onto `transactions`/`transaction_categories` server-side —
+  matching happens client-side only.
 - `/budgets/suggestions` trailing-average window changed 3 → 6 months.
 
-**Shared frontend infra added:** category color/icon helpers (`lib/categories.ts`), the theme system
-(`next-themes` + `styles/globals.css` `data-theme` tokens).
+**Shared frontend infra added:** category color/icon helpers (`lib/categories.ts`); the theme system
+(`next-themes` + `styles/globals.css` `data-theme` tokens); the shared date-range context
+(`lib/date-range.tsx` `DateRangeProvider`) plus `MonthStepper` (`components/shared/`); `lib/contacts.ts`
+(contact matching/grouping helpers, `useContacts`); `PageHeader`'s optional `center` slot
+(`components/shared/ui.tsx`), true-centered via absolute positioning independent of `action` width.
 
-**Verification:** backend unit suite green; frontend `npm test` green, `npm run build` clean. (Same
-pre-existing, unrelated `StatTile.tsx` lint violation as before — not introduced by this work.)
+**Verification:** backend unit suite green as of 2026-07-09 (re-run after the `direction` filter and
+Contacts changes above — includes new `ContactServiceTest` coverage). Frontend not rebuilt/retested
+this round per `CLAUDE.md`'s Frontend Development Workflow policy (the dev server stays running and
+the user verifies manually) — the last recorded frontend `npm test`/`npm run build` result predates
+this round of changes and should not be treated as still current; re-run explicitly if you need a
+fresh signal.
