@@ -60,7 +60,7 @@ Authorization: Bearer <access_token>
 
 | Method | Path | Description | Auth |
 | --- | --- | --- | --- |
-| GET | `/transactions` | List transactions (paginated, 50/page, cursor-based); supports optional filters: `category` (category_id, or the literal `uncategorized`), `from`, `to` (ISO 8601 dates) | User |
+| GET | `/transactions` | List transactions (paginated, 50/page, cursor-based); supports optional filters: `category` (category_id, or the literal `uncategorized`), `from`, `to` (ISO 8601 dates), `sort` (`date_desc` default, or `amount_desc`) | User |
 | GET | `/transactions/:id` | Get single transaction | User |
 | POST | `/transactions` | Manually create a transaction | User |
 | PUT | `/transactions/:id/category` | Correct a transaction's category; writes a labeled example to `ml_corrections` for the next retraining cycle | User |
@@ -70,6 +70,8 @@ Authorization: Bearer <access_token>
 > **`category=uncategorized` (added for the Transactions page redesign):** `GET /transactions`'s `category` filter accepts a numeric category id, the literal string `uncategorized` (filters to transactions with no `transaction_categories` row at all), or is omitted (no filter). Any other non-numeric value is a 400 (`INVALID_CATEGORY_FILTER`). Backward compatible — numeric filtering is unchanged.
 >
 > **Category filters are debit-only:** whenever `category` is set (a numeric id or `uncategorized`), the result additionally excludes any transaction where `debit` is not positive — money received (a refund, an incoming transfer) never appears in a category-filtered view, even if it happens to carry that category. This only applies when a category filter is active; the unfiltered list (no `category` param) is unaffected and still returns every transaction, spend or income.
+>
+> **`sort=amount_desc` (added for the Analytics category deep-dive's "biggest transactions"):** ranks by `ABS(amount)` descending instead of the default `transaction_date DESC, id DESC`. This is a **bounded, non-paginated top-N read**, not a second pagination mode — `cursor` cannot be combined with it (400 `INVALID_SORT`; ranking by magnitude has no stable keyset seek across concurrent inserts the way `(transaction_date, id)` does), and the response always has `nextCursor: null`, `hasMore: false` regardless of how many rows actually match. Ask for a bigger `limit` if you need more than one "page." Any `sort` value other than `date_desc` (the default) or `amount_desc` is a 400 (`INVALID_SORT`).
 
 ### `/categories` — Categories
 
@@ -114,12 +116,14 @@ Authorization: Bearer <access_token>
 | GET | `/analytics/summary` | Total spend/income, category breakdown for date range | User |
 | GET | `/analytics/categories` | Per-category breakdown with drilldown | User |
 | GET | `/analytics/comparison` | Week/month/year comparison view | User |
-| GET | `/analytics/trends` | Spending trend over time (line chart data) | User |
+| GET | `/analytics/trends` | Spending trend over time (line chart data); optionally scoped to one category | User |
 | GET | `/analytics/export/pdf` | Export PDF report for selected date range | User |
 | GET | `/analytics/export/csv` | Export CSV for selected date range | User |
 
-Query parameters for analytics: `from`, `to`, `granularity` (week/month/year — `/analytics/trends` additionally accepts `day`), `category`
+Query parameters for analytics: `from`, `to`, `granularity` (week/month/year — `/analytics/trends` additionally accepts `day`)
 
+> **`category` is `/analytics/trends`-only (corrected 2026-07-09):** this doc previously implied every analytics endpoint accepted a `category` filter — it doesn't. Only `GET /analytics/trends` takes `category` (a numeric category id; no `uncategorized` sentinel, unlike `/transactions`) and applies it as a real `category_id` filter. `/analytics/summary` and `/analytics/categories` always return every category's breakdown for the range (that's their contract — a caller who wants one category's total reads it off the response) and have no `category` param at all; passing one is silently ignored, not an error. `/analytics/comparison` has no `category` param either, and separately ignores `from`/`to` too (see the Epic 7 addendum below) — it is not usable for a range-scoped, category-scoped comparison. The Analytics page's category deep-dive (Current Phase redesign) computes "this period vs. previous period" itself instead: fetch `/analytics/trends?category=<id>` for the selected range and for the equal-length window immediately before it, then sum each window's buckets client-side.
+>
 > **Epic 7 addenda (implemented 2026-07-03, not fully spelled out above):**
 > - `/analytics/summary`, `/analytics/categories`, `/analytics/trends`, and both export endpoints
 >   require `from`+`to` (400 if either is missing) — inclusive both ends, matching

@@ -189,6 +189,41 @@ public class TransactionRepository {
                 .append(" FROM transactions t LEFT JOIN transaction_categories tc ON tc.transaction_id = t.id WHERE t.user_id = ?");
         List<Object> args = new ArrayList<>();
         args.add(userId);
+        appendCategoryAndDateFilters(sql, args, categoryId, uncategorizedOnly, from, to);
+        if (cursorDate != null && cursorId != null) {
+            sql.append(" AND (t.transaction_date, t.id) < (?, ?::uuid)");
+            args.add(Timestamp.from(cursorDate));
+            args.add(cursorId.toString());
+        }
+        sql.append(" ORDER BY t.transaction_date DESC, t.id DESC LIMIT ?");
+        args.add(limitPlusOne);
+        return jdbcTemplate.query(sql.toString(), ROW_MAPPER, args.toArray());
+    }
+
+    /**
+     * Top-N transactions by absolute amount, largest first — a bounded read for "biggest
+     * transactions in this category" (Analytics category deep-dive), never paginated. Unlike
+     * {@link #listPage}, there is no cursor: ranking by magnitude has no stable seek key across
+     * concurrent inserts the way {@code (transaction_date, id)} does, so this only ever serves a
+     * single top-{@code limit} page.
+     */
+    public List<Transaction> topByAmount(
+            UUID userId, Integer categoryId, boolean uncategorizedOnly, Instant from, Instant to, int limit) {
+        rlsSession.setCurrentUser(userId);
+        StringBuilder sql = new StringBuilder("SELECT ")
+                .append(SELECT_COLUMNS)
+                .append(" FROM transactions t LEFT JOIN transaction_categories tc ON tc.transaction_id = t.id WHERE t.user_id = ?");
+        List<Object> args = new ArrayList<>();
+        args.add(userId);
+        appendCategoryAndDateFilters(sql, args, categoryId, uncategorizedOnly, from, to);
+        sql.append(" ORDER BY ABS(t.amount) DESC, t.transaction_date DESC, t.id DESC LIMIT ?");
+        args.add(limit);
+        return jdbcTemplate.query(sql.toString(), ROW_MAPPER, args.toArray());
+    }
+
+    /** Shared by {@link #listPage} and {@link #topByAmount} — the category/date WHERE fragment, identical in both. */
+    private static void appendCategoryAndDateFilters(
+            StringBuilder sql, List<Object> args, Integer categoryId, boolean uncategorizedOnly, Instant from, Instant to) {
         if (categoryId != null) {
             // A category filter means "show me what I spent in this category" — money received
             // (a refund, an incoming transfer) that happens to carry this category never belongs
@@ -206,14 +241,6 @@ public class TransactionRepository {
             sql.append(" AND t.transaction_date <= ?");
             args.add(Timestamp.from(to));
         }
-        if (cursorDate != null && cursorId != null) {
-            sql.append(" AND (t.transaction_date, t.id) < (?, ?::uuid)");
-            args.add(Timestamp.from(cursorDate));
-            args.add(cursorId.toString());
-        }
-        sql.append(" ORDER BY t.transaction_date DESC, t.id DESC LIMIT ?");
-        args.add(limitPlusOne);
-        return jdbcTemplate.query(sql.toString(), ROW_MAPPER, args.toArray());
     }
 
     /**

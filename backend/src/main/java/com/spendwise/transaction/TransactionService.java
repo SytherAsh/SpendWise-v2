@@ -37,6 +37,14 @@ public interface TransactionService {
     TransactionPage list(
             UUID userId, int limit, UUID cursor, Integer categoryId, boolean uncategorizedOnly, Instant from, Instant to);
 
+    /**
+     * Top-{@code limit} transactions by absolute amount, largest first (E10 Analytics category
+     * deep-dive "biggest transactions" — docs/api.md {@code GET /transactions?sort=amount_desc}).
+     * A bounded, non-paginated read; see {@link TransactionRepository#topByAmount}.
+     */
+    List<Transaction> topByAmount(
+            UUID userId, Integer categoryId, boolean uncategorizedOnly, Instant from, Instant to, int limit);
+
     /** @throws TransactionNotFoundException if absent or owned by a different user */
     Transaction getById(UUID userId, UUID transactionId);
 

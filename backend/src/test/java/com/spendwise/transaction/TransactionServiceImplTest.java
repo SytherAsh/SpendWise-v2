@@ -201,6 +201,19 @@ class TransactionServiceImplTest {
     }
 
     @Test
+    void topByAmountDelegatesStraightToRepositoryWithNoCursorLogic() {
+        Transaction biggest = sampleTransaction();
+        Instant from = Instant.parse("2026-01-01T00:00:00Z");
+        Instant to = Instant.parse("2026-06-30T23:59:59Z");
+        given(transactionRepository.topByAmount(userId, 3, false, from, to, 5)).willReturn(List.of(biggest));
+
+        List<Transaction> result = service.topByAmount(userId, 3, false, from, to, 5);
+
+        assertThat(result).containsExactly(biggest);
+        verify(transactionRepository, never()).findTransactionDate(any(), any());
+    }
+
+    @Test
     void sumSpendByCategoryForMonthDelegatesToRepository() {
         given(transactionRepository.sumSpendByCategoryForMonth(userId, 7, 2026)).willReturn(java.util.Map.of(3, BigDecimal.TEN));
 

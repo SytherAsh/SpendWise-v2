@@ -90,6 +90,13 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional
+    public List<Transaction> topByAmount(
+            UUID userId, Integer categoryId, boolean uncategorizedOnly, Instant from, Instant to, int limit) {
+        return transactionRepository.topByAmount(userId, categoryId, uncategorizedOnly, from, to, limit);
+    }
+
+    @Override
+    @Transactional
     public Transaction getById(UUID userId, UUID transactionId) {
         return transactionRepository.findById(userId, transactionId).orElseThrow(TransactionNotFoundException::new);
     }

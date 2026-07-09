@@ -44,18 +44,32 @@ public class TransactionController {
             @RequestParam(required = false) UUID cursor,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String from,
-            @RequestParam(required = false) String to) {
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false) String sort) {
         CategoryFilter filter = parseCategoryFilter(category);
+        int effectiveLimit = limit != null ? limit : DEFAULT_PAGE_SIZE;
+        if (isAmountDescSort(sort)) {
+            if (cursor != null) {
+                throw new InvalidSortException("cursor pagination is not supported with sort=amount_desc");
+            }
+            List<TransactionResponse> data = transactionService
+                    .topByAmount(userId, filter.categoryId(), filter.uncategorizedOnly(), parseDate(from), parseDate(to), effectiveLimit)
+                    .stream()
+                    .map(TransactionResponse::from)
+                    .toList();
+            return new TransactionListResponse(data, null, false);
+        }
+        if (sort != null && !sort.isBlank() && !sort.equalsIgnoreCase("date_desc")) {
+            throw new InvalidSortException("sort must be \"date_desc\" or \"amount_desc\", got: " + sort);
+        }
         TransactionPage page = transactionService.list(
-                userId,
-                limit != null ? limit : DEFAULT_PAGE_SIZE,
-                cursor,
-                filter.categoryId(),
-                filter.uncategorizedOnly(),
-                parseDate(from),
-                parseDate(to));
+                userId, effectiveLimit, cursor, filter.categoryId(), filter.uncategorizedOnly(), parseDate(from), parseDate(to));
         List<TransactionResponse> data = page.data().stream().map(TransactionResponse::from).toList();
         return new TransactionListResponse(data, page.nextCursor(), page.hasMore());
+    }
+
+    private static boolean isAmountDescSort(String sort) {
+        return sort != null && sort.equalsIgnoreCase("amount_desc");
     }
 
     @GetMapping("/{id}")

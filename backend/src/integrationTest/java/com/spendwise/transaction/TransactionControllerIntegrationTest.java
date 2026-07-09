@@ -191,6 +191,44 @@ class TransactionControllerIntegrationTest {
         assertThat((Boolean) secondPage.getBody().get("hasMore")).isFalse();
     }
 
+    @Test
+    void sortAmountDescReturnsBiggestFirstAndRejectsCursor() {
+        // Uses the Google-auth test identity rather than authHeadersViaOtp()'s fixed phone
+        // number — every other test in this class shares that one OTP user with no per-test DB
+        // cleanup, and (unlike this test) cursorPaginationReturnsConsistent... below queries with
+        // no from/to at all, so it sees every transaction ever created for that user regardless
+        // of date. A different user is fully isolated by RLS; date-picking alone wouldn't be.
+        HttpHeaders headers = authHeadersViaGoogle();
+        createManual(headers, "2024-03-01T00:00:00Z", -10.0);
+        createManual(headers, "2024-03-02T00:00:00Z", -999.0);
+        createManual(headers, "2024-03-03T00:00:00Z", -50.0);
+
+        ResponseEntity<Map> response = restTemplate.exchange(
+                baseUrl() + "/transactions?sort=amount_desc&limit=2&from=2024-03-01&to=2024-03-03T23:59:59Z",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        List<Map<String, Object>> data = (List<Map<String, Object>>) response.getBody().get("data");
+        assertThat(data).hasSize(2);
+        assertThat(((Number) data.get(0).get("amount")).doubleValue()).isEqualTo(-999.0);
+        assertThat(((Number) data.get(1).get("amount")).doubleValue()).isEqualTo(-50.0);
+        assertThat(response.getBody().get("nextCursor")).isNull();
+        assertThat((Boolean) response.getBody().get("hasMore")).isFalse();
+
+        ResponseEntity<Map> withCursor = restTemplate.exchange(
+                baseUrl() + "/transactions?sort=amount_desc&cursor=" + UUID.randomUUID(),
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                Map.class);
+        assertThat(withCursor.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        ResponseEntity<Map> invalidSort = restTemplate.exchange(
+                baseUrl() + "/transactions?sort=amount_asc", HttpMethod.GET, new HttpEntity<>(headers), Map.class);
+        assertThat(invalidSort.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
     private void createManual(HttpHeaders headers, String transactionDate, double amount) {
         restTemplate.exchange(
                 baseUrl() + "/transactions",

@@ -12,6 +12,7 @@ const PRESETS: Array<{ id: Exclude<RangePreset, "custom">; label: string }> = [
   { id: "this-month", label: "This month" },
   { id: "last-month", label: "Last month" },
   { id: "last-3-months", label: "Last 3 months" },
+  { id: "last-6-months", label: "Last 6 months" },
   { id: "ytd", label: "Year to date" },
   { id: "this-fy", label: "This financial year" },
 ];
