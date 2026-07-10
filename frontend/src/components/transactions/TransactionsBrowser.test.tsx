@@ -65,16 +65,21 @@ describe("TransactionsBrowser", () => {
   it("loads the first page and appends the next page on Load more (cursor pagination)", async () => {
     const user = userEvent.setup();
     fetcher.mockImplementation((key: string) =>
-      key.includes("cursor=t1")
-        ? Promise.resolve({ data: [txn("t2", 5, "Uber")], nextCursor: null, hasMore: false })
-        : Promise.resolve({ data: [txn("t1", 7, "Swiggy")], nextCursor: "t1", hasMore: true }),
+      key.includes("/contacts")
+        ? Promise.resolve([])
+        : key.includes("cursor=t1")
+          ? Promise.resolve({ data: [txn("t2", 5, "Uber")], nextCursor: null, hasMore: false })
+          : Promise.resolve({ data: [txn("t1", 7, "Swiggy")], nextCursor: "t1", hasMore: true }),
     );
 
     renderIsolated(<TransactionsBrowser categoryFilter={null} onClearFilter={vi.fn()} />);
 
     expect(await screen.findByText("Swiggy")).toBeInTheDocument();
-    expect(fetcher.mock.calls[0][0]).toContain("limit=50");
-    expect(fetcher.mock.calls[0][0]).not.toContain("cursor=");
+    // Call order between the transactions fetch and useContacts()'s own /contacts fetch isn't
+    // guaranteed, so find the transactions call by content rather than assuming index 0.
+    const firstPageCall = fetcher.mock.calls.map((c) => c[0] as string).find((k) => k.includes("limit=50"));
+    expect(firstPageCall).toBeDefined();
+    expect(firstPageCall).not.toContain("cursor=");
 
     await user.click(screen.getByRole("button", { name: /load more/i }));
 
@@ -87,7 +92,11 @@ describe("TransactionsBrowser", () => {
   });
 
   it("requests the numeric category filter param when categoryFilter is set", async () => {
-    fetcher.mockResolvedValue({ data: [txn("t1", 5, "Uber")], nextCursor: null, hasMore: false });
+    fetcher.mockImplementation((key: string) =>
+      key.includes("/contacts")
+        ? Promise.resolve([])
+        : Promise.resolve({ data: [txn("t1", 5, "Uber")], nextCursor: null, hasMore: false }),
+    );
 
     renderIsolated(<TransactionsBrowser categoryFilter={5} onClearFilter={vi.fn()} />);
 
@@ -98,7 +107,9 @@ describe("TransactionsBrowser", () => {
   });
 
   it('requests the "uncategorized" sentinel when categoryFilter is "uncategorized"', async () => {
-    fetcher.mockResolvedValue({ data: [], nextCursor: null, hasMore: false });
+    fetcher.mockImplementation((key: string) =>
+      key.includes("/contacts") ? Promise.resolve([]) : Promise.resolve({ data: [], nextCursor: null, hasMore: false }),
+    );
 
     renderIsolated(<TransactionsBrowser categoryFilter="uncategorized" onClearFilter={vi.fn()} />);
 
@@ -110,7 +121,11 @@ describe("TransactionsBrowser", () => {
   it("calls onClearFilter when the Clear filter control is clicked", async () => {
     const user = userEvent.setup();
     const onClearFilter = vi.fn();
-    fetcher.mockResolvedValue({ data: [txn("t1", 5, "Uber")], nextCursor: null, hasMore: false });
+    fetcher.mockImplementation((key: string) =>
+      key.includes("/contacts")
+        ? Promise.resolve([])
+        : Promise.resolve({ data: [txn("t1", 5, "Uber")], nextCursor: null, hasMore: false }),
+    );
 
     renderIsolated(<TransactionsBrowser categoryFilter={5} onClearFilter={onClearFilter} />);
     await screen.findByText("Uber");
@@ -122,7 +137,11 @@ describe("TransactionsBrowser", () => {
 
   it("corrects a transaction category via PUT and reflects it immediately", async () => {
     const user = userEvent.setup();
-    fetcher.mockResolvedValue({ data: [txn("t1", 7, "Swiggy")], nextCursor: null, hasMore: false });
+    fetcher.mockImplementation((key: string) =>
+      key.includes("/contacts")
+        ? Promise.resolve([])
+        : Promise.resolve({ data: [txn("t1", 7, "Swiggy")], nextCursor: null, hasMore: false }),
+    );
     put.mockResolvedValue({ transactionId: "t1", categoryId: 5 });
 
     renderIsolated(<TransactionsBrowser categoryFilter={null} onClearFilter={vi.fn()} />);

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MonthStepper } from "@/components/shared/MonthStepper";
 
 /**
@@ -31,9 +31,12 @@ afterEach(() => {
 
 describe("MonthStepper", () => {
   it("shows the month/year for the current range and steps backward/forward", async () => {
-    vi.useFakeTimers();
+    // Fake only Date (not setTimeout/setInterval) — userEvent v14 schedules its own real
+    // timers internally for click delays, which hang indefinitely under a fully-faked clock
+    // even with `advanceTimers` wired up. Scoping the fake to Date avoids that entirely.
+    vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(2026, 9, 15)); // "now" = October 2026, well after the June range below
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     mockRange("2026-06-01", "2026-06-30");
 
     render(<MonthStepper />);
