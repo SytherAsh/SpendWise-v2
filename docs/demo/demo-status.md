@@ -34,7 +34,7 @@ working:
    `/api/v1/auth/demo/info` alongside the other public `/auth/*` routes.
 
 4. **Live ML classifier bias** — not a code bug, a data/model quality finding (see
-   [docs/demo/demo-feature-complete.md § Known Issue](docs/demo/demo-feature-complete.md#known-issue-live-ml-model-bias)):
+   [demo-feature-complete.md § Known Issue](./demo-feature-complete.md#known-issue-live-ml-model-bias)):
    the trained classifier predicts "Transfers" for ~89% of demo transactions at barely-passing
    confidence. Fixed by overlaying the CSV's curated `category` column onto the seeded transactions
    via `TransactionService.correctCategory` — the same correction path a real user takes — after
@@ -86,7 +86,7 @@ Miscellaneous 13, Fees & Debt 12, Medical 2.
 
 ### QA
 
-Note: [docs/demo/demo-deployment-checklist.md](docs/demo/demo-deployment-checklist.md) still
+Note: [demo-deployment-checklist.md](./demo-deployment-checklist.md) still
 assumes a hardcoded demo user UUID and raw-SQL seeding from the original (pre-deployment) design —
 both are no longer accurate and the checklist needs a follow-up pass before being used for QA.
 

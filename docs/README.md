@@ -74,6 +74,7 @@ These documents specify **demo account setup** and pre-seeded data for marketing
 | [demo/demo-feature-complete.md](demo/demo-feature-complete.md) | Demo feature checklist: verified architecture, ML bias workaround, frozen-month budgets, EMI/alert/recommendation seeding | Today | ACTIVE — verified against live code |
 | [demo/demo-login-integration.md](demo/demo-login-integration.md) | Frontend demo login flow: real `demoLogin()`/`DEMO_PHONE`/badge/date-range implementation | Today | ACTIVE — verified against live code |
 | [demo/demo-deployment-checklist.md](demo/demo-deployment-checklist.md) | Demo account seeding, pre-flight verification | ~2 weeks | **STALE** — checklist still assumes a hardcoded demo user UUID and raw-SQL seeding from the pre-deployment design; needs a follow-up pass before use |
+| [demo/demo-status.md](demo/demo-status.md) | Session log: what was found broken and fixed during deployment, verified state, files changed | Today | ACTIVE — moved from repo root |
 
 ---
 
