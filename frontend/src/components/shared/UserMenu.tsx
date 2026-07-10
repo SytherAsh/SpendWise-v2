@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -108,11 +109,14 @@ export function UserMenu() {
   );
 }
 
+// Client-only value (next-themes reads it from localStorage) — resolved via
+// useSyncExternalStore rather than setState-in-effect, matching AuthGuard's pattern.
+const EMPTY_SUBSCRIBE = () => () => {};
+
 /** Inline light/dark segmented control inside the menu. */
 function ThemeControl() {
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(EMPTY_SUBSCRIBE, () => true, () => false);
   const current = mounted ? (theme === "system" ? resolvedTheme : theme) : undefined;
 
   const opts = [

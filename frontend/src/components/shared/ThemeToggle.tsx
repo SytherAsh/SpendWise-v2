@@ -1,9 +1,15 @@
 "use client";
 
-import * as React from "react";
+import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/cn";
+
+// The resolved theme is a client-only value (next-themes reads it from localStorage), so
+// "mounted" is resolved via useSyncExternalStore — server snapshot false, client snapshot
+// true — exactly like AuthGuard's client-only token check. Avoids both a hydration mismatch
+// and a setState-in-effect (the project's lint rule forbids the latter).
+const EMPTY_SUBSCRIBE = () => () => {};
 
 /**
  * Light/dark toggle. Uses next-themes (data-theme, system default, persisted).
@@ -11,8 +17,7 @@ import { cn } from "@/lib/cn";
  */
 export function ThemeToggle({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(EMPTY_SUBSCRIBE, () => true, () => false);
 
   const isDark = resolvedTheme === "dark";
 

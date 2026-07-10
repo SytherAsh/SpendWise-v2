@@ -1,21 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-function prefersReducedMotion(): boolean {
+function prefersReducedMotionNow(): boolean {
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
+// Client-only read (matchMedia) — resolved via useSyncExternalStore (server/first-paint
+// snapshot false) rather than a setState-in-effect, matching AuthGuard's established pattern.
+const EMPTY_SUBSCRIBE = () => () => {};
+
 /** Animate a number from 0 → value on mount (skipped under reduced-motion). */
 export function useCountUp(value: number, durationMs = 900): number {
-  const [display, setDisplay] = useState(() => (prefersReducedMotion() ? value : 0));
+  const reduced = useSyncExternalStore(EMPTY_SUBSCRIBE, prefersReducedMotionNow, () => false);
+  const [display, setDisplay] = useState(0);
   const raf = useRef<number | undefined>(undefined);
 
   useEffect(() => {
-    if (prefersReducedMotion()) {
-      setDisplay(value);
+    if (reduced) {
       return;
     }
     const start = performance.now();
@@ -30,9 +34,9 @@ export function useCountUp(value: number, durationMs = 900): number {
     return () => {
       if (raf.current) cancelAnimationFrame(raf.current);
     };
-  }, [value, durationMs]);
+  }, [value, durationMs, reduced]);
 
-  return display;
+  return reduced ? value : display;
 }
 
 export function StatTile({

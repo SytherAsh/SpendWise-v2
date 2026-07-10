@@ -1,5 +1,6 @@
 package com.spendwise.budget;
 
+import com.spendwise.common.demo.DemoUserRegistry;
 import com.spendwise.transaction.Category;
 import com.spendwise.transaction.CategoryService;
 import com.spendwise.transaction.MonthlyCategorySpend;
@@ -26,7 +27,12 @@ class BudgetServiceImplTest {
     private final BudgetRepository budgetRepository = mock(BudgetRepository.class);
     private final TransactionService transactionService = mock(TransactionService.class);
     private final CategoryService categoryService = mock(CategoryService.class);
-    private final BudgetServiceImpl service = new BudgetServiceImpl(budgetRepository, transactionService, categoryService);
+    // Real (unmocked) instance — a trivial value holder with no dependencies. Never registering
+    // a demo user here means isDemoUser() always returns false, so resolveMonth() falls through
+    // to YearMonth.now() for every test below, exactly as before this class existed.
+    private final DemoUserRegistry demoUserRegistry = new DemoUserRegistry();
+    private final BudgetServiceImpl service =
+            new BudgetServiceImpl(budgetRepository, transactionService, categoryService, demoUserRegistry, "");
     private final UUID userId = UUID.randomUUID();
 
     @Test
