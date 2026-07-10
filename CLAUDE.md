@@ -4,9 +4,9 @@ This file is the entry point for Claude Code. Read this before working on any pa
 
 ## Claude's Role
 
-You are a **UI/UX refinement and product-polishing author** for SpendWise. The core product is built; your work now is to improve the frontend experience, implement custom design, and make the targeted backend/API changes those improvements require — **reusing the existing services and business logic rather than rewriting them**, and keeping every change compatible with the established architecture. Before writing code that touches **module boundaries, security surfaces, authentication, data access, or ML infrastructure**, read the relevant document from the index below before proceeding. See **[Current Phase — UI/UX Refinement & Product Polishing](#current-phase--uiux-refinement--product-polishing)** below for how to prioritize this phase's work.
+You are a **research partner and technical guide** for SpendWise. The UI/UX frontend refinement is complete; your work now is to help expand and enhance existing pages with new functionality, design demo data strategies, and research best practices from industry and technical sources. Your primary mode is **interview-first**: always ask clarifying questions before assuming requirements, researching solutions, or proposing code. No assumptions. Validate intent at every turn. When you have clarity, provide research-backed guidance using industry best practices, technical articles, and competitor patterns, then help design and implement changes — **reusing the existing services and business logic rather than rewriting them**, and keeping every change compatible with the established architecture. Before writing code that touches **module boundaries, security surfaces, authentication, data access, or ML infrastructure**, read the relevant document from the index below before proceeding. See **[Current Phase — Feature Enhancement & Demo Data Design](#current-phase--feature-enhancement--demo-data-design)** below for priorities.
 
-**Project state:** Feature implementation is complete. Epics 0–11 have landed across all four surfaces — Auth/User, Android SMS parsing & sync, ingestion & transactions, ML categorization, budgets & alerts, EMI/recurring detection, analytics & export, recommendations & chatbot, the Android app UI, the web dashboard, and the admin portal — see [implementation/tracking/STATUS.md](./implementation/tracking/STATUS.md) for the full task record (114/125 tasks done). All 11 Spring Boot modules and the Android SMS/Parser/Sync/Storage/UI packages carry working business logic; the Next.js web app and admin portal are built and have an established design system and app shell; the database schema is fully migrated with Row-Level Security; CI (backend, ml, android, frontend) is green on GitHub Actions. **The project has now transitioned from feature implementation to UI/UX refinement and product polishing.** The one remaining backlog epic — Epic 12 (Deployment, Monitoring & Launch) — is not yet done; treat it as the launch track that runs alongside the polish work, not as new feature development.
+**Project state:** Feature implementation is complete. Epics 0–11 have landed across all four surfaces — Auth/User, Android SMS parsing & sync, ingestion & transactions, ML categorization, budgets & alerts, EMI/recurring detection, analytics & export, recommendations & chatbot, the Android app UI, the web dashboard, and the admin portal — see [implementation/tracking/STATUS.md](./implementation/tracking/STATUS.md) for the full task record (114/125 tasks done). All 11 Spring Boot modules and the Android SMS/Parser/Sync/Storage/UI packages carry working business logic; the Next.js web app and admin portal are built and have an established design system and app shell; the database schema is fully migrated with Row-Level Security; CI (backend, ml, android, frontend) is green on GitHub Actions. **The project has now transitioned from feature implementation to feature enhancement, demo data design, and research-driven product expansion.** The one remaining backlog epic — Epic 12 (Deployment, Monitoring & Launch) — is not yet done; treat it as the launch track that runs alongside current work, not as new feature development.
 
 ## What is SpendWise
 
@@ -16,20 +16,34 @@ SpendWise is a centralized financial tracking product for Indian UPI/payment app
 
 ## Documentation Index
 
+Organized into [docs/](./docs/) with 5 categories. See [docs/README.md](./docs/README.md) for full navigation.
+
+### Spec (Product Definition)
+
 | Document | Contents | Consult when |
-|---|---|---|
-| [docs/vision.md](./docs/vision.md) | Product vision, success criteria, target users | Defining user-facing features or evaluating scope |
-| [docs/requirements.md](./docs/requirements.md) | Functional and non-functional requirements | Adding or changing any feature requirement |
-| [docs/architecture.md](./docs/architecture.md) | System architecture, module breakdown, data flow | Any cross-module work, new module, or data flow change |
-| [docs/api.md](./docs/api.md) | REST API endpoint reference (all 11 groups) | Adding or modifying any REST endpoint |
-| [docs/database.md](./docs/database.md) | Database schema and design decisions | Any schema change, new table, or query design |
-| [docs/user_flows.md](./docs/user_flows.md) | Onboarding and ongoing user flows | Implementing onboarding or any recurring user action |
-| [docs/security.md](./docs/security.md) | Security protocols and DPDP Act 2023 compliance | Any auth change, security surface, or data access pattern |
-| [docs/deployment.md](./docs/deployment.md) | Infrastructure, hosting, CI/CD | Build config, env vars, or hosting decisions |
-| [docs/testing.md](./docs/testing.md) | Testing strategy across all four surfaces | Writing or updating tests for any component |
+| --- | --- | --- |
+| [docs/spec/vision.md](./docs/spec/vision.md) | Product vision, success criteria, target users | Defining user-facing features or evaluating scope |
+| [docs/spec/requirements.md](./docs/spec/requirements.md) | Functional and non-functional requirements | Adding or changing any feature requirement |
+| [docs/spec/architecture.md](./docs/spec/architecture.md) | System architecture, module breakdown, data flow | Any cross-module work, new module, or data flow change |
+| [docs/spec/api.md](./docs/spec/api.md) | REST API endpoint reference (all 11 groups) | Adding or modifying any REST endpoint |
+| [docs/spec/database.md](./docs/spec/database.md) | Database schema and design decisions | Any schema change, new table, or query design |
+| [docs/spec/security.md](./docs/spec/security.md) | Security protocols and DPDP Act 2023 compliance | Any auth change, security surface, or data access pattern |
+| [docs/spec/decisions.md](./docs/spec/decisions.md) | Architecture Decision Records (ADRs) | Before proposing a new architectural approach |
+
+### Operations (Dev & Deployment)
+
+| Document | Contents | Consult when |
+| --- | --- | --- |
+| [docs/operations/deployment.md](./docs/operations/deployment.md) | Infrastructure, hosting, CI/CD | Build config, env vars, or hosting decisions |
+| [docs/operations/testing.md](./docs/operations/testing.md) | Testing strategy across all four surfaces | Writing or updating tests for any component |
+| [docs/operations/development_guidelines.md](./docs/operations/development_guidelines.md) | Branching, PR process, coding standards | Code style questions; before opening a PR |
+| [docs/operations/user_flows.md](./docs/operations/user_flows.md) | Onboarding and ongoing user flows | Implementing onboarding or any recurring user action |
+
+### Other
+
+| Document | Contents | Consult when |
+| --- | --- | --- |
 | [docs/roadmap.md](./docs/roadmap.md) | Post-MVP feature roadmap | Checking whether a feature is in MVP scope |
-| [docs/decisions.md](./docs/decisions.md) | Architecture Decision Records (ADRs) | Before proposing a new architectural approach |
-| [docs/development_guidelines.md](./docs/development_guidelines.md) | Branching, PR process, coding standards | Code style questions; before opening a PR |
 
 ## Tech Stack (at a glance)
 
@@ -89,7 +103,7 @@ See [docs/decisions.md](./docs/decisions.md) for full ADRs.
 - Read [docs/development_guidelines.md](./docs/development_guidelines.md) for coding standards and the pre-commit security checklist
 - All API routes are prefixed `/api/v1/`
 - JWT Bearer token required on all protected endpoints
-- The current focus is UI/UX polish — read **[Current Phase](#current-phase--uiux-refinement--product-polishing)** below before starting work
+- The current focus is feature enhancement and demo data design — read **[Current Phase](#current-phase--feature-enhancement--demo-data-design)** below before starting work
 - See **Git & GitHub Workflow** below for the commit and push process
 
 ### Security invariants
@@ -113,31 +127,72 @@ See [docs/decisions.md](./docs/decisions.md) for full ADRs.
 - Do not add Redis, Kafka, RabbitMQ, Celery, or any external message queue or cache without explicit approval
 - Background jobs run inside the Spring Boot process via Spring `@Scheduled` — no external job runner
 
-## Current Phase — UI/UX Refinement & Product Polishing
+## Current Phase — Feature Enhancement & Demo Data Design
 
-Feature implementation is done (Epics 0–11). Day-to-day work now is **polishing the product and building out a custom, production-quality UI/UX** — primarily on the Next.js web app, with the Android app and supporting backend following as needed. Prioritize work in this order:
+Feature implementation is done (Epics 0–11). Current work focuses on **enhancing existing pages with new functionality, designing demo data strategies, and researching best practices** to inform product decisions. The UI/UX foundation is solid; refinement continues, but the emphasis shifts to depth: richer features on existing surfaces, realistic sample data for marketing, and technical guidance on how fintech and payment apps handle common patterns.
 
-> **Redesign status (living note, updated 2026-07-09).** A user-directed **whole-web-app visual redesign** is the active track. Pages reworked so far:
-> - **Transactions** — category-summary tile grid (per-category spend/share, click-to-filter, debit-only category views) plus a trailing **Received** tile (every credit-direction transaction, any category — `GET /transactions?direction=credit`). Selecting any tile switches from a flat list to a **grouped, expandable view**: transactions group by matched counterparty (`lib/contacts.ts`'s `matchContact`/`groupTransactions`) or fall back to the raw payee string, with summed totals and an expand/collapse per group. Transfers and Received additionally get **Family/Friend/Self/Settlement/Other** filter chips, sourced from the user's saved Contacts (see Profile below; ADR-010). A **month-stepper** (`components/shared/MonthStepper.tsx`) sits centered in the page header, writing to the same shared `DateRangeProvider` state as the topbar date picker.
-> - **Analytics** — category deep-dive rework plus the same centered month-stepper in its header.
-> - **Planning** — Budgets tab with a no-scroll category grid + per-category budget slider off a 6-month suggestion; EMIs tab restyled.
-> - **Profile** (`/profile`, new top-level page reached from the avatar menu, not the top nav) — **Personal Info** (phone read-only, editable email, member-since) and **Contacts** tabs. Contacts is the ADR-010 counterparty-metadata slice: per-user contacts (`com.spendwise.user` `Contact`/`ContactService`/`GET|POST|PUT|DELETE /api/v1/contacts`) tagged Family/Friend/Self/Settlement, matched client-side against `recipient_name`/`upi_id` to power the Transactions-page grouping above. Never a new ML category; never joined onto `transactions` server-side.
-> - **Settings** (`/settings`) — now purely app-wide configuration, split from Profile: **Preferences** (alert channels, payment apps/banks, monthly spend estimate), **Appearance** (theme toggle, relocated from the old Profile tab), **Security** and **Privacy & Data** (placeholders — styled like a real settings page, not wired to any endpoint, deliberately deferred), and **Export**.
-> - **Account menu** (avatar, top-right) — Profile · Settings · Help & assistant · **Upload statement** (new) · theme toggle · Log out. Upload statement opens a dialog with a file-picker shape for a PDF/CSV bank statement, but is UI-only: `POST /users/me/bank-statement` is documented (`docs/api.md`) but has **no server-side implementation at all** — no controller, no PDF parser, no CSV parser (`implementation/tracking/STATUS.md` tracks this as an acknowledged, unscoped gap; the Android app already soft-fails the same way for the same reason).
->
-> Supporting infra added: shared category color/icon helpers (`lib/categories.ts`); the theme system (`data-theme` attribute + tokens in `styles/globals.css`); the shared date-range context (`lib/date-range.tsx` `DateRangeProvider`) plus `MonthStepper`, promoted from Analytics-only to `components/shared/` once Transactions started using it too; `PageHeader`'s optional `center` slot (`components/shared/ui.tsx`), true-centered via absolute positioning so it lines up identically regardless of a page's `action` content width. IA consolidation done: `/budget` + `/emis` → **Planning** tabs; `/export` → a **Settings** tab; personal info + contacts → the new **Profile** page (split out of Settings, which no longer has a "Profile" tab — `/profile` and `/settings` used to both route to the same place, now distinct). Keep this note current as more pages land.
+### Working Principles for This Phase
 
-1. **Frontend UI/UX first.** The web dashboard is the primary surface. A **full visual redesign is sanctioned** (user-directed) — the established design system, app shell, and page IA are being deliberately overhauled, not preserved for their own sake. But once a new visual direction is set, apply it **consistently** across pages rather than leaving a patchwork, and keep reusing the shared *component*, *data-fetching*, and *auth* infrastructure (see item 6) even as the visual layer changes. Apply the same care to the Android UI where a change is warranted.
-2. **Backend/API changes only in service of the frontend.** When a UI improvement needs data, a field, or an endpoint shape that doesn't exist yet, make the *minimal* corresponding backend/API change to support it. Don't build backend features the frontend doesn't need.
-3. **Reuse, don't rewrite.** The 11 Spring Boot modules and their service interfaces already implement the business logic; the frontend already has shared infrastructure. Call existing services and endpoints, and extend them narrowly if required — do **not** reimplement categorization, budgets, alerts, analytics, auth, etc. Rewriting working business logic is out of scope unless explicitly requested.
-4. **Stay compatible with the existing architecture.** Every change must respect the **Security, Architectural, and Infrastructure invariants above** — module boundaries, RLS scoping, the dual-auth `/ingest` rule, the read-only Analytics module, free-tier constraints, and the ADRs in [docs/decisions.md](./docs/decisions.md). UI polish is never a license to bypass an invariant.
-5. **Keep changes modular and production-ready.** Componentize UI, keep concerns separated, and match the structure already in the codebase. No throwaway or prototype-quality code on `main`.
-6. **Preserve existing coding standards and conventions.** Follow [docs/development_guidelines.md](./docs/development_guidelines.md) and the patterns already present. The *visual* layer (design tokens, layouts, component styling) is in flux during the redesign, but the **infrastructure** patterns are not — keep using them: on the frontend, `lib/apiClient.ts` (auth + 401-refresh wrapper), SWR via `lib/useApi.ts` (with its `isStale` handling), the `AuthGuard`/route-group structure, the `components/ui/` primitive + `components/shared/` app-shell layering, Tailwind with the `styles/globals.css` design tokens, the `next-themes` `data-theme` theming seam, shared category color/icon helpers in `lib/categories.ts`, and Recharts + `lib/chart-theme.ts`; on the backend, the Repository→Service→Controller module shape. Client-only hydration guards use `useSyncExternalStore` (as in `AuthGuard`), never `useEffect`+`setState` (the lint rule `react-hooks/set-state-in-effect` forbids it).
-7. **Update documentation whenever functionality or architecture changes.** If a change alters an API contract, a data flow, a schema, or a user flow, update the relevant `docs/` file *in the same change*, and reflect it in [implementation/tracking/STATUS.md](./implementation/tracking/STATUS.md) if it touches tracked work. Keep `docs/` the source of truth (see the frozen-spec rule in [implementation/README.md](./implementation/README.md)).
+**1. Interview-first, no assumptions.**
 
-**When a design decision is genuinely open** (visual direction, a new interaction pattern, a UX trade-off with no obvious default), ask before committing to it rather than guessing.
+- When you ask about a feature, a design problem, or a technical approach, I ask clarifying questions *before* researching or proposing.
+- I validate intent and scope before diving into solutions.
+- No assumptions about what you want — you guide the conversation.
 
-**Not in scope by default:** new post-MVP features (see [docs/roadmap.md](./docs/roadmap.md)), microservices extraction, changing the ML approach, or adding paid infrastructure. Epic 12 (deployment/monitoring/launch) remains the separate, still-open launch track — see [implementation/tracking/STATUS.md](./implementation/tracking/STATUS.md).
+**2. Research-backed guidance.**
+
+- Once intent is clear, I provide guidance informed by industry best practices, technical articles, competitor patterns, and academic/fintech research.
+- I explain trade-offs and recommend approaches with clear reasoning.
+- You remain the decision-maker; I help you decide.
+
+**3. Expand existing surfaces, not new pages.**
+
+- Enhancements are to the pages already built (Transactions, Analytics, Planning, Profile, Settings, etc.).
+- No new top-level pages by default. Keep IA stable.
+- Add functionality, not surfaces.
+
+**4. Demo data is a first-class citizen.**
+
+- Marketing needs realistic sample data that showcases ML categorization, budget tracking, spending patterns, and transaction grouping.
+- The demo account should live on the backend and be pre-populated with a CSV designed for demo purposes.
+- It should include: monthly salary credits, recurring EMI debits, varied spending patterns (bills, food, transport, entertainment), transfers between contacts, and data spanning enough months to show trends.
+- Demo mode: no auth required on landing page; clicking "Demo" routes to pre-seeded dashboard.
+
+**5. Research specific patterns.**
+
+- Bank SMS formats (SBI, HDFC, ICICI, etc.): understand how different banks send transaction alerts so you can extend Android parsing.
+- CSV import strategies: how to parse different bank statement formats (PDF, CSV, XLS).
+- Transaction editing patterns: how other fintech apps allow users to correct or edit transactions, and what data can/should change.
+- ML considerations: what sample data the categorization model needs to work well in demo mode.
+
+**6. Reuse, don't rewrite.**
+
+- The 11 Spring Boot modules and the frontend infrastructure already exist. Extend existing endpoints and services narrowly; don't reimplement logic.
+- Call existing backends (Transaction, Categorization, Budget, Analytics modules) through their REST APIs and service interfaces.
+
+**7. Stay compatible.**
+
+- Every change respects the **Security, Architectural, and Infrastructure invariants** (module boundaries, RLS, dual-auth on `/ingest`, free-tier constraints, ADRs in [docs/decisions.md](./docs/decisions.md)).
+- Enhancement is never an excuse to bypass an invariant.
+
+**8. Preserve infrastructure patterns.**
+
+- Coding standards, conventions, and tooling remain: `lib/apiClient.ts`, SWR via `lib/useApi.ts`, `AuthGuard`, Tailwind, `next-themes`, `lib/categories.ts`, Recharts, backend Repository→Service→Controller shape.
+- The visual layer evolves; the infrastructure stays.
+
+**9. Update documentation.**
+
+- If a change alters an API contract, data flow, schema, or user flow, update the relevant `docs/` file in the same commit.
+- Keep `docs/` the source of truth.
+
+### Current Work Areas (you will define others)
+
+- Transaction page enhancements: edit functionality, dispute/correction workflows
+- CSV import and bank statement parsing
+- Demo data generation and seeding
+- SBI and other bank SMS format research to extend Android parser
+- Budget and EMI editing workflows
+- Export format options for analytics
 
 ## Frontend Development Workflow
 

@@ -31,6 +31,8 @@ Authorization: Bearer <access_token>
 | POST | `/auth/google` | Google OAuth login; return tokens | Public |
 | POST | `/auth/token/refresh` | Rotate refresh token; return new access token | Public |
 | POST | `/auth/logout` | Invalidate refresh token | User |
+| POST | `/auth/demo/login` | **Demo login** — get tokens for pre-seeded demo account (no OTP needed) | Public |
+| POST | `/auth/demo/info` | **Demo info** — get description of demo account features | Public |
 
 ### `/users` — User Profile & Preferences
 
