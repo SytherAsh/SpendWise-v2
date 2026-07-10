@@ -159,23 +159,26 @@ export function DashboardView() {
       </div>
 
       {/* Bento grid */}
-      <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
         <TrendSection
           state={{ data: trends.data ? { buckets: trends.data.buckets } : undefined, error: trends.error, isLoading: trends.isLoading }}
           span={trendSpan}
           onSpanChange={setTrendSpan}
           spanDisabled={range.preset === "this-fy"}
         />
-        <AlertsSection state={{ data: alerts.data?.data, error: alerts.error, isLoading: alerts.isLoading }} />
-        <UpcomingEmisSection state={{ data: emis.data, error: emis.error, isLoading: emis.isLoading }} />
 
-        <div className="lg:col-span-1 xl:col-span-2">
+        <div className="lg:col-span-2 xl:col-span-2">
           <CategorySummarySection state={{ data: summary.data?.categories, error: summary.error, isLoading: summary.isLoading }} />
         </div>
+      <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
+        <UpcomingEmisSection state={{ data: emis.data, error: emis.error, isLoading: emis.isLoading }} />
+        <AlertsSection state={{ data: alerts.data?.data, error: alerts.error, isLoading: alerts.isLoading }} />
         <RecommendationsSection
           state={{ data: recommendations.data ? visibleRecs : undefined, error: recommendations.error, isLoading: recommendations.isLoading }}
           onDismiss={dismiss}
         />
+        
+      
+        
 
         <TopSpendsSection state={{ data: topDebits.data?.data, error: topDebits.error, isLoading: topDebits.isLoading }} />
         <TopPayeesSection state={{ data: topDebits.data?.data, error: topDebits.error, isLoading: topDebits.isLoading }} />
