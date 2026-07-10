@@ -2,14 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Plus, Search } from "lucide-react";
+import { Menu, Plus, Search, PlayCircle } from "lucide-react";
 import { DateRangePicker } from "@/components/shared/DateRangePicker";
 import { NotificationsBell } from "@/components/shared/NotificationsBell";
 import { UserMenu } from "@/components/shared/UserMenu";
 import { BrandMark } from "@/components/shared/BrandMark";
 import { Button } from "@/components/ui/button";
 import { useShell, PRIMARY_NAV } from "@/lib/shell";
+import { useApi } from "@/lib/useApi";
+import { DEMO_PHONE } from "@/lib/authApi";
 import { cn } from "@/lib/cn";
+
+interface Profile {
+  phone: string;
+}
 
 /**
  * Primary top navigation: logo (→ landing) + primary destinations + global
@@ -19,6 +25,9 @@ import { cn } from "@/lib/cn";
 export function TopBar() {
   const pathname = usePathname();
   const { setMobileNavOpen, setCommandOpen, setQuickAddOpen } = useShell();
+  // Shares the SWR cache key with UserMenu's own `/users/me` fetch — no extra request.
+  const { data: profile } = useApi<Profile>("/users/me");
+  const isDemo = profile?.phone === DEMO_PHONE;
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border bg-surface/80 px-3 backdrop-blur-xl md:px-6">
@@ -32,6 +41,12 @@ export function TopBar() {
       </button>
 
       <BrandMark />
+
+      {isDemo && (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-400/40 bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700 dark:bg-brand-400/10 dark:text-brand-300">
+          <PlayCircle className="size-3.5" /> Demo account
+        </span>
+      )}
 
       {/* Primary nav */}
       <nav className="ml-4 hidden items-center gap-1 lg:flex">

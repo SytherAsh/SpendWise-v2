@@ -1,0 +1,523 @@
+transaction_date,debit,credit,amount,dr_cr_indicator,transaction_id,recipient_name,upi_id,bank,transaction_mode,note,source,category
+2025-07-01T14:01:00Z,482,0,-482,DR,txn_818144230c132431,Zomato,zomato@icic,AXIS,UPI,,bank_statement,7
+2025-07-02T17:38:00Z,370,0,-370,DR,txn_6e713322990afd5f,Zomato,zomato@icic,ICIC,UPI,,bank_statement,7
+2025-07-03T13:36:00Z,296,0,-296,DR,txn_50f1324acab491e6,McDonald's,mcdonalds@hdfc,SBIN,UPI,,bank_statement,7
+2025-07-03T18:45:00Z,258,0,-258,DR,txn_a2854b751a0ce9ad,Fuel Station,fuel.petrol@upi,AXIS,UPI,,bank_statement,5
+2025-07-04T14:11:00Z,182,0,-182,DR,txn_6287428ad451c21f,Flipkart Flight,flights@flipkart,ICIC,UPI,,bank_statement,5
+2025-07-05T16:45:00Z,419,0,-419,DR,txn_71fcd230a851c64c,Local Dhaba,dhaba.local@upi,HDFC,UPI,,bank_statement,7
+2025-07-06T12:14:00Z,104,0,-104,DR,txn_31531855f1ae3a69,Ola,ola@icic,SBIN,UPI,,bank_statement,5
+2025-07-06T22:06:00Z,252,0,-252,DR,txn_cfd2cd151e32ae16,McDonald's,mcdonalds@hdfc,AXIS,UPI,,bank_statement,7
+2025-07-08T12:58:00Z,102,0,-102,DR,txn_86006d9009b4716e,Dominos,dominos@hdfc,HDFC,UPI,,bank_statement,7
+2025-07-09T10:44:00Z,260,0,-260,DR,txn_6de2c3d1768b7612,Uber,uber@hdfc,SBIN,UPI,,bank_statement,5
+2025-07-10T14:35:00Z,385,0,-385,DR,txn_a108d8d21bdd34b1,Dominos,dominos@hdfc,AXIS,UPI,,bank_statement,7
+2025-07-11T09:35:00Z,288,0,-288,DR,txn_f8f942580e8cccab,Uber,uber@hdfc,HDFC,UPI,,bank_statement,5
+2025-07-11T12:38:00Z,401,0,-401,DR,txn_61dd0fc4125cd24b,DMart,dmart@hdfc,KOTAK,UPI,,bank_statement,4
+2025-07-12T13:35:00Z,452,0,-452,DR,txn_8739e54f7ff873a8,Subway,subway@okaxis,AXIS,UPI,,bank_statement,7
+2025-07-13T10:12:00Z,692,0,-692,DR,txn_358f3666a7d98d05,Blinkit,blinkit@okaxis,KOTAK,UPI,,bank_statement,4
+2025-07-13T11:30:00Z,229,0,-229,DR,txn_b24778ac2dccad3c,Fuel Station,fuel.petrol@upi,ICIC,UPI,,bank_statement,5
+2025-07-13T21:42:00Z,410,0,-410,DR,txn_a2a9ac3ce3985c1e,McDonald's,mcdonalds@hdfc,SBIN,UPI,,bank_statement,7
+2025-07-14T19:13:00Z,286,0,-286,DR,txn_14bfe14b591f915d,Flipkart Flight,flights@flipkart,HDFC,UPI,,bank_statement,5
+2025-07-15T12:13:00Z,0,2183,2183,CR,txn_dab1f22b7f5c4225,Amit Kumar,rahul.sharma@upi,ICIC,UPI,Received from Amit Kumar,bank_statement,10
+2025-07-15T17:45:00Z,274,0,-274,DR,txn_bdeb23c0d6a2be7f,Rapido,rapido@okaxis,ICIC,UPI,,bank_statement,5
+2025-07-16T20:06:00Z,135,0,-135,DR,txn_f0cd1a8d1d9a4558,Rapido,rapido@okaxis,AXIS,UPI,,bank_statement,5
+2025-07-17T14:57:00Z,516,0,-516,DR,txn_005a9e9e776e4d7f,Spencer,spencer@hdfc,KOTAK,UPI,,bank_statement,4
+2025-07-17T20:53:00Z,247,0,-247,DR,txn_bdd7a04113c7b88f,Starbucks,starbucks@hdfc,HDFC,UPI,,bank_statement,7
+2025-07-18T17:44:00Z,788,0,-788,DR,txn_9073cff503aaea33,Spencer,spencer@hdfc,KOTAK,UPI,,bank_statement,4
+2025-07-18T21:29:00Z,83,0,-83,DR,txn_e832bec6e32d2006,Ola,ola@icic,KOTAK,UPI,,bank_statement,5
+2025-07-19T11:53:00Z,605,0,-605,DR,txn_8a0e87657452a627,Blinkit,blinkit@okaxis,AXIS,UPI,,bank_statement,4
+2025-07-19T16:29:00Z,276,0,-276,DR,txn_e78a03ba6bf5a35a,Local Dhaba,dhaba.local@upi,KOTAK,UPI,,bank_statement,7
+2025-07-20T17:15:00Z,178,0,-178,DR,txn_4e82bac06c238399,Ola,ola@icic,KOTAK,UPI,,bank_statement,5
+2025-07-21T22:12:00Z,130,0,-130,DR,txn_02c693a59b3efb63,Cafe Coffee Day,caffe.ccd@hdfc,SBIN,UPI,,bank_statement,7
+2025-07-22T12:43:00Z,74,0,-74,DR,txn_5e00bebc2b6cac3c,Fuel Station,fuel.petrol@upi,ICIC,UPI,,bank_statement,5
+2025-07-22T16:51:00Z,445,0,-445,DR,txn_7799bee624c9f4c0,Zomato,zomato@icic,ICIC,UPI,,bank_statement,7
+2025-07-23T13:30:00Z,84,0,-84,DR,txn_dfda96ba7bf65e32,Zomato,zomato@icic,HDFC,UPI,,bank_statement,7
+2025-07-23T19:53:00Z,441,0,-441,DR,txn_51b1c3c02a94331d,DMart,dmart@hdfc,KOTAK,UPI,,bank_statement,4
+2025-07-25T09:30:00Z,0,75000,75000,CR,txn_e6e98c7cbd93e3aa,SBIN,salary.7@kotak,KOTAK,INB,Monthly Salary,bank_statement,
+2025-07-25T11:08:00Z,218,0,-218,DR,txn_511d8462050643dd,Fuel Station,fuel.petrol@upi,AXIS,UPI,,bank_statement,5
+2025-07-26T10:29:00Z,101,0,-101,DR,txn_27da4201f3000a34,Rapido,rapido@okaxis,KOTAK,UPI,,bank_statement,5
+2025-07-26T20:22:00Z,64,0,-64,DR,txn_b0ebe8bec44b71af,Zomato,zomato@icic,SBIN,UPI,,bank_statement,7
+2025-07-27T10:15:00Z,69,0,-69,DR,txn_2509f9d449517adf,Spotify,spotify@okaxis,OKAXIS,UPI,Spotify Premium,bank_statement,9
+2025-07-28T11:25:00Z,531,0,-531,DR,txn_4bbbf356a1ed3de7,DMart,dmart@hdfc,SBIN,UPI,,bank_statement,4
+2025-07-28T12:35:00Z,236,0,-236,DR,txn_f82d5446417b3a3a,Ola,ola@icic,HDFC,UPI,,bank_statement,5
+2025-07-28T14:00:00Z,5000,0,-5000,DR,txn_9733b7db05ac5f69,Car Loan EMI,carloan@hdfc,HDFC,UPI,Car Loan EMI,bank_statement,12
+2025-07-29T11:00:00Z,1666,0,-1666,DR,txn_e325ec58a618d50e,Electricity Board,electricity@sbin,SBIN,UPI,Monthly Electricity Bill,bank_statement,6
+2025-07-29T13:54:00Z,62,0,-62,DR,txn_f56f3c3fa0ade38c,Zomato,zomato@icic,KOTAK,UPI,,bank_statement,7
+2025-07-29T15:36:00Z,693,0,-693,DR,txn_7eef2344ff9147c4,Spencer,spencer@hdfc,ICIC,UPI,,bank_statement,4
+2025-07-29T19:09:00Z,45,0,-45,DR,txn_e33719b978e18360,Flipkart Flight,flights@flipkart,SBIN,UPI,,bank_statement,5
+2025-07-31T13:06:00Z,78,0,-78,DR,txn_55da730425591867,Fuel Station,fuel.petrol@upi,HDFC,UPI,,bank_statement,5
+2025-08-01T15:46:00Z,611,0,-611,DR,txn_38691b1e05aa7e2c,Local Vegetable Vendor,vendor@upi,HDFC,UPI,,bank_statement,4
+2025-08-02T07:33:00Z,158,0,-158,DR,txn_979e3e7c8b9878df,Fuel Station,fuel.petrol@upi,ICIC,UPI,,bank_statement,5
+2025-08-02T13:25:00Z,0,1239,1239,CR,txn_d19f4dfe759cbe1e,Rajesh Singh,shreya.p@upi,HDFC,UPI,Received from Rajesh Singh,bank_statement,10
+2025-08-02T17:23:00Z,93,0,-93,DR,txn_273ef282d7d4c406,Starbucks,starbucks@hdfc,AXIS,UPI,,bank_statement,7
+2025-08-03T12:31:00Z,619,0,-619,DR,txn_157f6ef200302675,BigBasket,bigbasket@okaxis,ICIC,UPI,,bank_statement,4
+2025-08-03T15:50:00Z,339,0,-339,DR,txn_d0849f8a3b4db876,Zomato,zomato@icic,KOTAK,UPI,,bank_statement,7
+2025-08-03T19:58:00Z,189,0,-189,DR,txn_ce85e5e3ef025b90,Ola,ola@icic,SBIN,UPI,,bank_statement,5
+2025-08-04T13:46:00Z,3409,0,-3409,DR,txn_699aa6219c169d7b,Rajesh Singh,amit.k@ibl,SBIN,UPI,Transfer to Rajesh Singh,bank_statement,10
+2025-08-04T21:24:00Z,225,0,-225,DR,txn_de9462932e172ce9,Cafe Coffee Day,caffe.ccd@hdfc,HDFC,UPI,,bank_statement,7
+2025-08-05T10:09:00Z,0,2292,2292,CR,txn_4479b3b6de4d5c67,Amit Kumar,rajesh.s@ybl,KOTAK,UPI,Received from Amit Kumar,bank_statement,10
+2025-08-05T16:01:00Z,276,0,-276,DR,txn_8b542a0fe6f02c87,DMart,dmart@hdfc,ICIC,UPI,,bank_statement,4
+2025-08-05T19:15:00Z,83,0,-83,DR,txn_c10ff1069be80591,Local Dhaba,dhaba.local@upi,SBIN,UPI,,bank_statement,7
+2025-08-07T12:09:00Z,434,0,-434,DR,txn_bded4c75eda76452,Local Dhaba,dhaba.local@upi,AXIS,UPI,,bank_statement,7
+2025-08-07T13:19:00Z,2573,0,-2573,DR,txn_333e0ecd0d93a1fa,Rahul Sharma,rajesh.s@ybl,SBIN,UPI,Transfer to Rahul Sharma,bank_statement,10
+2025-08-08T17:00:00Z,1138,0,-1138,DR,txn_9a9438a780a31640,Rahul Sharma,rahul.sharma@upi,AXIS,UPI,Transfer to Rahul Sharma,bank_statement,10
+2025-08-10T14:51:00Z,1157,0,-1157,DR,txn_e9f7716394c485cd,Flipkart,flipkart@hdfc,HDFC,UPI,,bank_statement,1
+2025-08-10T19:13:00Z,778,0,-778,DR,txn_cc9f0f7e1c71386f,BigBasket,bigbasket@okaxis,AXIS,UPI,,bank_statement,4
+2025-08-11T07:34:00Z,174,0,-174,DR,txn_dc512eacc218e263,Rapido,rapido@okaxis,HDFC,UPI,,bank_statement,5
+2025-08-11T20:14:00Z,310,0,-310,DR,txn_fa09dd5af0ec5d50,Dominos,dominos@hdfc,HDFC,UPI,,bank_statement,7
+2025-08-12T21:02:00Z,335,0,-335,DR,txn_e5057c0da08923c7,Starbucks,starbucks@hdfc,KOTAK,UPI,,bank_statement,7
+2025-08-12T21:03:00Z,95,0,-95,DR,txn_25c523bba523319f,Flipkart Flight,flights@flipkart,HDFC,UPI,,bank_statement,5
+2025-08-13T20:09:00Z,293,0,-293,DR,txn_afbe09051130d0fb,Blinkit,blinkit@okaxis,AXIS,UPI,,bank_statement,4
+2025-08-14T09:03:00Z,543,0,-543,DR,txn_ffb9ab8e1b89c324,Local Vegetable Vendor,vendor@upi,HDFC,UPI,,bank_statement,4
+2025-08-15T21:16:00Z,296,0,-296,DR,txn_d00b0cb201c27669,Rapido,rapido@okaxis,AXIS,UPI,,bank_statement,5
+2025-08-15T22:15:00Z,477,0,-477,DR,txn_2c91a3787a307d1f,McDonald's,mcdonalds@hdfc,KOTAK,UPI,,bank_statement,7
+2025-08-18T14:02:00Z,339,0,-339,DR,txn_8ecd5f8e14412bd7,Swiggy,swiggy@okicici,AXIS,UPI,,bank_statement,7
+2025-08-19T14:15:00Z,101,0,-101,DR,txn_f673bfadde0624ac,Fuel Station,fuel.petrol@upi,ICIC,UPI,,bank_statement,5
+2025-08-19T21:33:00Z,177,0,-177,DR,txn_ecb4382282ae1228,McDonald's,mcdonalds@hdfc,ICIC,UPI,,bank_statement,7
+2025-08-21T13:37:00Z,218,0,-218,DR,txn_6fe5f6d66efe0e73,Local Dhaba,dhaba.local@upi,KOTAK,UPI,,bank_statement,7
+2025-08-22T07:05:00Z,106,0,-106,DR,txn_466ac894ddbf1c52,MakeMyTrip,mmt@hdfc,KOTAK,UPI,,bank_statement,5
+2025-08-22T13:13:00Z,388,0,-388,DR,txn_cc2b1476ae19e713,McDonald's,mcdonalds@hdfc,SBIN,UPI,,bank_statement,7
+2025-08-23T18:44:00Z,377,0,-377,DR,txn_0bfd2df719a514d1,Cafe Coffee Day,caffe.ccd@hdfc,SBIN,UPI,,bank_statement,7
+2025-08-25T09:30:00Z,0,75000,75000,CR,txn_e51f4294ad3add08,HDFC,salary.8@sbin,ICIC,INB,Monthly Salary,bank_statement,
+2025-08-25T16:32:00Z,2680,0,-2680,DR,txn_6bb45368089cff60,H&M,hm@hdfc,ICIC,UPI,,bank_statement,1
+2025-08-25T20:05:00Z,72,0,-72,DR,txn_685057b34971e989,Fuel Station,fuel.petrol@upi,HDFC,UPI,,bank_statement,5
+2025-08-25T20:14:00Z,307,0,-307,DR,txn_e05d3e40324f57ac,Swiggy,swiggy@okicici,ICIC,UPI,,bank_statement,7
+2025-08-27T10:15:00Z,69,0,-69,DR,txn_6fc9547953b13233,Spotify,spotify@okaxis,OKAXIS,UPI,Spotify Premium,bank_statement,9
+2025-08-28T14:00:00Z,5000,0,-5000,DR,txn_fbc19f809422baf1,Car Loan EMI,carloan@hdfc,HDFC,UPI,Car Loan EMI,bank_statement,12
+2025-08-28T21:19:00Z,144,0,-144,DR,txn_8991b33184f103d2,Starbucks,starbucks@hdfc,HDFC,UPI,,bank_statement,7
+2025-08-29T09:14:00Z,0,1305,1305,CR,txn_5ead118256235011,Rajesh Singh,amit.k@ibl,HDFC,UPI,Received from Rajesh Singh,bank_statement,10
+2025-08-29T21:47:00Z,100,0,-100,DR,txn_f5a5c7302cf0adcd,Cafe Coffee Day,caffe.ccd@hdfc,AXIS,UPI,,bank_statement,7
+2025-08-31T16:56:00Z,376,0,-376,DR,txn_c430c98b8ff92fae,McDonald's,mcdonalds@hdfc,ICIC,UPI,,bank_statement,7
+2025-09-01T09:28:00Z,103,0,-103,DR,txn_0e91db272358f588,Ola,ola@icic,SBIN,UPI,,bank_statement,5
+2025-09-02T09:04:00Z,612,0,-612,DR,txn_fa1a9114bcddbe67,Spencer,spencer@hdfc,HDFC,UPI,,bank_statement,4
+2025-09-02T21:26:00Z,165,0,-165,DR,txn_3017c1226490143c,Fuel Station,fuel.petrol@upi,HDFC,UPI,,bank_statement,5
+2025-09-04T18:47:00Z,143,0,-143,DR,txn_fd9f75243cbb3b6e,Dominos,dominos@hdfc,SBIN,UPI,,bank_statement,7
+2025-09-04T20:24:00Z,188,0,-188,DR,txn_1ea2cb191fcdaaf8,Fuel Station,fuel.petrol@upi,HDFC,UPI,,bank_statement,5
+2025-09-05T17:15:00Z,429,0,-429,DR,txn_c5bb0f410f6bfb01,Subway,subway@okaxis,SBIN,UPI,,bank_statement,7
+2025-09-05T19:12:00Z,709,0,-709,DR,txn_bec5346e24ade77a,DMart,dmart@hdfc,SBIN,UPI,,bank_statement,4
+2025-09-05T21:20:00Z,188,0,-188,DR,txn_2a0d1a4acee6550c,IRCTC,irctc@sbin,AXIS,UPI,,bank_statement,5
+2025-09-07T11:06:00Z,290,0,-290,DR,txn_4438b486778760f0,Ola,ola@icic,HDFC,UPI,,bank_statement,5
+2025-09-09T08:55:00Z,46,0,-46,DR,txn_a7ee3376b6e91d88,Uber,uber@hdfc,ICIC,UPI,,bank_statement,5
+2025-09-10T09:08:00Z,759,0,-759,DR,txn_e70021bc42b96ce5,BigBasket,bigbasket@okaxis,AXIS,UPI,,bank_statement,4
+2025-09-10T19:24:00Z,71,0,-71,DR,txn_113c18ecf24ff325,McDonald's,mcdonalds@hdfc,KOTAK,UPI,,bank_statement,7
+2025-09-10T21:53:00Z,257,0,-257,DR,txn_756c450ba86a7b3a,Ola,ola@icic,SBIN,UPI,,bank_statement,5
+2025-09-11T12:48:00Z,207,0,-207,DR,txn_343542eff3064316,Local Dhaba,dhaba.local@upi,AXIS,UPI,,bank_statement,7
+2025-09-13T12:30:00Z,1039,0,-1039,DR,txn_787f74740f10ecee,Gas Agency,gas@upi,UPI,UPI,Gas Bill,bank_statement,6
+2025-09-13T14:13:00Z,230,0,-230,DR,txn_304e9c115769847f,Subway,subway@okaxis,HDFC,UPI,,bank_statement,7
+2025-09-13T14:20:00Z,1166,0,-1166,DR,txn_7d027aa31c570851,Myntra,myntra@okaxis,AXIS,UPI,,bank_statement,1
+2025-09-13T17:40:00Z,588,0,-588,DR,txn_55072a98dda67199,Blinkit,blinkit@okaxis,ICIC,UPI,,bank_statement,4
+2025-09-13T20:02:00Z,217,0,-217,DR,txn_7db3fe27fbbe57e3,MakeMyTrip,mmt@hdfc,HDFC,UPI,,bank_statement,5
+2025-09-14T14:32:00Z,559,0,-559,DR,txn_4594cf17800a164c,DMart,dmart@hdfc,AXIS,UPI,,bank_statement,4
+2025-09-14T20:26:00Z,164,0,-164,DR,txn_2091ce4341c19b08,Local Dhaba,dhaba.local@upi,ICIC,UPI,,bank_statement,7
+2025-09-15T07:17:00Z,41,0,-41,DR,txn_671ec4fe9ce217cd,Flipkart Flight,flights@flipkart,AXIS,UPI,,bank_statement,5
+2025-09-15T15:52:00Z,168,0,-168,DR,txn_201ca73af77e127e,Subway,subway@okaxis,SBIN,UPI,,bank_statement,7
+2025-09-17T21:08:00Z,391,0,-391,DR,txn_120dff95a79832eb,Dominos,dominos@hdfc,SBIN,UPI,,bank_statement,7
+2025-09-18T20:01:00Z,278,0,-278,DR,txn_8ba7c1f0fb6aea43,Uber,uber@hdfc,SBIN,UPI,,bank_statement,5
+2025-09-19T12:31:00Z,442,0,-442,DR,txn_1100dd1e2d25c76d,Dominos,dominos@hdfc,HDFC,UPI,,bank_statement,7
+2025-09-20T13:40:00Z,204,0,-204,DR,txn_66998bcf47dc84f0,Fuel Station,fuel.petrol@upi,ICIC,UPI,,bank_statement,5
+2025-09-21T13:15:00Z,171,0,-171,DR,txn_8bd9be4af57c47bd,Fuel Station,fuel.petrol@upi,ICIC,UPI,,bank_statement,5
+2025-09-21T13:23:00Z,453,0,-453,DR,txn_aeba7d5cc4e750c1,Cafe Coffee Day,caffe.ccd@hdfc,ICIC,UPI,,bank_statement,7
+2025-09-22T12:13:00Z,273,0,-273,DR,txn_8b7bc56b9fe26546,Uber,uber@hdfc,KOTAK,UPI,,bank_statement,5
+2025-09-22T14:20:00Z,726,0,-726,DR,txn_fecad933dfa77ef1,Spencer,spencer@hdfc,AXIS,UPI,,bank_statement,4
+2025-09-22T16:47:00Z,462,0,-462,DR,txn_6ba14e7451fe83f9,McDonald's,mcdonalds@hdfc,SBIN,UPI,,bank_statement,7
+2025-09-24T17:13:00Z,139,0,-139,DR,txn_f877e82d03153704,MakeMyTrip,mmt@hdfc,SBIN,UPI,,bank_statement,5
+2025-09-24T22:32:00Z,86,0,-86,DR,txn_270c3327fe8491dd,Local Dhaba,dhaba.local@upi,AXIS,UPI,,bank_statement,7
+2025-09-25T09:30:00Z,0,75000,75000,CR,txn_85abe1f26fb6251a,SBIN,salary.9@sbin,HDFC,INB,Monthly Salary,bank_statement,
+2025-09-25T14:02:00Z,138,0,-138,DR,txn_cecfae3d3251f267,IRCTC,irctc@sbin,KOTAK,UPI,,bank_statement,5
+2025-09-25T20:09:00Z,190,0,-190,DR,txn_72f989ecff9ffc08,Swiggy,swiggy@okicici,KOTAK,UPI,,bank_statement,7
+2025-09-26T14:59:00Z,252,0,-252,DR,txn_20e20b0f3f24cc8c,Dominos,dominos@hdfc,SBIN,UPI,,bank_statement,7
+2025-09-27T10:15:00Z,69,0,-69,DR,txn_ef6056a4d558b7dc,Spotify,spotify@okaxis,OKAXIS,UPI,Spotify Premium,bank_statement,9
+2025-09-27T14:52:00Z,335,0,-335,DR,txn_0331c24b20dadb1c,Starbucks,starbucks@hdfc,AXIS,UPI,,bank_statement,7
+2025-09-27T19:53:00Z,108,0,-108,DR,txn_5991e9ea6b70da71,Rapido,rapido@okaxis,AXIS,UPI,,bank_statement,5
+2025-09-28T11:54:00Z,127,0,-127,DR,txn_291908cdd158bd84,IRCTC,irctc@sbin,ICIC,UPI,,bank_statement,5
+2025-09-28T14:00:00Z,5000,0,-5000,DR,txn_fbbc62f5158ba223,Car Loan EMI,carloan@hdfc,HDFC,UPI,Car Loan EMI,bank_statement,12
+2025-09-28T18:35:00Z,74,0,-74,DR,txn_dcaeaecb09f23dd1,Dominos,dominos@hdfc,SBIN,UPI,,bank_statement,7
+2025-09-29T11:00:00Z,1601,0,-1601,DR,txn_36ece9be98d2426e,Electricity Board,electricity@sbin,SBIN,UPI,Monthly Electricity Bill,bank_statement,6
+2025-09-30T12:02:00Z,464,0,-464,DR,txn_1403c4a0913a3390,Subway,subway@okaxis,HDFC,UPI,,bank_statement,7
+2025-09-30T16:46:00Z,131,0,-131,DR,txn_7f55810b6347b737,Uber,uber@hdfc,ICIC,UPI,,bank_statement,5
+2025-10-02T09:00:00Z,199,0,-199,DR,txn_9471a9edde475f9b,Netflix,netflix@hdfc,HDFC,UPI,Netflix Subscription,bank_statement,9
+2025-10-03T10:07:00Z,63,0,-63,DR,txn_877bd41d3b9ec68d,IRCTC,irctc@sbin,SBIN,UPI,,bank_statement,5
+2025-10-03T13:05:00Z,583,0,-583,DR,txn_c151bff5ae7a6232,Local Vegetable Vendor,vendor@upi,AXIS,UPI,,bank_statement,4
+2025-10-03T16:53:00Z,142,0,-142,DR,txn_d5dda9fac21740bb,Starbucks,starbucks@hdfc,AXIS,UPI,,bank_statement,7
+2025-10-04T12:16:00Z,100,0,-100,DR,txn_cd35ae734ebe1cec,Swiggy,swiggy@okicici,AXIS,UPI,,bank_statement,7
+2025-10-04T18:48:00Z,272,0,-272,DR,txn_66715722f55b96c7,MakeMyTrip,mmt@hdfc,KOTAK,UPI,,bank_statement,5
+2025-10-05T16:23:00Z,344,0,-344,DR,txn_47b0dc2661d9b67a,Spencer,spencer@hdfc,SBIN,UPI,,bank_statement,4
+2025-10-05T22:53:00Z,323,0,-323,DR,txn_4261927675940e78,Starbucks,starbucks@hdfc,AXIS,UPI,,bank_statement,7
+2025-10-07T15:08:00Z,422,0,-422,DR,txn_b77e9bd03e869867,DMart,dmart@hdfc,KOTAK,UPI,,bank_statement,4
+2025-10-07T20:07:00Z,95,0,-95,DR,txn_ca693260106dd07f,Local Dhaba,dhaba.local@upi,ICIC,UPI,,bank_statement,7
+2025-10-08T10:17:00Z,276,0,-276,DR,txn_ff8a298fb647aa43,Local Vegetable Vendor,vendor@upi,HDFC,UPI,,bank_statement,4
+2025-10-10T14:12:00Z,253,0,-253,DR,txn_b1239f5bb7354868,Local Vegetable Vendor,vendor@upi,SBIN,UPI,,bank_statement,4
+2025-10-11T07:17:00Z,263,0,-263,DR,txn_d7b97c6851237450,Ola,ola@icic,HDFC,UPI,,bank_statement,5
+2025-10-12T14:17:00Z,1144,0,-1144,DR,txn_4ec7b3b23c8ec7ba,Ajio,ajio@okaxis,SBIN,UPI,,bank_statement,1
+2025-10-12T18:25:00Z,647,0,-647,DR,txn_7ba6ba54e0c5798d,BigBasket,bigbasket@okaxis,KOTAK,UPI,,bank_statement,4
+2025-10-13T14:45:00Z,301,0,-301,DR,txn_204e5bce5edef01f,Local Dhaba,dhaba.local@upi,HDFC,UPI,,bank_statement,7
+2025-10-13T20:29:00Z,214,0,-214,DR,txn_e38b626eaff6db94,BigBasket,bigbasket@okaxis,ICIC,UPI,,bank_statement,4
+2025-10-14T19:39:00Z,148,0,-148,DR,txn_5d9cc78cf25d1ede,Flipkart Flight,flights@flipkart,SBIN,UPI,,bank_statement,5
+2025-10-15T14:55:00Z,83,0,-83,DR,txn_c632785d0c85250f,Swiggy,swiggy@okicici,SBIN,UPI,,bank_statement,7
+2025-10-15T19:02:00Z,467,0,-467,DR,txn_41d97dc1d4964577,Spencer,spencer@hdfc,AXIS,UPI,,bank_statement,4
+2025-10-16T07:30:00Z,131,0,-131,DR,txn_b6675dd1f01094d3,IRCTC,irctc@sbin,AXIS,UPI,,bank_statement,5
+2025-10-16T12:16:00Z,330,0,-330,DR,txn_85f0d2e3cee9e497,Cafe Coffee Day,caffe.ccd@hdfc,ICIC,UPI,,bank_statement,7
+2025-10-16T19:40:00Z,367,0,-367,DR,txn_3664603a04f33ee9,DMart,dmart@hdfc,KOTAK,UPI,,bank_statement,4
+2025-10-17T12:38:00Z,116,0,-116,DR,txn_7242eae154daf9bc,Uber,uber@hdfc,KOTAK,UPI,,bank_statement,5
+2025-10-18T17:50:00Z,1513,0,-1513,DR,txn_569cd28173308719,Priya Verma,amit.k@ibl,HDFC,UPI,Transfer to Priya Verma,bank_statement,10
+2025-10-18T18:44:00Z,493,0,-493,DR,txn_23687e6b16f0c59f,Subway,subway@okaxis,ICIC,UPI,,bank_statement,7
+2025-10-19T16:57:00Z,99,0,-99,DR,txn_0455608871057c90,IRCTC,irctc@sbin,SBIN,UPI,,bank_statement,5
+2025-10-19T17:34:00Z,1016,0,-1016,DR,txn_62da15b7ee714d2f,Meesho,meesho@upi,ICIC,UPI,,bank_statement,1
+2025-10-20T09:29:00Z,41,0,-41,DR,txn_d263a857d4f2a712,Fuel Station,fuel.petrol@upi,KOTAK,UPI,,bank_statement,5
+2025-10-20T20:04:00Z,421,0,-421,DR,txn_38fdf76bc070c3fc,Subway,subway@okaxis,HDFC,UPI,,bank_statement,7
+2025-10-21T08:41:00Z,38,0,-38,DR,txn_9b7e554f9aae395d,Ola,ola@icic,AXIS,UPI,,bank_statement,5
+2025-10-21T19:32:00Z,71,0,-71,DR,txn_76cb00b7e41664e2,Subway,subway@okaxis,HDFC,UPI,,bank_statement,7
+2025-10-22T12:20:00Z,977,0,-977,DR,txn_175e6aa3fa7c0602,Amazon,amazon@okaxis,ICIC,UPI,,bank_statement,1
+2025-10-22T22:42:00Z,71,0,-71,DR,txn_33b228ff854f4fe5,Swiggy,swiggy@okicici,AXIS,UPI,,bank_statement,7
+2025-10-23T22:07:00Z,423,0,-423,DR,txn_1221f1b739d5b6e6,Starbucks,starbucks@hdfc,KOTAK,UPI,,bank_statement,7
+2025-10-25T09:30:00Z,0,75000,75000,CR,txn_4fadb0532d8e6c36,HDFC,salary.10@axis,HDFC,INB,Monthly Salary,bank_statement,
+2025-10-25T09:49:00Z,750,0,-750,DR,txn_44a58544bcd3a040,DMart,dmart@hdfc,HDFC,UPI,,bank_statement,4
+2025-10-26T13:20:00Z,220,0,-220,DR,txn_b2b02159251f594b,McDonald's,mcdonalds@hdfc,AXIS,UPI,,bank_statement,7
+2025-10-26T18:52:00Z,176,0,-176,DR,txn_1c02f19ac99c618b,Ola,ola@icic,HDFC,UPI,,bank_statement,5
+2025-10-27T10:15:00Z,69,0,-69,DR,txn_ef5084843468d3b9,Spotify,spotify@okaxis,OKAXIS,UPI,Spotify Premium,bank_statement,9
+2025-10-28T14:00:00Z,5000,0,-5000,DR,txn_91fa6be5368d3df1,Car Loan EMI,carloan@hdfc,HDFC,UPI,Car Loan EMI,bank_statement,12
+2025-10-29T22:19:00Z,207,0,-207,DR,txn_5e1562487448ab65,Starbucks,starbucks@hdfc,ICIC,UPI,,bank_statement,7
+2025-10-30T20:19:00Z,1267,0,-1267,DR,txn_72d7eaf1b88dd4c9,Ajio,ajio@okaxis,ICIC,UPI,,bank_statement,1
+2025-10-31T18:50:00Z,146,0,-146,DR,txn_34473e055bf8655c,Dominos,dominos@hdfc,KOTAK,UPI,,bank_statement,7
+2025-11-01T20:14:00Z,37,0,-37,DR,txn_a06716c4915f66c1,Fuel Station,fuel.petrol@upi,SBIN,UPI,,bank_statement,5
+2025-11-03T12:23:00Z,228,0,-228,DR,txn_388af718bc5e5e41,Fuel Station,fuel.petrol@upi,SBIN,UPI,,bank_statement,5
+2025-11-03T22:55:00Z,96,0,-96,DR,txn_d3313b6fbab342db,Dominos,dominos@hdfc,AXIS,UPI,,bank_statement,7
+2025-11-05T11:28:00Z,295,0,-295,DR,txn_3ba75b98cd61fe88,MakeMyTrip,mmt@hdfc,AXIS,UPI,,bank_statement,5
+2025-11-06T09:43:00Z,639,0,-639,DR,txn_5a289f262b9fc258,Local Vegetable Vendor,vendor@upi,ICIC,UPI,,bank_statement,4
+2025-11-06T15:09:00Z,443,0,-443,DR,txn_732b9ff89a346a53,Dominos,dominos@hdfc,AXIS,UPI,,bank_statement,7
+2025-11-08T14:53:00Z,262,0,-262,DR,txn_012cbeec0c22900e,Local Vegetable Vendor,vendor@upi,KOTAK,UPI,,bank_statement,4
+2025-11-08T15:41:00Z,485,0,-485,DR,txn_a37d793792c8f2d2,Starbucks,starbucks@hdfc,HDFC,UPI,,bank_statement,7
+2025-11-08T17:08:00Z,283,0,-283,DR,txn_cd73a3c3d4efe186,MakeMyTrip,mmt@hdfc,ICIC,UPI,,bank_statement,5
+2025-11-08T18:57:00Z,0,1292,1292,CR,txn_e26fc4bcc54708f8,Priya Verma,rajesh.s@ybl,SBIN,UPI,Received from Priya Verma,bank_statement,10
+2025-11-09T08:37:00Z,77,0,-77,DR,txn_49f73a0860238790,Flipkart Flight,flights@flipkart,SBIN,UPI,,bank_statement,5
+2025-11-09T11:06:00Z,304,0,-304,DR,txn_dc1ee36b41468fc4,Blinkit,blinkit@okaxis,AXIS,UPI,,bank_statement,4
+2025-11-09T17:47:00Z,260,0,-260,DR,txn_bb32088c3bb79cb3,Subway,subway@okaxis,AXIS,UPI,,bank_statement,7
+2025-11-10T09:03:00Z,643,0,-643,DR,txn_9f8d15e3458ef6c1,Local Vegetable Vendor,vendor@upi,ICIC,UPI,,bank_statement,4
+2025-11-11T16:13:00Z,109,0,-109,DR,txn_75432c4ae76b5bd6,Ola,ola@icic,ICIC,UPI,,bank_statement,5
+2025-11-13T14:21:00Z,134,0,-134,DR,txn_76d82fb6d9a4dff9,MakeMyTrip,mmt@hdfc,KOTAK,UPI,,bank_statement,5
+2025-11-13T17:59:00Z,1001,0,-1001,DR,txn_3f6d2b5c5f0310b8,Salon,salon@upi,SBIN,UPI,,bank_statement,6
+2025-11-14T22:33:00Z,401,0,-401,DR,txn_6cce13669aab68da,Starbucks,starbucks@hdfc,AXIS,UPI,,bank_statement,7
+2025-11-15T07:12:00Z,268,0,-268,DR,txn_737d42f78802bf61,IRCTC,irctc@sbin,AXIS,UPI,,bank_statement,5
+2025-11-15T12:30:00Z,1061,0,-1061,DR,txn_069239ea2c08fe0a,Gas Agency,gas@upi,UPI,UPI,Gas Bill,bank_statement,6
+2025-11-17T09:55:00Z,362,0,-362,DR,txn_92a83eb79ba12a23,Local Vegetable Vendor,vendor@upi,KOTAK,UPI,,bank_statement,4
+2025-11-18T15:21:00Z,253,0,-253,DR,txn_d2691b43684e6f14,Rapido,rapido@okaxis,ICIC,UPI,,bank_statement,5
+2025-11-18T16:06:00Z,56,0,-56,DR,txn_5c4bd1264beab887,Cafe Coffee Day,caffe.ccd@hdfc,KOTAK,UPI,,bank_statement,7
+2025-11-19T16:08:00Z,194,0,-194,DR,txn_82a65f0855a947d7,Zomato,zomato@icic,HDFC,UPI,,bank_statement,7
+2025-11-19T16:12:00Z,267,0,-267,DR,txn_ae9ade234df2065b,Rapido,rapido@okaxis,KOTAK,UPI,,bank_statement,5
+2025-11-20T12:08:00Z,472,0,-472,DR,txn_c9eee1822da5266c,DMart,dmart@hdfc,SBIN,UPI,,bank_statement,4
+2025-11-21T13:59:00Z,481,0,-481,DR,txn_1c511630c004e48f,Swiggy,swiggy@okicici,ICIC,UPI,,bank_statement,7
+2025-11-22T15:53:00Z,698,0,-698,DR,txn_17f60c19b2fe8187,Spencer,spencer@hdfc,ICIC,UPI,,bank_statement,4
+2025-11-23T14:21:00Z,450,0,-450,DR,txn_af18c78bc8927899,BigBasket,bigbasket@okaxis,KOTAK,UPI,,bank_statement,4
+2025-11-23T17:32:00Z,198,0,-198,DR,txn_c2a09280a50d9235,MakeMyTrip,mmt@hdfc,KOTAK,UPI,,bank_statement,5
+2025-11-23T18:52:00Z,242,0,-242,DR,txn_29fe93eff8e7059f,Dominos,dominos@hdfc,KOTAK,UPI,,bank_statement,7
+2025-11-24T14:00:00Z,218,0,-218,DR,txn_8ec8caf3bb4fb16e,Local Dhaba,dhaba.local@upi,ICIC,UPI,,bank_statement,7
+2025-11-24T20:42:00Z,135,0,-135,DR,txn_4d31a044ce258598,Flipkart Flight,flights@flipkart,HDFC,UPI,,bank_statement,5
+2025-11-25T09:30:00Z,0,75000,75000,CR,txn_65dab7f987dcb517,HDFC,salary.11@kotak,AXIS,INB,Monthly Salary,bank_statement,
+2025-11-26T18:54:00Z,298,0,-298,DR,txn_346e334903a72371,Rapido,rapido@okaxis,AXIS,UPI,,bank_statement,5
+2025-11-26T19:10:00Z,800,0,-800,DR,txn_029aa9f99a91eb76,Blinkit,blinkit@okaxis,SBIN,UPI,,bank_statement,4
+2025-11-27T10:15:00Z,69,0,-69,DR,txn_9e9f9d9bb5c9ea96,Spotify,spotify@okaxis,OKAXIS,UPI,Spotify Premium,bank_statement,9
+2025-11-27T15:26:00Z,240,0,-240,DR,txn_1f78588554188cfd,Flipkart Flight,flights@flipkart,ICIC,UPI,,bank_statement,5
+2025-11-28T10:15:00Z,297,0,-297,DR,txn_9f96fc617b55ee08,Fuel Station,fuel.petrol@upi,SBIN,UPI,,bank_statement,5
+2025-11-28T14:00:00Z,5000,0,-5000,DR,txn_d15537e902cc93b7,Car Loan EMI,carloan@hdfc,HDFC,UPI,Car Loan EMI,bank_statement,12
+2025-11-28T14:27:00Z,55,0,-55,DR,txn_ab05d60bd340c5c7,Dominos,dominos@hdfc,ICIC,UPI,,bank_statement,7
+2025-11-29T19:48:00Z,86,0,-86,DR,txn_735fa4dc0c39930c,Swiggy,swiggy@okicici,KOTAK,UPI,,bank_statement,7
+2025-11-30T19:39:00Z,312,0,-312,DR,txn_e29db484b32fb0d1,Cafe Coffee Day,caffe.ccd@hdfc,SBIN,UPI,,bank_statement,7
+2025-12-01T21:19:00Z,227,0,-227,DR,txn_599b7351b11513e1,Flipkart Flight,flights@flipkart,ICIC,UPI,,bank_statement,5
+2025-12-02T08:42:00Z,98,0,-98,DR,txn_5811e8fe0f865653,Rapido,rapido@okaxis,ICIC,UPI,,bank_statement,5
+2025-12-03T17:50:00Z,339,0,-339,DR,txn_08618a97bbb35d31,Blinkit,blinkit@okaxis,SBIN,UPI,,bank_statement,4
+2025-12-03T18:52:00Z,194,0,-194,DR,txn_62af996595bce8ef,Rapido,rapido@okaxis,AXIS,UPI,,bank_statement,5
+2025-12-04T13:02:00Z,790,0,-790,DR,txn_df110b0e38f11398,Spencer,spencer@hdfc,HDFC,UPI,,bank_statement,4
+2025-12-04T15:34:00Z,203,0,-203,DR,txn_08ec54b16fbf50dc,Dominos,dominos@hdfc,HDFC,UPI,,bank_statement,7
+2025-12-06T11:54:00Z,2523,0,-2523,DR,txn_feab917a97af07c8,Ajio,ajio@okaxis,AXIS,UPI,,bank_statement,1
+2025-12-06T18:54:00Z,404,0,-404,DR,txn_c4b01f4be54f636f,Blinkit,blinkit@okaxis,KOTAK,UPI,,bank_statement,4
+2025-12-07T16:41:00Z,319,0,-319,DR,txn_0f95eacbda72ed9f,Zomato,zomato@icic,AXIS,UPI,,bank_statement,7
+2025-12-08T16:07:00Z,58,0,-58,DR,txn_962d0dc0b58e47b6,Flipkart Flight,flights@flipkart,KOTAK,UPI,,bank_statement,5
+2025-12-09T17:02:00Z,0,2150,2150,CR,txn_201c9c3a1674071d,Rahul Sharma,shreya.p@upi,SBIN,UPI,Received from Rahul Sharma,bank_statement,10
+2025-12-10T12:07:00Z,203,0,-203,DR,txn_3278f32f1d22689d,IRCTC,irctc@sbin,HDFC,UPI,,bank_statement,5
+2025-12-10T20:26:00Z,434,0,-434,DR,txn_7ce68ed27e8ef0af,Subway,subway@okaxis,SBIN,UPI,,bank_statement,7
+2025-12-11T15:22:00Z,245,0,-245,DR,txn_4ff22f0664beb7e7,Rapido,rapido@okaxis,SBIN,UPI,,bank_statement,5
+2025-12-11T18:25:00Z,145,0,-145,DR,txn_6ec51f2502b18908,McDonald's,mcdonalds@hdfc,ICIC,UPI,,bank_statement,7
+2025-12-13T14:44:00Z,578,0,-578,DR,txn_b2cd5054e92f6f33,Local Vegetable Vendor,vendor@upi,ICIC,UPI,,bank_statement,4
+2025-12-13T20:05:00Z,368,0,-368,DR,txn_c8575e9bd8a68214,Starbucks,starbucks@hdfc,ICIC,UPI,,bank_statement,7
+2025-12-14T11:06:00Z,544,0,-544,DR,txn_b3e75a7f29708593,Local Vegetable Vendor,vendor@upi,KOTAK,UPI,,bank_statement,4
+2025-12-15T12:11:00Z,98,0,-98,DR,txn_80a8cb55be4de9be,Subway,subway@okaxis,HDFC,UPI,,bank_statement,7
+2025-12-16T10:36:00Z,4292,0,-4292,DR,txn_24151c57367da5b6,Rahul Sharma,shreya.p@upi,ICIC,UPI,Transfer to Rahul Sharma,bank_statement,10
+2025-12-16T16:21:00Z,50,0,-50,DR,txn_f9051106695ed3f0,Rapido,rapido@okaxis,HDFC,UPI,,bank_statement,5
+2025-12-17T13:39:00Z,122,0,-122,DR,txn_011d44c5a72c577c,Ola,ola@icic,SBIN,UPI,,bank_statement,5
+2025-12-18T17:37:00Z,106,0,-106,DR,txn_067ece691c694461,Dominos,dominos@hdfc,KOTAK,UPI,,bank_statement,7
+2025-12-20T12:00:00Z,245,0,-245,DR,txn_abe2c71645f455b0,Ola,ola@icic,KOTAK,UPI,,bank_statement,5
+2025-12-20T18:31:00Z,762,0,-762,DR,txn_8a577f799e8a6529,BigBasket,bigbasket@okaxis,HDFC,UPI,,bank_statement,4
+2025-12-22T09:51:00Z,222,0,-222,DR,txn_711e188c94faa54d,Blinkit,blinkit@okaxis,SBIN,UPI,,bank_statement,4
+2025-12-22T18:00:00Z,184,0,-184,DR,txn_bc3699744c129dc2,Rapido,rapido@okaxis,HDFC,UPI,,bank_statement,5
+2025-12-22T22:33:00Z,465,0,-465,DR,txn_da91140aed592f1e,Dominos,dominos@hdfc,KOTAK,UPI,,bank_statement,7
+2025-12-23T18:27:00Z,220,0,-220,DR,txn_49dd8289143051cc,McDonald's,mcdonalds@hdfc,KOTAK,UPI,,bank_statement,7
+2025-12-23T21:55:00Z,279,0,-279,DR,txn_3789a0da87181495,Fuel Station,fuel.petrol@upi,KOTAK,UPI,,bank_statement,5
+2025-12-24T12:20:00Z,315,0,-315,DR,txn_d4baa1b16b70d054,Cafe Coffee Day,caffe.ccd@hdfc,ICIC,UPI,,bank_statement,7
+2025-12-24T16:05:00Z,365,0,-365,DR,txn_5a10701bd9f77510,DMart,dmart@hdfc,HDFC,UPI,,bank_statement,4
+2025-12-25T09:30:00Z,0,75000,75000,CR,txn_61ac882bda9d753c,AXIS,salary.12@hdfc,ICIC,INB,Monthly Salary,bank_statement,
+2025-12-25T12:18:00Z,4498,0,-4498,DR,txn_b87021f0e3f77cef,Rahul Sharma,shreya.p@upi,ICIC,UPI,Transfer to Rahul Sharma,bank_statement,10
+2025-12-25T16:42:00Z,233,0,-233,DR,txn_99cc5102f11d563a,Spencer,spencer@hdfc,ICIC,UPI,,bank_statement,4
+2025-12-25T18:45:00Z,95,0,-95,DR,txn_c9f9b430c4638c79,MakeMyTrip,mmt@hdfc,KOTAK,UPI,,bank_statement,5
+2025-12-27T10:15:00Z,69,0,-69,DR,txn_f6e649fb316d77e3,Spotify,spotify@okaxis,OKAXIS,UPI,Spotify Premium,bank_statement,9
+2025-12-27T18:01:00Z,38,0,-38,DR,txn_5cba211441c238c7,Rapido,rapido@okaxis,KOTAK,UPI,,bank_statement,5
+2025-12-27T18:51:00Z,727,0,-727,DR,txn_09ea92bf1a6c65e5,Amazon,amazon@okaxis,SBIN,UPI,,bank_statement,1
+2025-12-27T20:37:00Z,241,0,-241,DR,txn_20383ed2396d4fb8,McDonald's,mcdonalds@hdfc,AXIS,UPI,,bank_statement,7
+2025-12-28T14:00:00Z,5000,0,-5000,DR,txn_9335e19b4818b772,Car Loan EMI,carloan@hdfc,HDFC,UPI,Car Loan EMI,bank_statement,12
+2025-12-28T18:03:00Z,281,0,-281,DR,txn_a845f603447fcd3a,Starbucks,starbucks@hdfc,ICIC,UPI,,bank_statement,7
+2025-12-29T16:25:00Z,137,0,-137,DR,txn_c2836958bc999450,IRCTC,irctc@sbin,AXIS,UPI,,bank_statement,5
+2025-12-30T16:46:00Z,417,0,-417,DR,txn_db71a75839edc082,Cafe Coffee Day,caffe.ccd@hdfc,AXIS,UPI,,bank_statement,7
+2025-12-30T21:05:00Z,257,0,-257,DR,txn_595ded48d7eacb8c,IRCTC,irctc@sbin,ICIC,UPI,,bank_statement,5
+2025-12-31T11:18:00Z,252,0,-252,DR,txn_77e5cb5dace13eef,Flipkart Flight,flights@flipkart,HDFC,UPI,,bank_statement,5
+2025-12-31T16:50:00Z,666,0,-666,DR,txn_bfdbdd7bfdfd8177,Blinkit,blinkit@okaxis,SBIN,UPI,,bank_statement,4
+2026-01-01T09:00:00Z,199,0,-199,DR,txn_8615442ca0aa6477,Netflix,netflix@hdfc,HDFC,UPI,Netflix Subscription,bank_statement,9
+2026-01-02T20:49:00Z,514,0,-514,DR,txn_f61913501f8eb618,Local Vegetable Vendor,vendor@upi,HDFC,UPI,,bank_statement,4
+2026-01-02T20:52:00Z,245,0,-245,DR,txn_cf7cb84303d128d8,Swiggy,swiggy@okicici,SBIN,UPI,,bank_statement,7
+2026-01-03T19:01:00Z,216,0,-216,DR,txn_96691529133d26ef,Uber,uber@hdfc,AXIS,UPI,,bank_statement,5
+2026-01-04T13:09:00Z,4592,0,-4592,DR,txn_58542686d61734ff,Shreya Patel,amit.k@ibl,HDFC,UPI,Transfer to Shreya Patel,bank_statement,10
+2026-01-05T16:39:00Z,256,0,-256,DR,txn_24298e35133f9f4a,Fuel Station,fuel.petrol@upi,KOTAK,UPI,,bank_statement,5
+2026-01-05T17:26:00Z,310,0,-310,DR,txn_66ed73514601f0fa,Zomato,zomato@icic,AXIS,UPI,,bank_statement,7
+2026-01-06T14:35:00Z,169,0,-169,DR,txn_416211d6d41b4b42,Cafe Coffee Day,caffe.ccd@hdfc,HDFC,UPI,,bank_statement,7
+2026-01-06T14:40:00Z,292,0,-292,DR,txn_5fab5982a8e91ff5,Fuel Station,fuel.petrol@upi,SBIN,UPI,,bank_statement,5
+2026-01-07T12:28:00Z,735,0,-735,DR,txn_05e70eb2f90a74fb,DMart,dmart@hdfc,HDFC,UPI,,bank_statement,4
+2026-01-08T17:13:00Z,118,0,-118,DR,txn_21d799828b99642b,Swiggy,swiggy@okicici,SBIN,UPI,,bank_statement,7
+2026-01-09T15:44:00Z,762,0,-762,DR,txn_8d3dd26799d24b84,BigBasket,bigbasket@okaxis,SBIN,UPI,,bank_statement,4
+2026-01-09T16:02:00Z,349,0,-349,DR,txn_8a7dfde75ad62c21,Local Dhaba,dhaba.local@upi,KOTAK,UPI,,bank_statement,7
+2026-01-13T15:20:00Z,495,0,-495,DR,txn_221c31dc7e44c244,Swiggy,swiggy@okicici,SBIN,UPI,,bank_statement,7
+2026-01-14T16:01:00Z,137,0,-137,DR,txn_9b8af80574adafa1,Starbucks,starbucks@hdfc,AXIS,UPI,,bank_statement,7
+2026-01-15T19:22:00Z,144,0,-144,DR,txn_580e2979223db95e,Swiggy,swiggy@okicici,SBIN,UPI,,bank_statement,7
+2026-01-16T13:53:00Z,765,0,-765,DR,txn_a631a9a64ac4ed90,BigBasket,bigbasket@okaxis,ICIC,UPI,,bank_statement,4
+2026-01-18T11:26:00Z,0,1250,1250,CR,txn_32c551186f46bbff,Rajesh Singh,priya.v@okaxis,KOTAK,UPI,Received from Rajesh Singh,bank_statement,10
+2026-01-18T13:13:00Z,401,0,-401,DR,txn_b24bd374b04b3cc3,Local Vegetable Vendor,vendor@upi,SBIN,UPI,,bank_statement,4
+2026-01-18T21:54:00Z,171,0,-171,DR,txn_59873e6b066d54bb,Swiggy,swiggy@okicici,ICIC,UPI,,bank_statement,7
+2026-01-19T09:36:00Z,688,0,-688,DR,txn_db890a787d4079f1,DMart,dmart@hdfc,HDFC,UPI,,bank_statement,4
+2026-01-19T21:39:00Z,433,0,-433,DR,txn_43930d0871825527,Local Dhaba,dhaba.local@upi,SBIN,UPI,,bank_statement,7
+2026-01-20T12:12:00Z,251,0,-251,DR,txn_b12fa23c944f7cf3,Zomato,zomato@icic,AXIS,UPI,,bank_statement,7
+2026-01-20T14:35:00Z,369,0,-369,DR,txn_1d5f8fc172a1aab8,Blinkit,blinkit@okaxis,SBIN,UPI,,bank_statement,4
+2026-01-21T08:50:00Z,103,0,-103,DR,txn_2884f00c77d52801,Fuel Station,fuel.petrol@upi,KOTAK,UPI,,bank_statement,5
+2026-01-22T11:44:00Z,268,0,-268,DR,txn_d9bcc4a8d7faf873,DMart,dmart@hdfc,AXIS,UPI,,bank_statement,4
+2026-01-22T15:02:00Z,268,0,-268,DR,txn_125e4f90b7c96935,McDonald's,mcdonalds@hdfc,SBIN,UPI,,bank_statement,7
+2026-01-22T16:31:00Z,259,0,-259,DR,txn_4bad33d61936db8d,Ola,ola@icic,AXIS,UPI,,bank_statement,5
+2026-01-23T15:27:00Z,148,0,-148,DR,txn_ddb43db1d50425bb,Subway,subway@okaxis,HDFC,UPI,,bank_statement,7
+2026-01-23T15:36:00Z,299,0,-299,DR,txn_e05425bb92266fbd,BigBasket,bigbasket@okaxis,HDFC,UPI,,bank_statement,4
+2026-01-23T17:28:00Z,270,0,-270,DR,txn_bbcdb5b39e40cca5,Fuel Station,fuel.petrol@upi,AXIS,UPI,,bank_statement,5
+2026-01-25T09:30:00Z,0,75000,75000,CR,txn_05d4da4cc42205c8,HDFC,salary.1@hdfc,SBIN,INB,Monthly Salary,bank_statement,
+2026-01-25T18:48:00Z,491,0,-491,DR,txn_811ba7ee85972f4f,Subway,subway@okaxis,HDFC,UPI,,bank_statement,7
+2026-01-25T19:40:00Z,116,0,-116,DR,txn_f7e6da4ee4854885,Flipkart Flight,flights@flipkart,SBIN,UPI,,bank_statement,5
+2026-01-26T12:00:00Z,1539,0,-1539,DR,txn_92bb933d2b2e94e4,Amazon,amazon@okaxis,HDFC,UPI,,bank_statement,1
+2026-01-26T19:41:00Z,154,0,-154,DR,txn_4e2436ee671df3ff,MakeMyTrip,mmt@hdfc,SBIN,UPI,,bank_statement,5
+2026-01-27T10:15:00Z,69,0,-69,DR,txn_c2d07c2198eec918,Spotify,spotify@okaxis,OKAXIS,UPI,Spotify Premium,bank_statement,9
+2026-01-27T13:18:00Z,3495,0,-3495,DR,txn_2919015ae139b8af,Amit Kumar,rajesh.s@ybl,AXIS,UPI,Transfer to Amit Kumar,bank_statement,10
+2026-01-27T15:49:00Z,261,0,-261,DR,txn_25ac57fc1e823ccf,DMart,dmart@hdfc,AXIS,UPI,,bank_statement,4
+2026-01-28T14:00:00Z,5000,0,-5000,DR,txn_a9cc9e567ba2e9d7,Car Loan EMI,carloan@hdfc,HDFC,UPI,Car Loan EMI,bank_statement,12
+2026-01-29T07:58:00Z,240,0,-240,DR,txn_ecfbf6a2f1155694,Uber,uber@hdfc,ICIC,UPI,,bank_statement,5
+2026-01-29T19:34:00Z,324,0,-324,DR,txn_580cc67161aa475c,Local Dhaba,dhaba.local@upi,HDFC,UPI,,bank_statement,7
+2026-01-30T11:00:00Z,1924,0,-1924,DR,txn_a6a7bfaca5f5adc6,Electricity Board,electricity@sbin,SBIN,UPI,Monthly Electricity Bill,bank_statement,6
+2026-02-01T15:21:00Z,222,0,-222,DR,txn_18542fd7dbee716e,Starbucks,starbucks@hdfc,ICIC,UPI,,bank_statement,7
+2026-02-02T15:49:00Z,0,1898,1898,CR,txn_601e690048c0a28e,Rahul Sharma,rajesh.s@ybl,SBIN,UPI,Received from Rahul Sharma,bank_statement,10
+2026-02-02T18:24:00Z,2948,0,-2948,DR,txn_dc864e73c8d9e012,Rahul Sharma,rahul.sharma@upi,ICIC,UPI,Transfer to Rahul Sharma,bank_statement,10
+2026-02-04T12:49:00Z,283,0,-283,DR,txn_dd896dd18f86da62,IRCTC,irctc@sbin,AXIS,UPI,,bank_statement,5
+2026-02-05T13:22:00Z,421,0,-421,DR,txn_086cabf9eb4afaae,Local Dhaba,dhaba.local@upi,ICIC,UPI,,bank_statement,7
+2026-02-06T18:09:00Z,1899,0,-1899,DR,txn_6a276821caf4196a,Flipkart,flipkart@hdfc,ICIC,UPI,,bank_statement,1
+2026-02-07T12:18:00Z,108,0,-108,DR,txn_d4a865d4f5689449,Ola,ola@icic,HDFC,UPI,,bank_statement,5
+2026-02-07T12:54:00Z,782,0,-782,DR,txn_5d0351bbb897c804,Spencer,spencer@hdfc,KOTAK,UPI,,bank_statement,4
+2026-02-08T14:34:00Z,231,0,-231,DR,txn_7f03024ca24966d1,MakeMyTrip,mmt@hdfc,SBIN,UPI,,bank_statement,5
+2026-02-08T17:38:00Z,58,0,-58,DR,txn_079ce8b399a7b76a,McDonald's,mcdonalds@hdfc,ICIC,UPI,,bank_statement,7
+2026-02-09T10:45:00Z,171,0,-171,DR,txn_ce0e4e12f10a12b8,IRCTC,irctc@sbin,AXIS,UPI,,bank_statement,5
+2026-02-11T10:38:00Z,239,0,-239,DR,txn_5bffc20007734a43,Fuel Station,fuel.petrol@upi,AXIS,UPI,,bank_statement,5
+2026-02-12T09:19:00Z,611,0,-611,DR,txn_d6f5363fad301cf8,Spencer,spencer@hdfc,HDFC,UPI,,bank_statement,4
+2026-02-12T17:57:00Z,200,0,-200,DR,txn_c2b332e56d986bfe,Starbucks,starbucks@hdfc,SBIN,UPI,,bank_statement,7
+2026-02-13T10:03:00Z,249,0,-249,DR,txn_658b8e1d692465a7,Random Vendor,unknown@upi,HDFC,UPI,,bank_statement,6
+2026-02-14T18:28:00Z,233,0,-233,DR,txn_df267afbb4b4948a,DMart,dmart@hdfc,ICIC,UPI,,bank_statement,4
+2026-02-14T19:13:00Z,138,0,-138,DR,txn_8b6241ff3a3b8087,Fuel Station,fuel.petrol@upi,ICIC,UPI,,bank_statement,5
+2026-02-15T07:05:00Z,276,0,-276,DR,txn_7048a9cf8b597192,MakeMyTrip,mmt@hdfc,HDFC,UPI,,bank_statement,5
+2026-02-16T17:18:00Z,1559,0,-1559,DR,txn_235913c50b82efdd,Priya Verma,priya.v@okaxis,ICIC,UPI,Transfer to Priya Verma,bank_statement,10
+2026-02-17T13:20:00Z,57,0,-57,DR,txn_c01ea6d48459b994,IRCTC,irctc@sbin,KOTAK,UPI,,bank_statement,5
+2026-02-17T18:33:00Z,473,0,-473,DR,txn_0496f598b2724731,Zomato,zomato@icic,AXIS,UPI,,bank_statement,7
+2026-02-18T21:49:00Z,266,0,-266,DR,txn_66df1a1c78c974fe,Dominos,dominos@hdfc,ICIC,UPI,,bank_statement,7
+2026-02-19T14:23:00Z,202,0,-202,DR,txn_d46ba5c8f1418abb,Uber,uber@hdfc,ICIC,UPI,,bank_statement,5
+2026-02-20T21:46:00Z,217,0,-217,DR,txn_066009cc3837db7e,IRCTC,irctc@sbin,SBIN,UPI,,bank_statement,5
+2026-02-21T16:39:00Z,298,0,-298,DR,txn_5a7bd05f7c229e19,Fuel Station,fuel.petrol@upi,ICIC,UPI,,bank_statement,5
+2026-02-23T12:49:00Z,187,0,-187,DR,txn_61bdaff078523add,Swiggy,swiggy@okicici,ICIC,UPI,,bank_statement,7
+2026-02-23T14:47:00Z,444,0,-444,DR,txn_be4940c5f478028e,DMart,dmart@hdfc,ICIC,UPI,,bank_statement,4
+2026-02-23T18:54:00Z,3230,0,-3230,DR,txn_8048ac3a2797951e,Priya Verma,amit.k@ibl,ICIC,UPI,Transfer to Priya Verma,bank_statement,10
+2026-02-25T09:30:00Z,0,75000,75000,CR,txn_9dc72dfe39307b1a,ICIC,salary.2@axis,ICIC,INB,Monthly Salary,bank_statement,
+2026-02-27T10:15:00Z,69,0,-69,DR,txn_9747595061b871de,Spotify,spotify@okaxis,OKAXIS,UPI,Spotify Premium,bank_statement,9
+2026-02-27T15:22:00Z,130,0,-130,DR,txn_e28f7cc64c2f7670,Starbucks,starbucks@hdfc,AXIS,UPI,,bank_statement,7
+2026-02-28T11:00:00Z,1553,0,-1553,DR,txn_78941eb886521173,Electricity Board,electricity@sbin,SBIN,UPI,Monthly Electricity Bill,bank_statement,6
+2026-02-28T14:00:00Z,5000,0,-5000,DR,txn_716cabb71f43b324,Car Loan EMI,carloan@hdfc,HDFC,UPI,Car Loan EMI,bank_statement,12
+2026-02-28T14:16:00Z,167,0,-167,DR,txn_5f81f00248943752,Ola,ola@icic,SBIN,UPI,,bank_statement,5
+2026-03-02T13:28:00Z,1758,0,-1758,DR,txn_41aa19b001624985,Meesho,meesho@upi,KOTAK,UPI,,bank_statement,1
+2026-03-02T14:14:00Z,152,0,-152,DR,txn_45115058e6042807,MakeMyTrip,mmt@hdfc,AXIS,UPI,,bank_statement,5
+2026-03-03T16:36:00Z,709,0,-709,DR,txn_989101187e489e91,BigBasket,bigbasket@okaxis,AXIS,UPI,,bank_statement,4
+2026-03-03T19:51:00Z,53,0,-53,DR,txn_3f594485156de667,Zomato,zomato@icic,ICIC,UPI,,bank_statement,7
+2026-03-04T15:29:00Z,0,811,811,CR,txn_691520292f653d32,Rajesh Singh,amit.k@ibl,AXIS,UPI,Received from Rajesh Singh,bank_statement,10
+2026-03-05T10:10:00Z,202,0,-202,DR,txn_06883367d7ac7479,MakeMyTrip,mmt@hdfc,HDFC,UPI,,bank_statement,5
+2026-03-05T12:30:00Z,1058,0,-1058,DR,txn_56ca458443cd1e3d,Gas Agency,gas@upi,UPI,UPI,Gas Bill,bank_statement,6
+2026-03-05T13:24:00Z,739,0,-739,DR,txn_db0c6f39320b0d40,Decathlon,decathlon@hdfc,SBIN,UPI,,bank_statement,1
+2026-03-05T16:29:00Z,182,0,-182,DR,txn_4cc8bef610e791a5,Starbucks,starbucks@hdfc,AXIS,UPI,,bank_statement,7
+2026-03-06T11:12:00Z,390,0,-390,DR,txn_896ee88d9111bce7,DMart,dmart@hdfc,KOTAK,UPI,,bank_statement,4
+2026-03-06T11:42:00Z,162,0,-162,DR,txn_ecb2b0de41739336,Rapido,rapido@okaxis,HDFC,UPI,,bank_statement,5
+2026-03-07T13:43:00Z,1480,0,-1480,DR,txn_8a3c7a1cc616d5fe,Bookstore,bookstore@upi,HDFC,UPI,,bank_statement,11
+2026-03-07T17:46:00Z,580,0,-580,DR,txn_98273c7c9c3f7ce1,BigBasket,bigbasket@okaxis,ICIC,UPI,,bank_statement,4
+2026-03-07T19:40:00Z,455,0,-455,DR,txn_b4d3de16b78ab544,Cafe Coffee Day,caffe.ccd@hdfc,KOTAK,UPI,,bank_statement,7
+2026-03-08T14:40:00Z,550,0,-550,DR,txn_652ca24c31ef3a3d,Blinkit,blinkit@okaxis,AXIS,UPI,,bank_statement,4
+2026-03-09T12:51:00Z,360,0,-360,DR,txn_5a988de1e9e05a31,Subway,subway@okaxis,AXIS,UPI,,bank_statement,7
+2026-03-09T17:36:00Z,233,0,-233,DR,txn_b250a95e94382ad4,IRCTC,irctc@sbin,HDFC,UPI,,bank_statement,5
+2026-03-10T13:37:00Z,97,0,-97,DR,txn_669e1422bd20e0be,Swiggy,swiggy@okicici,SBIN,UPI,,bank_statement,7
+2026-03-11T14:04:00Z,476,0,-476,DR,txn_266ab8ab86222bf0,Subway,subway@okaxis,AXIS,UPI,,bank_statement,7
+2026-03-13T17:42:00Z,180,0,-180,DR,txn_fc3e330c7985ea56,Swiggy,swiggy@okicici,HDFC,UPI,,bank_statement,7
+2026-03-14T15:50:00Z,149,0,-149,DR,txn_824e4ce8c199e064,Uber,uber@hdfc,ICIC,UPI,,bank_statement,5
+2026-03-15T07:23:00Z,185,0,-185,DR,txn_19e7f90691d08c68,Flipkart Flight,flights@flipkart,AXIS,UPI,,bank_statement,5
+2026-03-15T16:39:00Z,214,0,-214,DR,txn_75f64d68cc1a2d78,Spencer,spencer@hdfc,KOTAK,UPI,,bank_statement,4
+2026-03-16T18:45:00Z,475,0,-475,DR,txn_ee40a9a7a1e20a6a,Starbucks,starbucks@hdfc,ICIC,UPI,,bank_statement,7
+2026-03-17T11:18:00Z,42,0,-42,DR,txn_023b828f5099cec8,Rapido,rapido@okaxis,KOTAK,UPI,,bank_statement,5
+2026-03-17T16:19:00Z,178,0,-178,DR,txn_dca8768dbc075ad9,Dominos,dominos@hdfc,HDFC,UPI,,bank_statement,7
+2026-03-17T17:23:00Z,788,0,-788,DR,txn_ce9fbe26a215b197,Blinkit,blinkit@okaxis,ICIC,UPI,,bank_statement,4
+2026-03-19T12:03:00Z,492,0,-492,DR,txn_df8d3f5a00432f44,Swiggy,swiggy@okicici,AXIS,UPI,,bank_statement,7
+2026-03-21T16:08:00Z,454,0,-454,DR,txn_550d3c924cd74c5a,DMart,dmart@hdfc,AXIS,UPI,,bank_statement,4
+2026-03-22T12:41:00Z,0,2995,2995,CR,txn_25a7f80f820859e2,Rahul Sharma,rahul.sharma@upi,SBIN,UPI,Received from Rahul Sharma,bank_statement,10
+2026-03-22T16:19:00Z,136,0,-136,DR,txn_8f39090c039c2d44,Flipkart Flight,flights@flipkart,SBIN,UPI,,bank_statement,5
+2026-03-22T20:42:00Z,246,0,-246,DR,txn_240b57d6f004c0a0,Spencer,spencer@hdfc,SBIN,UPI,,bank_statement,4
+2026-03-23T13:39:00Z,203,0,-203,DR,txn_f8d755c819dd131a,Uber,uber@hdfc,SBIN,UPI,,bank_statement,5
+2026-03-23T16:05:00Z,440,0,-440,DR,txn_60614d44380d0d3e,Zomato,zomato@icic,SBIN,UPI,,bank_statement,7
+2026-03-24T12:34:00Z,860,0,-860,DR,txn_57168615a463ec19,Hardware Store,hardwarestore@upi,ICIC,UPI,,bank_statement,6
+2026-03-24T13:35:00Z,432,0,-432,DR,txn_d822930e6157ede0,Zomato,zomato@icic,SBIN,UPI,,bank_statement,7
+2026-03-24T14:10:00Z,207,0,-207,DR,txn_9c427b90c983608d,Fuel Station,fuel.petrol@upi,AXIS,UPI,,bank_statement,5
+2026-03-25T09:30:00Z,0,75000,75000,CR,txn_f3adc4b095b73705,HDFC,salary.3@sbin,AXIS,INB,Monthly Salary,bank_statement,
+2026-03-25T12:20:00Z,4536,0,-4536,DR,txn_f5d62d5d209a260c,Amit Kumar,amit.k@ibl,HDFC,UPI,Transfer to Amit Kumar,bank_statement,10
+2026-03-26T10:22:00Z,770,0,-770,DR,txn_734d019d63f83f32,Spencer,spencer@hdfc,AXIS,UPI,,bank_statement,4
+2026-03-26T13:11:00Z,82,0,-82,DR,txn_6b83e1dcf3fc6937,Starbucks,starbucks@hdfc,KOTAK,UPI,,bank_statement,7
+2026-03-27T10:11:00Z,123,0,-123,DR,txn_d99de227dbe02fee,Uber,uber@hdfc,SBIN,UPI,,bank_statement,5
+2026-03-27T10:15:00Z,69,0,-69,DR,txn_6ba1249eb5ff28f0,Spotify,spotify@okaxis,OKAXIS,UPI,Spotify Premium,bank_statement,9
+2026-03-27T18:28:00Z,2534,0,-2534,DR,txn_18f7660e3e511de3,Flipkart,flipkart@hdfc,HDFC,UPI,,bank_statement,1
+2026-03-28T14:00:00Z,5000,0,-5000,DR,txn_4c153151631f4ed9,Car Loan EMI,carloan@hdfc,HDFC,UPI,Car Loan EMI,bank_statement,12
+2026-03-28T16:28:00Z,168,0,-168,DR,txn_4812282a1a709d6a,Ola,ola@icic,ICIC,UPI,,bank_statement,5
+2026-03-28T18:25:00Z,164,0,-164,DR,txn_8170b4110af90469,Starbucks,starbucks@hdfc,SBIN,UPI,,bank_statement,7
+2026-03-29T10:14:00Z,296,0,-296,DR,txn_7d93af2aef35f383,BigBasket,bigbasket@okaxis,KOTAK,UPI,,bank_statement,4
+2026-03-29T19:43:00Z,110,0,-110,DR,txn_e9e7cb1d0db14c14,Starbucks,starbucks@hdfc,AXIS,UPI,,bank_statement,7
+2026-03-31T16:34:00Z,229,0,-229,DR,txn_72158bf1e7678c9b,Flipkart Flight,flights@flipkart,ICIC,UPI,,bank_statement,5
+2026-03-31T21:25:00Z,110,0,-110,DR,txn_1898e3260d401683,Zomato,zomato@icic,HDFC,UPI,,bank_statement,7
+2026-03-31T22:56:00Z,1422,0,-1422,DR,txn_3974b3e44c722ce2,H&M,hm@hdfc,ICIC,UPI,,bank_statement,1
+2026-04-01T12:45:00Z,674,0,-674,DR,txn_012002c258e93987,Local Vegetable Vendor,vendor@upi,SBIN,UPI,,bank_statement,4
+2026-04-01T17:39:00Z,125,0,-125,DR,txn_014af23e108b98b9,Subway,subway@okaxis,SBIN,UPI,,bank_statement,7
+2026-04-02T11:58:00Z,182,0,-182,DR,txn_8feb5a98da669150,Rapido,rapido@okaxis,HDFC,UPI,,bank_statement,5
+2026-04-02T20:38:00Z,432,0,-432,DR,txn_26f5d85c06ffaf7e,Swiggy,swiggy@okicici,AXIS,UPI,,bank_statement,7
+2026-04-06T11:26:00Z,891,0,-891,DR,txn_a0504eabde59e67e,Meesho,meesho@upi,SBIN,UPI,,bank_statement,1
+2026-04-06T15:14:00Z,293,0,-293,DR,txn_5cca7326193eaeb3,Uber,uber@hdfc,AXIS,UPI,,bank_statement,5
+2026-04-07T09:22:00Z,167,0,-167,DR,txn_19653832fb8ff665,MakeMyTrip,mmt@hdfc,ICIC,UPI,,bank_statement,5
+2026-04-08T14:50:00Z,283,0,-283,DR,txn_b1d1a54b5cadbb08,Subway,subway@okaxis,AXIS,UPI,,bank_statement,7
+2026-04-09T21:02:00Z,496,0,-496,DR,txn_69614e2651acb8f1,Swiggy,swiggy@okicici,AXIS,UPI,,bank_statement,7
+2026-04-10T17:00:00Z,139,0,-139,DR,txn_64a68f77822fefd8,Ola,ola@icic,HDFC,UPI,,bank_statement,5
+2026-04-10T17:04:00Z,264,0,-264,DR,txn_78ff8220a689c2ed,Zomato,zomato@icic,ICIC,UPI,,bank_statement,7
+2026-04-12T15:58:00Z,1252,0,-1252,DR,txn_b5bfcb999dd891b2,Pharmacy,pharmacy@upi,KOTAK,UPI,,bank_statement,11
+2026-04-12T17:36:00Z,99,0,-99,DR,txn_382150a138dced74,Zomato,zomato@icic,HDFC,UPI,,bank_statement,7
+2026-04-12T19:03:00Z,39,0,-39,DR,txn_f015b4ba067197f9,Fuel Station,fuel.petrol@upi,SBIN,UPI,,bank_statement,5
+2026-04-12T20:42:00Z,594,0,-594,DR,txn_7b89b9adce8486f4,DMart,dmart@hdfc,SBIN,UPI,,bank_statement,4
+2026-04-12T21:01:00Z,1791,0,-1791,DR,txn_20ea10ad18485d9f,Myntra,myntra@okaxis,ICIC,UPI,,bank_statement,1
+2026-04-14T11:13:00Z,116,0,-116,DR,txn_42df3af0e55009ea,IRCTC,irctc@sbin,SBIN,UPI,,bank_statement,5
+2026-04-14T14:33:00Z,54,0,-54,DR,txn_397c6b5f69002f8e,Dominos,dominos@hdfc,KOTAK,UPI,,bank_statement,7
+2026-04-15T18:00:00Z,74,0,-74,DR,txn_eb83092b5afb26ca,Zomato,zomato@icic,SBIN,UPI,,bank_statement,7
+2026-04-17T20:10:00Z,346,0,-346,DR,txn_824187a7117bbd3f,Zomato,zomato@icic,KOTAK,UPI,,bank_statement,7
+2026-04-17T20:59:00Z,371,0,-371,DR,txn_7c365bd4bf78e5d7,Local Vegetable Vendor,vendor@upi,HDFC,UPI,,bank_statement,4
+2026-04-19T18:08:00Z,4366,0,-4366,DR,txn_e52cd97821b2b665,Rajesh Singh,rahul.sharma@upi,SBIN,UPI,Transfer to Rajesh Singh,bank_statement,10
+2026-04-19T19:18:00Z,288,0,-288,DR,txn_5bd6ff5655be385e,IRCTC,irctc@sbin,SBIN,UPI,,bank_statement,5
+2026-04-20T16:25:00Z,461,0,-461,DR,txn_c9cbaaab3d726175,Dominos,dominos@hdfc,SBIN,UPI,,bank_statement,7
+2026-04-21T10:01:00Z,165,0,-165,DR,txn_a3fe3ba33ce2e012,MakeMyTrip,mmt@hdfc,SBIN,UPI,,bank_statement,5
+2026-04-22T12:39:00Z,1100,0,-1100,DR,txn_5080e36b6f21b8c2,Rahul Sharma,priya.v@okaxis,SBIN,UPI,Transfer to Rahul Sharma,bank_statement,10
+2026-04-22T16:31:00Z,2380,0,-2380,DR,txn_3aac4bd1eacac806,Flipkart,flipkart@hdfc,SBIN,UPI,,bank_statement,1
+2026-04-22T18:22:00Z,288,0,-288,DR,txn_b49ce3496e22e024,Fuel Station,fuel.petrol@upi,KOTAK,UPI,,bank_statement,5
+2026-04-23T15:36:00Z,2784,0,-2784,DR,txn_30592c07f5caf659,Amit Kumar,priya.v@okaxis,HDFC,UPI,Transfer to Amit Kumar,bank_statement,10
+2026-04-23T16:36:00Z,47,0,-47,DR,txn_ac20bd817e272e81,Rapido,rapido@okaxis,ICIC,UPI,,bank_statement,5
+2026-04-23T19:56:00Z,427,0,-427,DR,txn_5b3b144df8719e2c,Subway,subway@okaxis,AXIS,UPI,,bank_statement,7
+2026-04-24T16:50:00Z,204,0,-204,DR,txn_58db2a4f26fbdd49,Subway,subway@okaxis,AXIS,UPI,,bank_statement,7
+2026-04-25T09:30:00Z,0,75000,75000,CR,txn_0ca09a5db6cf5279,HDFC,salary.4@kotak,ICIC,INB,Monthly Salary,bank_statement,
+2026-04-25T17:40:00Z,746,0,-746,DR,txn_03aab67928772ae8,BigBasket,bigbasket@okaxis,HDFC,UPI,,bank_statement,4
+2026-04-26T14:56:00Z,202,0,-202,DR,txn_fbaa34c62a01c097,BigBasket,bigbasket@okaxis,SBIN,UPI,,bank_statement,4
+2026-04-27T10:15:00Z,69,0,-69,DR,txn_e9c4ae9a51ea864a,Spotify,spotify@okaxis,OKAXIS,UPI,Spotify Premium,bank_statement,9
+2026-04-27T19:35:00Z,207,0,-207,DR,txn_9334a79223885762,Rapido,rapido@okaxis,HDFC,UPI,,bank_statement,5
+2026-04-27T21:28:00Z,388,0,-388,DR,txn_b91487820d989d2c,McDonald's,mcdonalds@hdfc,AXIS,UPI,,bank_statement,7
+2026-04-28T14:00:00Z,5000,0,-5000,DR,txn_8f24f38522b6e351,Car Loan EMI,carloan@hdfc,HDFC,UPI,Car Loan EMI,bank_statement,12
+2026-04-28T20:21:00Z,282,0,-282,DR,txn_2b0c8dd9d317d6d4,Local Dhaba,dhaba.local@upi,ICIC,UPI,,bank_statement,7
+2026-04-29T12:59:00Z,434,0,-434,DR,txn_27c0874deee4e3a4,McDonald's,mcdonalds@hdfc,AXIS,UPI,,bank_statement,7
+2026-04-29T20:38:00Z,785,0,-785,DR,txn_a9d6e3933553e1a9,DMart,dmart@hdfc,ICIC,UPI,,bank_statement,4
+2026-05-01T11:22:00Z,239,0,-239,DR,txn_e94a04397202ddce,Ola,ola@icic,KOTAK,UPI,,bank_statement,5
+2026-05-01T21:30:00Z,82,0,-82,DR,txn_01e81741d7dfd5fc,Local Dhaba,dhaba.local@upi,ICIC,UPI,,bank_statement,7
+2026-05-02T13:00:00Z,86,0,-86,DR,txn_b59710071a5740b9,McDonald's,mcdonalds@hdfc,AXIS,UPI,,bank_statement,7
+2026-05-02T13:27:00Z,146,0,-146,DR,txn_5e60c844981224cc,Rapido,rapido@okaxis,ICIC,UPI,,bank_statement,5
+2026-05-03T14:15:00Z,403,0,-403,DR,txn_677d04b2f33e37c1,Starbucks,starbucks@hdfc,HDFC,UPI,,bank_statement,7
+2026-05-05T10:28:00Z,0,2555,2555,CR,txn_40d868f51a05d9c5,Rahul Sharma,shreya.p@upi,SBIN,UPI,Received from Rahul Sharma,bank_statement,10
+2026-05-05T19:35:00Z,172,0,-172,DR,txn_fa8bbd50affa050d,Rapido,rapido@okaxis,SBIN,UPI,,bank_statement,5
+2026-05-05T20:27:00Z,452,0,-452,DR,txn_fb925d88a4c449c5,Local Dhaba,dhaba.local@upi,ICIC,UPI,,bank_statement,7
+2026-05-06T12:17:00Z,496,0,-496,DR,txn_593cd96f4a74b43a,Zomato,zomato@icic,SBIN,UPI,,bank_statement,7
+2026-05-09T11:02:00Z,459,0,-459,DR,txn_86650c80ea2c7c6c,Spencer,spencer@hdfc,KOTAK,UPI,,bank_statement,4
+2026-05-09T12:51:00Z,0,2161,2161,CR,txn_38fe765e11b76e79,Shreya Patel,rajesh.s@ybl,KOTAK,UPI,Received from Shreya Patel,bank_statement,10
+2026-05-09T19:48:00Z,46,0,-46,DR,txn_d3d2249bd5b218b0,Rapido,rapido@okaxis,SBIN,UPI,,bank_statement,5
+2026-05-09T20:28:00Z,155,0,-155,DR,txn_2ed0785c90413522,Subway,subway@okaxis,ICIC,UPI,,bank_statement,7
+2026-05-10T11:00:00Z,728,0,-728,DR,txn_c70c8e12ba7070a9,DMart,dmart@hdfc,HDFC,UPI,,bank_statement,4
+2026-05-10T20:30:00Z,82,0,-82,DR,txn_ae32f147b3f26afa,Cafe Coffee Day,caffe.ccd@hdfc,KOTAK,UPI,,bank_statement,7
+2026-05-11T13:01:00Z,185,0,-185,DR,txn_55fc135cbbf2bdc1,Swiggy,swiggy@okicici,KOTAK,UPI,,bank_statement,7
+2026-05-12T12:30:00Z,1016,0,-1016,DR,txn_99b942bfd4fd7066,Gas Agency,gas@upi,UPI,UPI,Gas Bill,bank_statement,6
+2026-05-12T13:10:00Z,208,0,-208,DR,txn_4922a6415ec55360,Local Vegetable Vendor,vendor@upi,AXIS,UPI,,bank_statement,4
+2026-05-12T14:24:00Z,138,0,-138,DR,txn_8f5cbfc1096c9bb2,Swiggy,swiggy@okicici,AXIS,UPI,,bank_statement,7
+2026-05-13T09:28:00Z,124,0,-124,DR,txn_83c47327da93933f,IRCTC,irctc@sbin,KOTAK,UPI,,bank_statement,5
+2026-05-13T21:18:00Z,1458,0,-1458,DR,txn_b3181850d4f62ecf,Ajio,ajio@okaxis,HDFC,UPI,,bank_statement,1
+2026-05-15T12:59:00Z,87,0,-87,DR,txn_afebbe6c35d82ee7,MakeMyTrip,mmt@hdfc,KOTAK,UPI,,bank_statement,5
+2026-05-15T21:11:00Z,136,0,-136,DR,txn_ffeeed7bff51848a,Local Dhaba,dhaba.local@upi,KOTAK,UPI,,bank_statement,7
+2026-05-16T17:27:00Z,1113,0,-1113,DR,txn_be84d5c7aa0a2cc4,Myntra,myntra@okaxis,ICIC,UPI,,bank_statement,1
+2026-05-17T13:28:00Z,623,0,-623,DR,txn_44940629069e683b,Local Vegetable Vendor,vendor@upi,ICIC,UPI,,bank_statement,4
+2026-05-17T16:42:00Z,143,0,-143,DR,txn_c4146c1bf973474a,IRCTC,irctc@sbin,KOTAK,UPI,,bank_statement,5
+2026-05-18T09:52:00Z,149,0,-149,DR,txn_63f84ba689296920,Flipkart Flight,flights@flipkart,SBIN,UPI,,bank_statement,5
+2026-05-19T19:04:00Z,280,0,-280,DR,txn_ab67457dfd1ebf0d,Flipkart Flight,flights@flipkart,SBIN,UPI,,bank_statement,5
+2026-05-20T12:19:00Z,380,0,-380,DR,txn_b0ddcbe46e32f75f,Cafe Coffee Day,caffe.ccd@hdfc,ICIC,UPI,,bank_statement,7
+2026-05-21T13:25:00Z,376,0,-376,DR,txn_8aacbb4666a5eee1,Dominos,dominos@hdfc,KOTAK,UPI,,bank_statement,7
+2026-05-21T20:56:00Z,53,0,-53,DR,txn_a07cfa974efaab61,Uber,uber@hdfc,KOTAK,UPI,,bank_statement,5
+2026-05-22T14:58:00Z,0,925,925,CR,txn_290e81f083a3e8f9,Priya Verma,amit.k@ibl,SBIN,UPI,Received from Priya Verma,bank_statement,10
+2026-05-22T19:55:00Z,83,0,-83,DR,txn_316fa8c222e93847,Rapido,rapido@okaxis,HDFC,UPI,,bank_statement,5
+2026-05-23T19:14:00Z,187,0,-187,DR,txn_c18a82615d45d73a,Subway,subway@okaxis,KOTAK,UPI,,bank_statement,7
+2026-05-24T10:53:00Z,575,0,-575,DR,txn_402a8e9fed834183,Local Vegetable Vendor,vendor@upi,KOTAK,UPI,,bank_statement,4
+2026-05-25T09:30:00Z,0,75000,75000,CR,txn_2955df5891535a55,ICIC,salary.5@kotak,HDFC,INB,Monthly Salary,bank_statement,
+2026-05-25T15:56:00Z,459,0,-459,DR,txn_af377299f1d1a88c,Blinkit,blinkit@okaxis,ICIC,UPI,,bank_statement,4
+2026-05-26T09:40:00Z,478,0,-478,DR,txn_d3d0e5f1180e7602,Local Vegetable Vendor,vendor@upi,HDFC,UPI,,bank_statement,4
+2026-05-26T20:34:00Z,76,0,-76,DR,txn_b7c4366c7f8db1ef,Local Dhaba,dhaba.local@upi,HDFC,UPI,,bank_statement,7
+2026-05-27T10:15:00Z,69,0,-69,DR,txn_8ed9020a223e4d2d,Spotify,spotify@okaxis,OKAXIS,UPI,Spotify Premium,bank_statement,9
+2026-05-27T12:16:00Z,1832,0,-1832,DR,txn_1d417cbb47a35a27,Rahul Sharma,shreya.p@upi,AXIS,UPI,Transfer to Rahul Sharma,bank_statement,10
+2026-05-28T14:00:00Z,5000,0,-5000,DR,txn_e19ce16078601584,Car Loan EMI,carloan@hdfc,HDFC,UPI,Car Loan EMI,bank_statement,12
+2026-05-29T17:36:00Z,117,0,-117,DR,txn_4cfc1aca3d213fd9,Uber,uber@hdfc,ICIC,UPI,,bank_statement,5
+2026-05-29T20:40:00Z,749,0,-749,DR,txn_be9a4c5ae29848a4,DMart,dmart@hdfc,ICIC,UPI,,bank_statement,4
+2026-05-30T10:23:00Z,78,0,-78,DR,txn_683da42fd202a77d,Rapido,rapido@okaxis,AXIS,UPI,,bank_statement,5
+2026-05-30T11:00:00Z,1964,0,-1964,DR,txn_c360be0f8876e4e9,Electricity Board,electricity@sbin,SBIN,UPI,Monthly Electricity Bill,bank_statement,6
+2026-05-30T21:28:00Z,199,0,-199,DR,txn_75a228875e750b60,Dominos,dominos@hdfc,HDFC,UPI,,bank_statement,7
+2026-05-31T12:48:00Z,359,0,-359,DR,txn_4d5ef3e39722c237,Blinkit,blinkit@okaxis,KOTAK,UPI,,bank_statement,4
+2026-05-31T13:45:00Z,1647,0,-1647,DR,txn_eb594e99a758dc06,Meesho,meesho@upi,ICIC,UPI,,bank_statement,1
+2026-05-31T15:51:00Z,128,0,-128,DR,txn_bb96202771fadb2b,Ola,ola@icic,SBIN,UPI,,bank_statement,5
+2026-06-01T17:32:00Z,236,0,-236,DR,txn_ca676e6d7a79da33,Subway,subway@okaxis,HDFC,UPI,,bank_statement,7
+2026-06-01T19:25:00Z,260,0,-260,DR,txn_be71fb087fcd9888,Uber,uber@hdfc,SBIN,UPI,,bank_statement,5
+2026-06-03T12:25:00Z,380,0,-380,DR,txn_214f496c91ebc0cb,Cafe Coffee Day,caffe.ccd@hdfc,HDFC,UPI,,bank_statement,7
+2026-06-04T15:18:00Z,161,0,-161,DR,txn_5d2dce15fce8c8a1,IRCTC,irctc@sbin,SBIN,UPI,,bank_statement,5
+2026-06-04T21:14:00Z,110,0,-110,DR,txn_e72e808c089c01a6,Dominos,dominos@hdfc,SBIN,UPI,,bank_statement,7
+2026-06-08T14:43:00Z,399,0,-399,DR,txn_fb39c3a49a58d178,Local Dhaba,dhaba.local@upi,KOTAK,UPI,,bank_statement,7
+2026-06-08T15:53:00Z,131,0,-131,DR,txn_f2d7a02862cb7be5,IRCTC,irctc@sbin,SBIN,UPI,,bank_statement,5
+2026-06-11T16:25:00Z,185,0,-185,DR,txn_924d6aa9352ca27a,Fuel Station,fuel.petrol@upi,AXIS,UPI,,bank_statement,5
+2026-06-12T13:54:00Z,1136,0,-1136,DR,txn_06e03743f51cf1e5,Amazon,amazon@okaxis,SBIN,UPI,,bank_statement,1
+2026-06-13T14:54:00Z,30,0,-30,DR,txn_ff0865796ae6f0f1,Ola,ola@icic,ICIC,UPI,,bank_statement,5
+2026-06-14T13:19:00Z,224,0,-224,DR,txn_2624b8739766921f,Local Vegetable Vendor,vendor@upi,AXIS,UPI,,bank_statement,4
+2026-06-15T15:52:00Z,265,0,-265,DR,txn_38ae5de33167b20f,Uber,uber@hdfc,KOTAK,UPI,,bank_statement,5
+2026-06-15T19:40:00Z,492,0,-492,DR,txn_c9514d2564b3d9af,BigBasket,bigbasket@okaxis,KOTAK,UPI,,bank_statement,4
+2026-06-19T10:32:00Z,242,0,-242,DR,txn_f714365757ee3b82,Ola,ola@icic,HDFC,UPI,,bank_statement,5
+2026-06-20T10:56:00Z,297,0,-297,DR,txn_341b75c6250f237b,Flipkart Flight,flights@flipkart,AXIS,UPI,,bank_statement,5
+2026-06-20T15:02:00Z,135,0,-135,DR,txn_dfbc7311734e6bab,Local Dhaba,dhaba.local@upi,KOTAK,UPI,,bank_statement,7
+2026-06-21T10:27:00Z,571,0,-571,DR,txn_8c5863e8b4d0d157,Local Vegetable Vendor,vendor@upi,KOTAK,UPI,,bank_statement,4
+2026-06-21T19:39:00Z,434,0,-434,DR,txn_7c04d1eaab77a8c9,Dominos,dominos@hdfc,SBIN,UPI,,bank_statement,7
+2026-06-22T20:51:00Z,193,0,-193,DR,txn_719c1144975e1ce1,Zomato,zomato@icic,KOTAK,UPI,,bank_statement,7
+2026-06-24T13:04:00Z,177,0,-177,DR,txn_82b0622a25d9952f,Dominos,dominos@hdfc,ICIC,UPI,,bank_statement,7
+2026-06-25T09:30:00Z,0,75000,75000,CR,txn_fcd9c88e90a5f7f6,ICIC,salary.6@hdfc,KOTAK,INB,Monthly Salary,bank_statement,
+2026-06-26T11:00:00Z,1899,0,-1899,DR,txn_80f6083717d8e058,Electricity Board,electricity@sbin,SBIN,UPI,Monthly Electricity Bill,bank_statement,6
+2026-06-26T11:14:00Z,205,0,-205,DR,txn_efef19d7a298ea5b,MakeMyTrip,mmt@hdfc,KOTAK,UPI,,bank_statement,5
+2026-06-26T22:17:00Z,279,0,-279,DR,txn_9b74d97f6a5e006a,Zomato,zomato@icic,HDFC,UPI,,bank_statement,7
+2026-06-27T07:46:00Z,177,0,-177,DR,txn_a31a4fd25f37a8b5,Flipkart Flight,flights@flipkart,ICIC,UPI,,bank_statement,5
+2026-06-27T10:15:00Z,69,0,-69,DR,txn_aa5b51577841e461,Spotify,spotify@okaxis,OKAXIS,UPI,Spotify Premium,bank_statement,9
+2026-06-27T21:06:00Z,287,0,-287,DR,txn_b37dad37b69c68af,Local Dhaba,dhaba.local@upi,HDFC,UPI,,bank_statement,7
+2026-06-28T14:00:00Z,5000,0,-5000,DR,txn_db1a2e38c1bfd237,Car Loan EMI,carloan@hdfc,HDFC,UPI,Car Loan EMI,bank_statement,12
+2026-06-29T10:00:00Z,156,0,-156,DR,txn_c96b917929d47163,Uber,uber@hdfc,SBIN,UPI,,bank_statement,5
+2026-06-29T13:23:00Z,132,0,-132,DR,txn_a876f015c108494d,Subway,subway@okaxis,HDFC,UPI,,bank_statement,7
+2026-06-30T18:04:00Z,1628,0,-1628,DR,txn_abdb2fabddf17a2d,Flipkart,flipkart@hdfc,AXIS,UPI,,bank_statement,1
+2026-06-30T19:57:00Z,120,0,-120,DR,txn_8691a18f01fb643b,Ola,ola@icic,SBIN,UPI,,bank_statement,5

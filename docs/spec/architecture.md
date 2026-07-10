@@ -101,6 +101,27 @@ SpendWise is built as a **modular monolith** for the MVP. The codebase is organi
 > Alerts), no cycle. Approved by project owner 2026-07-03 as a deviation from this document's
 > original dependency table, same pattern as the two addenda above.
 
+> **Budget's demo-only `DemoUserRegistry` dependency (added during demo feature deployment,
+> 2026-07-10):** the demo account's transactions come from a static CSV that is never re-uploaded
+> (see `docs/demo/demo-feature-complete.md`), so `BudgetServiceImpl`'s `resolveMonth(userId)` pins
+> the demo user's notion of "current month" to a fixed `demo.frozen-month` config value instead of
+> `YearMonth.now()`, so budget progress never reads as "₹0 spent" once real time drifts past the
+> CSV's last covered month. Answering "is this the demo user" requires *some* signal from outside
+> Budget's own module, but a full cross-module dependency on User's or Ingest's service interfaces
+> would be disproportionate to one boolean check. `com.spendwise.common.demo.DemoUserRegistry` is
+> the deliberately narrow channel for that signal instead: a `@Component` holder bean with a single
+> `volatile UUID` field and `register`/`isDemoUser` methods, carrying no business logic and
+> referencing no other module's domain types. `DemoDataSeeder` (Ingest) registers the demo user's ID
+> on every application startup; `BudgetServiceImpl` reads it. This is a one-way, read-only signal
+> (Budget never calls back into Ingest), returns `YearMonth.now()` unconditionally for every
+> non-demo user, and does not fit the "May call" / "Must must not call" table above cleanly because
+> it isn't a service-interface call at all — it's a shared, module-agnostic marker bean, structurally
+> similar to a feature flag. Treat it as a deliberate, narrow exception to "cross-module calls go
+> through injected service interfaces only," not a violation to flag — see
+> `DemoUserRegistry`'s own class-level Javadoc for the same reasoning in code. Unlike the two
+> addenda above, this one has not been separately confirmed with the project owner as a dependency-
+> table amendment; flag for explicit sign-off if the demo feature's scope changes.
+
 Direction rule: data flows inward through the stack (Ingest → Transaction → Analytics). No module calls back up the ingestion chain.
 
 > Admin calls Categorization's service interface for both retraining and accuracy evaluation — FastAPI is never called directly from Admin (CLAUDE.md invariant: only the Categorization module calls FastAPI).

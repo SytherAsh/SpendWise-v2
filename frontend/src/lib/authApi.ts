@@ -16,6 +16,9 @@ export interface AuthTokenResponse {
   user: { id: string; phone: string | null; email: string | null };
 }
 
+/** Matches the backend's `demo.phone` default (application.yml) — used to detect a demo session client-side. */
+export const DEMO_PHONE = "+919876543210";
+
 /** Exchange a phone-OTP Firebase ID token for a SpendWise session. */
 export async function verifyOtp(phone: string, idToken: string): Promise<AuthTokenResponse> {
   const res = await apiClient.post<AuthTokenResponse>(
@@ -45,6 +48,18 @@ export async function googleLogin(idToken: string): Promise<AuthTokenResponse> {
  */
 export async function devLogin(): Promise<AuthTokenResponse> {
   const res = await apiClient.post<AuthTokenResponse>("/auth/dev-login", undefined, { auth: false });
+  setTokens({ accessToken: res.accessToken, refreshToken: res.refreshToken });
+  return res;
+}
+
+/**
+ * Public marketing feature: mints a real session for the pre-seeded demo account, skipping
+ * auth entirely. Unlike {@link devLogin}, this succeeds in every environment where
+ * `demo.enabled=true` (see DemoAuthController) — it's meant to be reachable from the landing
+ * page's "Try Demo" button, not just local dev.
+ */
+export async function demoLogin(): Promise<AuthTokenResponse> {
+  const res = await apiClient.post<AuthTokenResponse>("/auth/demo/login", undefined, { auth: false });
   setTokens({ accessToken: res.accessToken, refreshToken: res.refreshToken });
   return res;
 }

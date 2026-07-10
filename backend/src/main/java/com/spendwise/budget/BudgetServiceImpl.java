@@ -1,9 +1,11 @@
 package com.spendwise.budget;
 
+import com.spendwise.common.demo.DemoUserRegistry;
 import com.spendwise.transaction.Category;
 import com.spendwise.transaction.CategoryService;
 import com.spendwise.transaction.MonthlyCategorySpend;
 import com.spendwise.transaction.TransactionService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,11 +29,34 @@ public class BudgetServiceImpl implements BudgetService {
     private final BudgetRepository budgetRepository;
     private final TransactionService transactionService;
     private final CategoryService categoryService;
+    private final DemoUserRegistry demoUserRegistry;
 
-    public BudgetServiceImpl(BudgetRepository budgetRepository, TransactionService transactionService, CategoryService categoryService) {
+    // The demo account's transaction data is a static CSV that is never re-uploaded (see
+    // DemoDataSeeder), so "the real current month" drifts away from it over time and every
+    // budget would show zero spend. Pinning the demo user's notion of "now" to the CSV's last
+    // populated month keeps its budget progress permanently non-blank. Unset (blank) for every
+    // real user — see DemoUserRegistry for why this lives here instead of a User/Ingest
+    // cross-module call.
+    private final YearMonth demoFrozenMonth;
+
+    public BudgetServiceImpl(
+            BudgetRepository budgetRepository,
+            TransactionService transactionService,
+            CategoryService categoryService,
+            DemoUserRegistry demoUserRegistry,
+            @Value("${demo.frozen-month:}") String demoFrozenMonth) {
         this.budgetRepository = budgetRepository;
         this.transactionService = transactionService;
         this.categoryService = categoryService;
+        this.demoUserRegistry = demoUserRegistry;
+        this.demoFrozenMonth = demoFrozenMonth.isBlank() ? null : YearMonth.parse(demoFrozenMonth);
+    }
+
+    private YearMonth resolveMonth(UUID userId) {
+        if (demoFrozenMonth != null && demoUserRegistry.isDemoUser(userId)) {
+            return demoFrozenMonth;
+        }
+        return YearMonth.now();
     }
 
     @Override
@@ -41,21 +66,21 @@ public class BudgetServiceImpl implements BudgetService {
         if (!categoryExists) {
             throw new InvalidCategoryException(categoryId);
         }
-        YearMonth now = YearMonth.now();
+        YearMonth now = resolveMonth(userId);
         return budgetRepository.upsert(userId, categoryId, monthlyLimit, now.getMonthValue(), now.getYear());
     }
 
     @Override
     @Transactional
     public List<Budget> listForCurrentMonth(UUID userId) {
-        YearMonth now = YearMonth.now();
+        YearMonth now = resolveMonth(userId);
         return budgetRepository.findForMonth(userId, now.getMonthValue(), now.getYear());
     }
 
     @Override
     @Transactional
     public List<BudgetProgress> progressForCurrentMonth(UUID userId) {
-        YearMonth now = YearMonth.now();
+        YearMonth now = resolveMonth(userId);
         List<Budget> budgets = budgetRepository.findForMonth(userId, now.getMonthValue(), now.getYear());
         Map<Integer, BigDecimal> spendByCategory =
                 transactionService.sumSpendByCategoryForMonth(userId, now.getMonthValue(), now.getYear());

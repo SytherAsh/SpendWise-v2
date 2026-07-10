@@ -1,6 +1,8 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useApi } from "@/lib/useApi";
+import { DEMO_PHONE } from "@/lib/authApi";
 
 export type RangePreset = "this-month" | "last-month" | "last-3-months" | "last-6-months" | "this-fy" | "ytd" | "month" | "custom";
 
@@ -133,8 +135,32 @@ interface DateRangeContextValue {
 
 const DateRangeContext = createContext<DateRangeContextValue | null>(null);
 
+/**
+ * The demo CSV (data/demo-transactions.csv) is static and never re-uploaded, so "this month"
+ * against the real clock eventually has zero demo transactions in it. Hardcoded to the CSV's
+ * actual coverage (Jul 2025 – Jun 2026) so the demo dashboard is never blank, regardless of
+ * when it's viewed. Must stay in sync with the backend's `demo.frozen-month`
+ * (backend/src/main/resources/application.yml — that value pins BudgetServiceImpl's
+ * "current month" for the demo user to this same window's last month).
+ */
+const DEMO_RANGE: DateRange = {
+  preset: "custom",
+  from: "2025-07-01",
+  to: "2026-06-30",
+  label: "Jul 2025 – Jun 2026",
+};
+
 export function DateRangeProvider({ children }: { children: ReactNode }) {
   const [range, setRange] = useState<DateRange>(() => computeRange("this-month"));
+  const { data: profile } = useApi<{ phone: string }>("/users/me");
+  const appliedDemoDefault = useRef(false);
+
+  useEffect(() => {
+    if (!appliedDemoDefault.current && profile?.phone === DEMO_PHONE) {
+      appliedDemoDefault.current = true;
+      setRange(DEMO_RANGE);
+    }
+  }, [profile]);
 
   const value = useMemo<DateRangeContextValue>(
     () => ({

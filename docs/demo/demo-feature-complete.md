@@ -1,82 +1,75 @@
 # Demo Feature — Complete Implementation Guide
 
-## Status: ✅ COMPLETE
+## Status: DEPLOYED & VERIFIED (local, backend + frontend)
 
-All components for the demo account feature are built and ready for integration and deployment.
+All components for the demo account feature are built and verified end-to-end against a live local
+backend — seeding logs, DB row counts, and live API/browser calls all confirmed. Frontend
+integration (landing page button, demo badge, demo date range) has landed alongside the backend
+work; see "Verification" below for what was checked.
 
 ## What's Built
 
 ### 1. Demo Transaction CSV
 
-**File:** `data/demo-transactions.csv`  
-**Size:** 522 transactions  
-**Scope:** 1 year (July 2025 — June 2026)
+**File:** `data/demo-transactions.csv` (also copied to `backend/src/main/resources/data/demo-transactions.csv`)
+**Size:** 522 transactions
+**Scope:** 1 year of data, July 2025 – June 2026
 
 **Patterns Included:**
-- ✅ Monthly salary (₹75,000 on 25th)
-- ✅ Car EMI (₹5,000 on 28th)
-- ✅ Spotify (₹69 on 27th, monthly)
-- ✅ Light bill (₹1,500–2,000, monthly)
-- ✅ Gas bill (₹1,000–1,200, alternate months)
-- ✅ Netflix (₹199, every 3 months)
-- ✅ Rapido for travel (consistent usage)
-- ✅ Daily food/dining (Swiggy, Zomato, restaurants)
-- ✅ Varied shopping (Amazon, Flipkart, Myntra)
-- ✅ Groceries (BigBasket, Blinkit, DMart)
-- ✅ Family transfers with 4 contacts
-- ✅ Received money
-- ✅ Miscellaneous & uncategorized items
-- ✅ Diverse merchant names (no repetition)
-- ✅ Realistic Indian names
 
-**Format:** Backend ingest-compatible (transaction_date, debit, credit, amount, dr_cr_indicator, transaction_id, recipient_name, upi_id, bank, transaction_mode, note, source)
+- Monthly salary, car EMI, Spotify, light bill, gas bill, Netflix
+- Rapido for travel (consistent usage)
+- Daily food/dining, varied shopping, groceries
+- Family transfers with 4 contacts, received money
+- Miscellaneous & a handful of intentionally miscategorized items
+- Diverse merchant names, realistic Indian names
+
+**Format:** `transaction_date, debit, credit, amount, dr_cr_indicator, transaction_id, recipient_name, upi_id, bank, transaction_mode, note, source, category` — the `category` column is demo-only curated ground truth (see §3 and "Known Issue: Live ML Model Bias" below).
 
 ### 2. CSV Parser (Reusable)
 
-**File:** `backend/src/main/java/com/spendwise/transaction/util/CsvTransactionParser.java`
+**File:** [`backend/src/main/java/com/spendwise/transaction/util/CsvTransactionParser.java`](../../backend/src/main/java/com/spendwise/transaction/util/CsvTransactionParser.java)
 
-**Purpose:** Parse bank statement CSVs into ingest-compatible format  
-**Current Use:** Demo data seeding  
-**Future Use:** User CSV upload feature  
-
-**Features:**
-- ✅ Validates required fields
-- ✅ Handles quoted CSV fields
-- ✅ Converts to IngestTransactionItem
-- ✅ Error handling with line numbers
-- ✅ Null-safe field parsing
-- ✅ ISO 8601 timestamp parsing
-- ✅ Numeric validation
+- `parse(InputStream)` — the reusable parser: converts CSV rows into `IngestTransactionItem`, ignoring the `category` column entirely. This is the method future user bank-statement uploads will call — real uploads never carry a pre-known category.
+- `parseCategoryOverrides(InputStream)` — demo-only: extracts a `transaction_id -> category_id` map from the CSV's `category` column, consumed solely by `DemoDataSeeder` (see §4). Tolerant of a missing `category` column (returns an empty map) and of non-numeric values (logs a warning, skips the row) so it never blocks the reusable `parse()` path.
+- No Lombok — this project doesn't use it anywhere else. Rewritten with an explicit `Logger` (`LoggerFactory.getLogger`), matching the rest of the codebase.
 
 ### 3. Demo Data Seeder
 
-**File:** `backend/src/main/java/com/spendwise/ingest/DemoDataSeeder.java`
+**File:** [`backend/src/main/java/com/spendwise/ingest/DemoDataSeeder.java`](../../backend/src/main/java/com/spendwise/ingest/DemoDataSeeder.java)
 
-**Purpose:** Auto-populate demo account on backend startup  
-**Runs On:** Application startup (if `demo.enabled=true`)  
+Runs on `ApplicationReadyEvent` if `demo.enabled=true`. **Reuses the real service layer throughout — no raw SQL inserts anywhere in the seeding path:**
 
-**What It Does:**
-1. Checks if demo user exists (ID: `12345678-1234-1234-1234-123456789abc`)
-2. If not, creates demo user account (phone: `+919876543210`, email: `demo@spendwise.local`)
-3. Loads 522 transactions from CSV
-4. Parses and inserts into database
-5. Creates pre-configured budgets (Food ₹10k, Travel ₹7k, Transfer ₹10k, Shopping ₹5k)
-6. Registers 4 family/friend contacts (Rahul, Priya, Amit, Shreya)
-7. Logs progress throughout
+| Step | Service called |
+| --- | --- |
+| Create/find demo user | `UserAccountService.findOrCreateByPhone`, `UserProfileService.updateEmail` |
+| Persist + categorize transactions | `IngestService.ingestBatch` — same path a real Android device batch takes, including the real `CategorizationService → FastAPI /predict` call |
+| Resolve seeded transactions' DB UUIDs | `TransactionService.list` (paged, cursor-based) — maps each CSV `transaction_id` to its generated DB `UUID` |
+| Overlay curated categories | `TransactionService.correctCategory` per transaction — the same correction path a real user takes to fix a wrong category (see "Known Issue" below for *why*) |
+| Budgets | `BudgetService.upsert` × 4 (see §5 for which "month" these land in) |
+| Contacts | `ContactService.create` × 4 |
+| EMIs | `EmiService.createManual` × 5 (see §6) |
+| Alerts | `AlertsService.recordIfNotAlreadyTriggeredThisMonth` × 3, `AlertsService.recordRecurringPaymentIfNotAlreadyTriggeredThisMonth` × 1 (see §6) |
+| Recommendations | `RecommendationsService.recordIfNoActiveRecommendationExists` × 4 (see §6) |
 
-**Configuration:**
-```properties
-demo.enabled: true                  # Enable demo seeding
-demo.phone: +919876543210          # Demo user phone
-demo.email: demo@spendwise.local    # Demo user email
+Idempotent: checks `UserAccountService.findByPhone(demoPhone)` first and skips the entire seeding pass if the demo user already exists. Even on the skip path, the demo user's ID is re-registered in `DemoUserRegistry` (see §5) on every startup — that registry is an in-memory bean with no persistence, so it must be repopulated every process start regardless of whether seeding itself ran. The demo user's ID is **not** a hardcoded constant — it's whatever `findOrCreateByPhone` generates, looked up dynamically by phone in the seeder, the login controller, and everywhere else that needs it. Seeding failures are caught and logged, never allowed to block app startup.
+
+**Configuration** (`application.yml`, all overridable via env var):
+```yaml
+demo:
+  enabled: ${DEMO_ENABLED:true}
+  phone: ${DEMO_PHONE:+919876543210}
+  email: ${DEMO_EMAIL:demo@spendwise.local}
+  frozen-month: ${DEMO_FROZEN_MONTH:2026-06}
 ```
 
 ### 4. Demo Login Endpoint
 
-**File:** `backend/src/main/java/com/spendwise/auth/DemoAuthController.java`
+**File:** [`backend/src/main/java/com/spendwise/auth/DemoAuthController.java`](../../backend/src/main/java/com/spendwise/auth/DemoAuthController.java)
 
-**Endpoint:** `POST /api/v1/auth/demo/login`  
-**Auth:** Public (no credentials required)  
+**Endpoints:** `POST /api/v1/auth/demo/login`, `POST /api/v1/auth/demo/info` — both public (`permitAll` in `SecurityConfig`'s `defaultFilterChain`, alongside the other unauthenticated `/auth/*` routes).
+
+Mirrors `DevAuthController`'s pattern exactly: `UserAccountService.findOrCreateByPhone(demoPhone)` (idempotent — creates on demand if seeding hasn't run yet, e.g. `demo.enabled` flipped on after startup) → `UserJwtService.issueAccessToken` → `RefreshTokenService.issue`. Unlike `DevAuthController`, it is **not** `@Profile`-gated — it's a public marketing feature meant to work in every environment where `demo.enabled=true`, not just local dev.
 
 **Response:**
 ```json
@@ -84,217 +77,262 @@ demo.email: demo@spendwise.local    # Demo user email
   "accessToken": "<jwt>",
   "refreshToken": "<jwt>",
   "expiresIn": 604800,
-  "user": {
-    "id": "12345678-1234-1234-1234-123456789abc",
-    "phone": "+919876543210",
-    "email": null
-  }
+  "user": { "id": "<uuid>", "phone": "+919876543210", "email": "demo@spendwise.local" }
 }
 ```
 
-**Features:**
-- ✅ No OTP required
-- ✅ Returns valid JWT tokens
-- ✅ Refresh token properly rotated
-- ✅ Single endpoint (simple integration)
-- ✅ Optional `/auth/demo/info` for landing page preview
+### 5. Frozen-Month Budgets: Keeping a Static CSV's Budgets Non-Blank
 
-### 5. Documentation
+**Problem:** the demo CSV is static and is never re-uploaded. Every other part of the seeded data
+(transactions, EMIs, alerts, recommendations) is a fixed snapshot that doesn't need "now" to mean
+anything in particular — but `BudgetService.listForCurrentMonth` / `progressForCurrentMonth`
+compute spend for `YearMonth.now()`. Once real wall-clock time drifts past the CSV's last covered
+month, the demo's budget cards would silently show ₹0 spent against every limit, which defeats the
+point of a demo meant to showcase budget tracking.
 
-**Files Created:**
-- ✅ `docs/demo-data.md` — Complete demo data specification
-- ✅ `docs/demo-login-integration.md` — Frontend integration guide
-- ✅ `docs/api.md` — Updated with demo endpoints
-- ✅ This file — Implementation summary
+**Fix — two small, narrow, additive pieces, both real-user-safe:**
+
+- **`common/demo/DemoUserRegistry.java`** (new file) — a `@Component` holder bean with a single
+  `volatile UUID demoUserId` field and `register(UUID)` / `isDemoUser(UUID)` methods. No business
+  logic, no dependency on any other module's domain types. Registered by `DemoDataSeeder` on every
+  application startup (see §3). This is a deliberate, narrow exception to the "cross-module calls
+  go through injected service interfaces only" rule — see [`docs/spec/architecture.md`](../spec/architecture.md#module-communication-rules)
+  for why it's structured this way and why it doesn't count as a module-boundary violation.
+- **`BudgetServiceImpl.resolveMonth(UUID userId)`** — a private helper, used everywhere the old code
+  called `YearMonth.now()` directly (`upsert`, `listForCurrentMonth`, `progressForCurrentMonth`).
+  Returns the configured `demo.frozen-month` (`YearMonth`, currently `2026-06`) **only** when
+  `demoUserRegistry.isDemoUser(userId)` is true; returns `YearMonth.now()` for every other user,
+  unconditionally.
+
+**Verified real-user safety:** confirmed with a dev-login test user (a different, non-demo seeded
+account) that budget calculations still resolve to the real current month — `resolveMonth` returns
+`YearMonth.now()` for any `userId` that isn't the registered demo user, with no other code path
+affected.
+
+**Keep in sync:** `demo.frozen-month` (backend `application.yml`) must match the CSV's actual last
+month, and must stay in sync with the frontend's hardcoded `DEMO_RANGE` constant
+(`frontend/src/lib/date-range.tsx` — see §7). If the CSV is ever regenerated with a different date
+range, update both.
+
+### 6. EMIs, Alerts & Recommendations Seeding — Demo-Only, Parallel to the Real Systems
+
+**Investigated first, before writing any seeding code:** the real recurring-payment detector and
+the alert/recommendation evaluators (`AlertEvaluatorJob`, `RecommendationGeneratorJob`) are both
+`@Scheduled` jobs keyed to the real wall clock (`YearMonth.now()`, `Instant.now().minus(60 days)`,
+etc.) — structurally incapable of ever firing against this demo's static, never-refreshed CSV data,
+no matter how long the app stays up. Unlike transactions/budgets/contacts, EMIs/alerts/recommendations
+can't be produced by simply running the real ingest pipeline and waiting for a background job to
+pick them up.
+
+**This is 100% hardcoded, demo-only seeding — not a change to the real algorithms.** The real,
+generic recurring-detection and alert/recommendation systems predate this session, are untouched by
+it, and continue to run automatically for every real user based on their genuine transaction data.
+The seeding below is a separate, parallel, demo-only code path that exists solely so the demo
+dashboard's Alerts / Upcoming EMIs / Recommendations cards are never blank — it goes through each
+feature's own real service methods (never a raw table insert), using hand-picked values that match
+the CSV's actual recurring merchants.
+
+**EMIs (5, via `EmiService.createManual`)** — `dueDay` is set on every one, since the dashboard's
+"Upcoming EMIs" card filters out EMIs with a null `dueDay`:
+
+| Label | Amount | Due day |
+| --- | --- | --- |
+| Car Loan EMI | ₹5,000 | 28th |
+| Spotify Premium | ₹69 | 27th |
+| Netflix Subscription | ₹199 | 1st |
+| Electricity Bill | ₹1,650 | 28th |
+| Gas Bill | ₹1,050 | 12th |
+
+**Alerts (4, spanning every `AlertType` the dashboard renders)**, via
+`AlertsService.recordIfNotAlreadyTriggeredThisMonth` (three threshold alerts) and
+`AlertsService.recordRecurringPaymentIfNotAlreadyTriggeredThisMonth` (one recurring-payment alert):
+
+| Type | Category | Priority | Read state |
+| --- | --- | --- | --- |
+| `CATEGORY_APPROACHING_LIMIT` | Shopping | Medium | Unread |
+| `CATEGORY_OVERSPEND` | Food / Dine Out | High | Unread |
+| `MID_MONTH_BUDGET` | (all categories) | High | **Read** — deliberately, to show both the read and unread bell-badge states in one demo session |
+| `RECURRING_PAYMENT` | — | Medium | Unread — wired to the actual most-recent seeded Spotify transaction's UUID, so clicking "Confirm" in the UI creates a real EMI from a real transaction, exactly as it would for a genuine user |
+
+**Recommendations (4)**, via `RecommendationsService.recordIfNoActiveRecommendationExists`: three
+category-specific (Shopping, Travel, Food / Dine Out) using the demo's actual seeded spend figures
+for each category, plus one global recommendation (`categoryId: null`) about the salary credit being
+a consistent recurring pattern, suggesting a savings auto-transfer.
 
 ## Architecture
 
 ```
-Landing Page
-    ↓
-[Try Demo] Button
-    ↓
-POST /api/v1/auth/demo/login
-    ↓
-DemoAuthController
-    ↓
-JwtTokenProvider (generates access token)
-RefreshTokenService (generates refresh token)
-    ↓
-Return tokens to frontend
-    ↓
-Frontend stores tokens
-    ↓
-Redirect to dashboard
-    ↓
-All API calls use tokens
-    ↓
-Dashboard shows 522 pre-populated demo transactions
+Landing Page → [Try Demo] → POST /api/v1/auth/demo/login → DemoAuthController
+  → UserAccountService.findOrCreateByPhone → UserJwtService + RefreshTokenService
+  → tokens returned → frontend stores tokens → redirect to /dashboard
+  → DateRangeProvider detects the demo phone number, applies the hardcoded DEMO_RANGE once
+  → all subsequent API calls use the token like any real session
 ```
 
 ## Data Flow: Demo Seeding on Startup
 
 ```
-Application Startup
-    ↓
-DemoDataSeeder.seedDemoDataOnStartup()
-    ↓
-Check if demo user (ID: 12345...) exists in database
-    ↓
-If not exists:
-    ├─ CREATE users row (phone: +919876543210)
-    ├─ CREATE user_preferences row
-    ├─ Load data/demo-transactions.csv
-    ├─ CsvTransactionParser.parse(inputStream)
-    ├─ For each transaction:
-    │   └─ INSERT into transactions table
-    ├─ CREATE pre-configured budgets (4 categories)
-    └─ CREATE pre-registered contacts (4 people)
-    ↓
-Log completion
+ApplicationReadyEvent
+  → DemoDataSeeder.seedDemoDataOnStartup()
+  → UserAccountService.findByPhone(demoPhone) — if present, register in DemoUserRegistry and skip (idempotent)
+  → UserAccountService.findOrCreateByPhone + UserProfileService.updateEmail
+  → DemoUserRegistry.register(demoUser.id())
+  → CsvTransactionParser.parse(csv) → IngestService.ingestBatch(userId, items)
+      (persists each transaction + triggers real ML categorization, same as a device sync)
+  → TransactionService.list (paged) to resolve client transaction_id → DB UUID
+  → CsvTransactionParser.parseCategoryOverrides(csv) → TransactionService.correctCategory per row
+  → BudgetService.upsert × 4 (lands in BudgetServiceImpl.resolveMonth's demo.frozen-month, not YearMonth.now())
+  → ContactService.create × 4
+  → EmiService.createManual × 5
+  → AlertsService.recordIfNotAlreadyTriggeredThisMonth × 3, recordRecurringPaymentIfNotAlreadyTriggeredThisMonth × 1
+  → RecommendationsService.recordIfNoActiveRecommendationExists × 4
 ```
 
 ## Data Flow: Future User CSV Upload
 
-When you implement user CSV upload (Phase 2):
+Unchanged from the original design — `CsvTransactionParser.parse()` is the reusable half of this
+feature. A future upload endpoint would call `parse()` then `IngestService.ingestBatch()` directly;
+it would **not** use `parseCategoryOverrides()`, `DemoUserRegistry`, or any of the EMI/alert/
+recommendation seeding above — all of that is demo-only.
+
+## 7. Frontend Integration
+
+**File:** [`frontend/src/lib/authApi.ts`](../../frontend/src/lib/authApi.ts)
+
+- `demoLogin()` — mirrors the existing `devLogin()` shape: `POST /auth/demo/login` (no body, `auth: false`), stores the returned tokens via the same `setTokens` helper every other login path uses.
+- `DEMO_PHONE = "+919876543210"` — exported constant, matches the backend's `demo.phone` default. Used client-side to detect a demo session without adding a new endpoint.
+
+**File:** [`frontend/src/components/landing/Landing.tsx`](../../frontend/src/components/landing/Landing.tsx)
+
+- A "Try demo" button in the header (replacing the redundant "Sign in" link, which pointed at the same `/login` page as "Get started") and a "Try the demo" button in the hero CTA row, both calling `onTryDemo()` → `demoLogin()` → `router.replace("/dashboard")`.
+- Busy/error state (`demoBusy`, `demoError`) with a user-facing message on failure: "Demo account unavailable. Please try again or sign up for a regular account."
+
+**File:** [`frontend/src/components/shared/TopBar.tsx`](../../frontend/src/components/shared/TopBar.tsx)
+
+- A persistent "Demo account" badge (pill, `PlayCircle` icon) shown whenever the logged-in user's `phone` (from the already-fetched `/users/me` profile, shared SWR cache key with `UserMenu` — no extra network request) matches `DEMO_PHONE`.
+
+**File:** [`frontend/src/lib/date-range.tsx`](../../frontend/src/lib/date-range.tsx)
+
+- A hardcoded `DEMO_RANGE` constant (`from: "2025-07-01"`, `to: "2026-06-30"`, matching the CSV's actual coverage and the backend's `demo.frozen-month`), applied automatically and exactly once via a `useEffect` (guarded by a `useRef`) when `DateRangeProvider` detects a demo session via `/users/me`. Real users' default range (`computeRange("this-month")`) is completely unaffected — the effect only fires when `profile?.phone === DEMO_PHONE`.
+
+## Verification (2026-07-10, local)
+
+Ran end-to-end against a fresh local Postgres + FastAPI ML service, then against the frontend in a
+browser:
 
 ```
-User selects CSV file
-    ↓
-POST /users/me/bank-statement/upload (new endpoint)
-    ↓
-Validate file type & size
-    ↓
-CsvTransactionParser.parse(uploadedFile)  ← Reuses seeder's parser
-    ↓
-Validate transactions
-    ↓
-POST /ingest/transactions (batch)
-    ↓
-Deduplicate, categorize, store
-    ↓
-Show success & imported count
+demo_user | transactions | budgets | contacts | emis | alerts | recommendations | categorized
+        1 |          522 |       4 |        4 |    5 |      4 |                4 |         522
 ```
+
+Category spread after seeding (curated overlay applied):
+
+```
+Food / Dine Out  171   Travel        155   Groceries     91
+Transfers         41   Shopping       23   Subscriptions 14
+Miscellaneous     13   Fees & Debt    12   Medical        2
+```
+
+`POST /api/v1/auth/demo/login` → `200 OK` with valid tokens; token verified against
+`GET /api/v1/transactions`, `GET /api/v1/budgets`, `GET /api/v1/contacts` — all return correct,
+correctly-scoped demo data. Browser click-through confirmed: landing page "Try demo" → dashboard
+loads with non-blank budget progress (frozen-month), 5 upcoming EMIs, 4 alerts (3 unread, 1 read),
+4 recommendations, and the "Demo account" badge in the top bar.
+
+## Known Issue: Live ML Model Bias
+
+The trained classifier (`ml/models/category_classifier.joblib`) currently predicts "Transfers" for
+~89% of this demo dataset at confidence just above the 0.5 threshold (e.g. "Zomato" → Transfers,
+0.51 confidence, when it should clearly be Food). This is a **model training-data quality issue**,
+not a bug in the ingest/seeding pipeline — `/predict` is being called correctly and the low-confidence
+retry job would behave identically for a real user's transactions.
+
+The demo works around this via the curated-category overlay (§2, §3): after real ingest + ML
+categorization runs, `DemoDataSeeder` replays the CSV's own curated `category` column onto each
+transaction using `TransactionService.correctCategory` — the same correction path a real user takes
+to fix a wrong category, not a bypass of the categorization pipeline. This is a **known, documented
+limitation of the currently-trained model**, not a permanent design choice: if the classifier is
+retrained with better-discriminating data, this overlay may become unnecessary, or may need
+adjusting if the CSV or model changes in the meantime. Worth tracking separately in `ml/training/`,
+`ml/evaluation/` — out of scope for the demo feature itself.
 
 ## Deployment Checklist
 
-- [ ] Copy `data/demo-transactions.csv` to backend resources (`backend/src/main/resources/data/`)
-- [ ] Verify `CsvTransactionParser.java` compiles
-- [ ] Verify `DemoDataSeeder.java` compiles
-- [ ] Verify `DemoAuthController.java` compiles
-- [ ] Set `demo.enabled: true` in `application.yml`
-- [ ] Start backend application
-- [ ] Check logs for "Demo data seeding completed successfully"
-- [ ] Verify demo user exists in database: `SELECT * FROM users WHERE id = '12345678-1234-1234-1234-123456789abc'`
-- [ ] Verify 522 transactions loaded: `SELECT COUNT(*) FROM transactions WHERE user_id = '12345678-1234-1234-1234-123456789abc'`
-- [ ] Test endpoint: `curl -X POST http://localhost:8080/api/v1/auth/demo/login`
-- [ ] Frontend: Add "Try Demo" button on landing page
-- [ ] Frontend: Implement demo login handler (see `docs/demo-login-integration.md`)
-- [ ] Test end-to-end: Click button → See demo dashboard with transactions
-
-## Files Modified/Created
-
-### New Files Created:
-- `data/generate_demo_csv.py` — Python script to generate CSV
-- `data/demo-transactions.csv` — Generated demo transactions
-- `backend/src/main/resources/data/demo-transactions.csv` — Copy for resources
-- `backend/src/main/java/com/spendwise/transaction/util/CsvTransactionParser.java`
-- `backend/src/main/java/com/spendwise/ingest/DemoDataSeeder.java`
-- `backend/src/main/java/com/spendwise/auth/DemoAuthController.java`
-- `docs/demo-data.md`
-- `docs/demo-login-integration.md`
-
-### Files Modified:
-- `docs/api.md` — Added demo endpoints
+- [x] `data/demo-transactions.csv` copied to `backend/src/main/resources/data/`
+- [x] `CsvTransactionParser.java`, `DemoDataSeeder.java`, `DemoAuthController.java` compile (Lombok removed — this project doesn't use it; rewritten with explicit constructors/loggers to match the rest of the codebase)
+- [x] `demo.enabled/phone/email/frozen-month` added to `application.yml`
+- [x] `/api/v1/auth/demo/login` and `/api/v1/auth/demo/info` added to `SecurityConfig`'s public route list (missing this caused a 403 on first test)
+- [x] Backend started, seeding logs confirmed clean
+- [x] DB verification queries run — counts match expected (522 transactions / 4 budgets / 4 contacts / 5 EMIs / 4 alerts / 4 recommendations / 522 categorized)
+- [x] `curl -X POST http://localhost:8080/api/v1/auth/demo/login` verified end-to-end with a follow-up authenticated call
+- [x] Frontend: "Try demo" buttons added to landing page (header + hero CTA)
+- [x] Frontend: `demoLogin()` implemented in `lib/authApi.ts`, wired into `Landing.tsx`
+- [x] Frontend: demo badge (`TopBar.tsx`) and demo date-range default (`date-range.tsx`) implemented
+- [x] Tested end-to-end in the browser: click button → demo dashboard loads with non-blank budgets/EMIs/alerts/recommendations
+- [ ] Production: confirm `FASTAPI_ML_URL` / `ML_INTERNAL_KEY` are set in the deployed environment so live categorization matches local behavior
+- [ ] Production: confirm `demo.frozen-month` / frontend `DEMO_RANGE` are revisited if the CSV is ever regenerated
 
 ## Known Limitations & Future Enhancements
 
-### Current Limitations:
-- Demo data is static (doesn't change unless backend restarts)
-- Demo user cannot upload real bank statements (optional: disable UI for demo)
+- Demo data is static once seeded — no scheduled reset job exists yet
 - No device API key for demo (demo is web-only, not Android)
-- Categorization is auto-assigned during seeding (not via ML)
+- Model bias (see above) means any *newly* seeded transaction not covered by the CSV's curated category list would fall back to live (currently weak) ML output
+- The frozen-month budget mechanism and the EMI/alert/recommendation seeding are both permanently tied to the CSV's current date range (Jul 2025 – Jun 2026); regenerating the CSV with a different range requires updating `demo.frozen-month`, the frontend `DEMO_RANGE`, and the hand-picked EMI/alert/recommendation values together
 
-### Future Enhancements:
-1. **Reset demo data daily/weekly** — Scheduled cleanup job to reset to fresh state
-2. **User CSV upload** — Reuse `CsvTransactionParser` for bank statement uploads
-3. **Demo-to-real upgrade** — Allow demo user to convert to real account by adding phone
-4. **Multiple demo versions** — Different scenarios (student, family, freelancer)
-5. **Demo analytics** — Pre-generated recommendations and insights
-6. **Android demo** — Register device API key for demo account
+### Future Enhancements
 
-## Testing
-
-### Unit Tests to Write:
-- `CsvTransactionParserTest` — Validate CSV parsing (valid/invalid rows)
-- `DemoDataSeederTest` — Verify seeding creates correct number of rows
-- `DemoAuthControllerTest` — Verify endpoint returns valid tokens
-
-### Integration Tests:
-- End-to-end demo login → dashboard view
-- CSV upload with demo parser (future)
-- Transaction categorization on demo data
-
-### Manual Testing:
-See `docs/demo-login-integration.md` "Testing" section
+1. Scheduled reset job to restore demo data to a fresh state periodically
+2. Demo-to-real upgrade path (convert demo session to a real account)
+3. Multiple demo personas (student, family, freelancer)
+4. Investigate/retrain the classifier for better category discrimination, then re-evaluate whether the curated-category overlay is still needed
 
 ## Monitoring & Logging
 
-**Application startup logs to check:**
+**Startup logs to check:**
 ```
 INFO  DemoDataSeeder - Starting demo data seeding...
 INFO  DemoDataSeeder - Creating demo user with phone: +919876543210
+INFO  DemoDataSeeder - Demo user created: <uuid>
 INFO  DemoDataSeeder - Loading demo transactions from CSV: data/demo-transactions.csv
 INFO  DemoDataSeeder - Parsed 522 transactions from CSV
-INFO  DemoDataSeeder - Inserted 522 transactions for demo user
-INFO  DemoDataSeeder - Setting up demo user budgets
-INFO  DemoDataSeeder - Setting up demo user contacts
+INFO  DemoDataSeeder - Ingested demo transactions: status=200 OK, items=522
+INFO  DemoDataSeeder - Applied 522 curated categories from CSV
+INFO  DemoDataSeeder - Set budget for category 7 to Rs.10000
+INFO  DemoDataSeeder - Created contact: Rahul Sharma (FRIEND)
+INFO  DemoDataSeeder - Created EMI: Car Loan EMI (Rs.5000, due day 28)
+INFO  DemoDataSeeder - Created alert: CATEGORY_APPROACHING_LIMIT (MEDIUM)
+INFO  DemoDataSeeder - Created recurring-payment alert for Spotify
+INFO  DemoDataSeeder - Created recommendation for category 1
 INFO  DemoDataSeeder - Demo data seeding completed successfully
 ```
 
 **Database verification queries:**
 ```sql
--- Check demo user
-SELECT id, phone, email FROM users WHERE id = '12345678-1234-1234-1234-123456789abc';
+SELECT id, phone, email FROM users WHERE phone = '+919876543210';
 
--- Check transactions count
-SELECT COUNT(*) FROM transactions WHERE user_id = '12345678-1234-1234-1234-123456789abc';
+SELECT COUNT(*) FROM transactions t
+JOIN users u ON t.user_id = u.id WHERE u.phone = '+919876543210';
 
--- Check budgets
 SELECT c.name, b.monthly_limit FROM budgets b
+JOIN users u ON b.user_id = u.id
 JOIN categories c ON b.category_id = c.id
-WHERE b.user_id = '12345678-1234-1234-1234-123456789abc';
+WHERE u.phone = '+919876543210';
 
--- Check contacts
-SELECT name, relationship_type FROM contacts WHERE user_id = '12345678-1234-1234-1234-123456789abc';
+SELECT name, relationship_type FROM contacts c
+JOIN users u ON c.user_id = u.id WHERE u.phone = '+919876543210';
+
+SELECT label, due_day, amount FROM emis e
+JOIN users u ON e.user_id = u.id WHERE u.phone = '+919876543210';
+
+SELECT type, priority, is_read FROM alerts a
+JOIN users u ON a.user_id = u.id WHERE u.phone = '+919876543210';
 ```
+
+> Note: the demo user's `id` is generated dynamically by `findOrCreateByPhone`, not a fixed
+> constant — always resolve it by phone (`+919876543210`), not by a hardcoded UUID.
 
 ## Next Steps
 
-1. **Backend Deployment:**
-   - Ensure CSV is in `backend/src/main/resources/data/demo-transactions.csv`
-   - Deploy backend with `demo.enabled: true`
-   - Verify seeding completes on startup
-
-2. **Frontend Integration:**
-   - Add "Try Demo" button to landing page
-   - Implement demo login handler (see integration guide)
-   - Add optional demo user badge/indicator
-
-3. **QA Testing:**
-   - Test demo login flow end-to-end
-   - Verify all dashboard features work with demo data
-   - Check analytics, budgets, alerts, exports
-
-4. **Marketing/Documentation:**
-   - Update landing page with demo info
-   - Add "Demo" to help/FAQ
-   - Highlight demo as onboarding tool
-
-## Questions & Support
-
-For questions about:
-- **CSV format** → See `docs/demo-data.md` "CSV Column Reference"
-- **Frontend integration** → See `docs/demo-login-integration.md`
-- **Backend setup** → See `docs/demo-data.md` "Backend Setup"
-- **Parser reuse for uploads** → See `docs/demo-feature-complete.md` "Future User CSV Upload"
+1. **QA** — walk through [demo-deployment-checklist.md](./demo-deployment-checklist.md) (flagged for a follow-up pass — it still assumes a hardcoded demo user UUID and raw-SQL seeding, both no longer accurate; see this doc's audit notes)
+2. **Production deploy** — confirm ML service env vars and `demo.frozen-month` are set so live categorization and budget progress work the same way in production as they did locally
+3. **Revisit the curated-category overlay** once the classifier is retrained (see "Known Issue" above)

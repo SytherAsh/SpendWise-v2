@@ -28,7 +28,7 @@ These documents define **what SpendWise is**. Changes to any one often require u
 |----------|---------|-----------|--------|
 | [spec/vision.md](spec/vision.md) | Product vision, target users, success criteria | ~2 months | FROZEN |
 | [spec/requirements.md](spec/requirements.md) | Functional requirements: 12 categories, budgets, alerts, recurring detection | ~3 weeks | STABLE |
-| [spec/architecture.md](spec/architecture.md) | System architecture: 11 Spring Boot modules, Android packages, data flow | 1 day | ACTIVE |
+| [spec/architecture.md](spec/architecture.md) | System architecture: 11 Spring Boot modules, Android packages, data flow | Today | ACTIVE |
 | [spec/api.md](spec/api.md) | REST API endpoint reference (all 11 groups, auth, demo endpoints) | Current | ACTIVE |
 | [spec/database.md](spec/database.md) | PostgreSQL schema: 18 tables, RLS policies, migration history | ~3 weeks | ACTIVE |
 | [spec/security.md](spec/security.md) | Security protocols, DPDP Act 2023 compliance, auth rules, encryption | ~4 weeks | STABLE |
@@ -70,10 +70,10 @@ These documents specify **demo account setup** and pre-seeded data for marketing
 
 | Document | Purpose | Last Touch | Status |
 |----------|---------|-----------|--------|
-| [demo/demo-data.md](demo/demo-data.md) | 522 demo transactions spanning 1 year, realistic spending patterns | NEW | NEW |
-| [demo/demo-feature-complete.md](demo/demo-feature-complete.md) | Demo feature checklist: what works in demo mode | NEW | NEW |
-| [demo/demo-login-integration.md](demo/demo-login-integration.md) | Frontend demo login flow, no-auth landing page | NEW | NEW |
-| [demo/demo-deployment-checklist.md](demo/demo-deployment-checklist.md) | Demo account seeding, pre-flight verification | NEW | NEW |
+| [demo/demo-data.md](demo/demo-data.md) | 522 demo transactions spanning 1 year, realistic spending patterns | ~2 weeks | **STALE** — still describes the original raw-SQL/hardcoded-UUID design; not updated for the frozen-month budget mechanism, curated-category overlay, or EMI/alert/recommendation seeding (see demo-feature-complete.md for the current source of truth) |
+| [demo/demo-feature-complete.md](demo/demo-feature-complete.md) | Demo feature checklist: verified architecture, ML bias workaround, frozen-month budgets, EMI/alert/recommendation seeding | Today | ACTIVE — verified against live code |
+| [demo/demo-login-integration.md](demo/demo-login-integration.md) | Frontend demo login flow: real `demoLogin()`/`DEMO_PHONE`/badge/date-range implementation | Today | ACTIVE — verified against live code |
+| [demo/demo-deployment-checklist.md](demo/demo-deployment-checklist.md) | Demo account seeding, pre-flight verification | ~2 weeks | **STALE** — checklist still assumes a hardcoded demo user UUID and raw-SQL seeding from the pre-deployment design; needs a follow-up pass before use |
 
 ---
 

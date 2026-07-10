@@ -80,6 +80,10 @@ public class SecurityConfig {
                                 // Only ever mapped to a real controller under the "local" profile
                                 // (see DevAuthController) — 404s everywhere else, permitAll or not.
                                 "/api/v1/auth/dev-login",
+                                // Public marketing feature (DemoAuthController) — no credentials,
+                                // single click from the landing page's "Try Demo" button.
+                                "/api/v1/auth/demo/login",
+                                "/api/v1/auth/demo/info",
                                 "/api/v1/health")
                         .permitAll()
                         .anyRequest()

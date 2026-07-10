@@ -105,3 +105,17 @@ app:
     # logic." Only "stub" exists today (LlmConfig) — a real provider is a future addition,
     # not this epic's scope. Same env-var-default pattern as app.ml.* above.
     provider: ${LLM_PROVIDER:stub}
+
+demo:
+  # Demo account feature — auto-seeds database on startup with realistic transaction data
+  # Disable by setting demo.enabled=false or env var DEMO_ENABLED=false
+  enabled: ${DEMO_ENABLED:true}
+  phone: ${DEMO_PHONE:+919876543210}
+  email: ${DEMO_EMAIL:demo@spendwise.local}
+  # The demo CSV (data/demo-transactions.csv) is static and never re-uploaded, so "the real
+  # current month" drifts away from it over time and every budget would show zero spend.
+  # Pins the demo user's notion of "current month" (BudgetServiceImpl) to the CSV's last
+  # populated month instead — update this if the CSV is ever regenerated with a different
+  # date range. Must stay in sync with the frontend's hardcoded demo date-range default
+  # (frontend/src/lib/date-range.tsx, DEMO_RANGE).
+  frozen-month: ${DEMO_FROZEN_MONTH:2026-06}

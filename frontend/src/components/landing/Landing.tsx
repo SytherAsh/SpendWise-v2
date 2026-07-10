@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, MotionConfig } from "framer-motion";
 import {
   Smartphone,
@@ -15,10 +17,17 @@ import {
   Check,
   TrendingUp,
   Lock,
+  PlayCircle,
 } from "lucide-react";
 import { categoryColor } from "@/lib/categories";
 import { BrandMark } from "@/components/shared/BrandMark";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { demoLogin } from "@/lib/authApi";
+
+function demoErrorMessage(err: unknown): string {
+  if (err instanceof Error && err.message) return err.message;
+  return "Demo account unavailable. Please try again or sign up for a regular account.";
+}
 
 const EASE = [0.2, 0.8, 0.2, 1] as const;
 
@@ -188,6 +197,22 @@ function ProductMock() {
 /* ------------------------------------------------------------------ page --- */
 
 export function Landing() {
+  const router = useRouter();
+  const [demoBusy, setDemoBusy] = useState(false);
+  const [demoError, setDemoError] = useState<string | null>(null);
+
+  async function onTryDemo() {
+    setDemoError(null);
+    setDemoBusy(true);
+    try {
+      await demoLogin();
+      router.replace("/dashboard");
+    } catch (err) {
+      setDemoError(demoErrorMessage(err));
+      setDemoBusy(false);
+    }
+  }
+
   return (
     <MotionConfig reducedMotion="user">
       <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
@@ -220,12 +245,14 @@ export function Landing() {
             </nav>
             <div className="flex items-center gap-2">
               <ThemeToggle />
-              <Link
-                href="/login"
-                className="hidden rounded-[var(--radius-sm)] px-3 py-2 text-sm font-medium text-foreground-muted transition-colors hover:text-foreground sm:inline-flex"
+              <button
+                type="button"
+                onClick={onTryDemo}
+                disabled={demoBusy}
+                className="hidden items-center gap-1.5 rounded-[var(--radius-sm)] px-3 py-2 text-sm font-medium text-foreground-muted transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-60 sm:inline-flex"
               >
-                Sign in
-              </Link>
+                <PlayCircle className="size-4" /> {demoBusy ? "Loading…" : "Try demo"}
+              </button>
               <Link
                 href="/login"
                 className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition-all hover:shadow-[var(--glow-brand-sm)] dark:bg-[image:var(--gradient-brand-vivid)] dark:text-[#04170d]"
@@ -265,13 +292,29 @@ export function Landing() {
                 >
                   Get started <ArrowRight className="size-4" />
                 </Link>
+                <button
+                  type="button"
+                  onClick={onTryDemo}
+                  disabled={demoBusy}
+                  className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-border-strong bg-surface px-6 py-3 text-sm font-medium text-foreground transition-colors hover:border-brand-500 disabled:pointer-events-none disabled:opacity-60"
+                >
+                  <PlayCircle className="size-4" /> {demoBusy ? "Loading demo…" : "Try the demo"}
+                </button>
                 <a
                   href="#how"
-                  className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-border-strong bg-surface px-6 py-3 text-sm font-medium text-foreground transition-colors hover:border-brand-500"
+                  className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-3 text-sm font-medium text-foreground-muted transition-colors hover:text-foreground"
                 >
                   See how it works
                 </a>
               </div>
+              {demoError && (
+                <p
+                  role="alert"
+                  className="mt-3 max-w-md rounded-[var(--radius-sm)] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-3 py-2 text-sm text-[var(--color-danger)]"
+                >
+                  {demoError}
+                </p>
+              )}
               <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-foreground-subtle">
                 {["Paytm", "GPay", "PhonePe", "SBI"].map((b) => (
                   <span key={b} className="flex items-center gap-1.5">
