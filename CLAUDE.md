@@ -98,13 +98,87 @@ See [docs/decisions.md](./docs/decisions.md) for full ADRs.
 | **UI** | `com.spendwise.ui` | Android screens: dashboard, transactions, chatbot, settings |
 | **Storage** | `com.spendwise.storage` | Room database definition and DAOs for offline transaction queue |
 
+## Documentation Structure & Creation
+
+**Two documentation trees exist — maintain both and follow the structure strictly.**
+
+### docs/ — Product Specification (Frozen/Evolving)
+
+**Purpose:** Defines **what** SpendWise **is**. Authoritative spec. When in doubt, this wins.
+
+**Structure:**
+
+```text
+docs/
+├── spec/                 (Core product spec — changes only when features land)
+│   ├── vision.md, requirements.md, architecture.md, api.md
+│   ├── database.md, security.md, decisions.md
+├── operations/           (Dev & deployment practices — updates rarely)
+│   ├── deployment.md, testing.md, development_guidelines.md, user_flows.md
+├── design/               (Visual identity & design system)
+│   ├── design-system.md, system-diagram.md
+├── demo/                 (Demo account specs)
+│   ├── demo-data.md, demo-feature-complete.md, demo-login-integration.md, demo-deployment-checklist.md
+├── archive/              (Deprecated docs with notices — grows over time)
+└── README.md             (Navigation guide)
+```
+
+**When creating a new docs/ file:**
+
+- **Determine category** — spec, operations, design, demo, or archive?
+- **Check if file already exists** — don't create duplicates
+- **If spec change**, update the relevant file in `docs/spec/` (don't create new files)
+- **If new feature area**, add to appropriate category or ask user for approval
+- **Never create** markdown files at `docs/` root level (use subfolders)
+
+### implementation/ — Execution Planning (Living)
+
+**Purpose:** Defines **how** to build it. Execution tracking. Updated daily.
+
+**Structure:**
+
+```text
+implementation/
+├── epics/                (13 epic specifications — preserved as reference)
+├── tracking/             (Execution tracking)
+│   ├── STATUS.md         (Master task checklist — only file at tracking/ root)
+│   ├── completed/        (Archived completed epic snapshots)
+│   ├── notes/            (Session findings, blockers, decisions)
+│   └── checklists/       (Verification: REVIEW.md, LOCAL-E2E-CHECKLIST.md)
+├── reference/            (Supporting docs)
+│   └── development_environment.md
+├── README.md, ROADMAP.md, DEPENDENCY-GRAPH.md, TASK-TEMPLATE.md (root)
+```
+
+**When creating a new implementation/ file:**
+
+- **Session notes?** → `implementation/tracking/notes/session-YYYY-MM-DD.md`
+- **New epic?** → `implementation/epics/epic-NN-name.md` (ask user first)
+- **Checklist/verification?** → `implementation/tracking/checklists/`
+- **Archive closed epic snapshot?** → `implementation/tracking/completed/epic-NN-summary.md`
+- **Never create** new files at `implementation/` root without approval
+
+### The Rule
+
+**Before creating any new markdown file, verify:**
+
+- ✅ It fits the structure above
+- ✅ A similar file doesn't already exist
+- ✅ It's in the correct folder (docs/ or implementation/)
+- ✅ It has proper category subfolder (not root level)
+
+**If uncertain:** Ask the user. Do not create files outside the structure.
+
+---
+
 ## Working in this codebase
 
-- Read [docs/development_guidelines.md](./docs/development_guidelines.md) for coding standards and the pre-commit security checklist
+- Read [docs/operations/development_guidelines.md](./docs/operations/development_guidelines.md) for coding standards and the pre-commit security checklist
 - All API routes are prefixed `/api/v1/`
 - JWT Bearer token required on all protected endpoints
 - The current focus is feature enhancement and demo data design — read **[Current Phase](#current-phase--feature-enhancement--demo-data-design)** below before starting work
 - See **Git & GitHub Workflow** below for the commit and push process
+- **Documentation:** Follow the structure above. Never create markdown files outside the defined folders.
 
 ### Security invariants
 
