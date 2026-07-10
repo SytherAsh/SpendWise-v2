@@ -42,7 +42,7 @@ Authorization: Bearer <access_token>
 | PUT | `/users/me` | Update profile | User |
 | GET | `/users/me/preferences` | Get preferences (alert channels, selected apps/banks) | User |
 | PUT | `/users/me/preferences` | Update preferences | User |
-| PUT | `/users/me/fcm-token` | Register/rotate the device's Firebase Cloud Messaging token, used by Alerts' push dispatch (added Epic 5 — see `docs/database.md` `user_preferences.fcm_token`) | User |
+| PUT | `/users/me/fcm-token` | Register/rotate the device's Firebase Cloud Messaging token, used by Alerts' push dispatch (added Epic 5 — see `docs/spec/database.md` `user_preferences.fcm_token`) | User |
 | POST | `/users/me/onboarding` | Submit onboarding data; records DPDP consent; registers and returns the raw device API key (only occurrence — store immediately in device secure storage) | User |
 | POST | `/users/me/bank-statement` | Upload bank statement PDF for historical transaction seed | User |
 
@@ -84,7 +84,7 @@ Authorization: Bearer <access_token>
 >
 > **Category filters are debit-only:** whenever `category` is set (a numeric id or `uncategorized`), the result additionally excludes any transaction where `debit` is not positive — money received (a refund, an incoming transfer) never appears in a category-filtered view, even if it happens to carry that category. This only applies when a category filter is active; the unfiltered list (no `category` param) is unaffected and still returns every transaction, spend or income.
 >
-> **`direction` (added for the Transactions page "Received" tile, UI/UX polish phase):** `credit` restricts the result to credit-direction transactions (`credit > 0`), `debit` to debit-direction (`debit > 0`); omitted applies no direction filter. Independent of `category`/`uncategorized` — passing both is accepted but the two filters simply AND together (a category filter's own implicit `debit > 0` combined with `direction=credit` yields no rows, since a transaction can't be both). The Received tile calls this with `direction=credit` and no `category`, deliberately pulling every credit-direction transaction across all categories — see `docs/decisions.md` ADR-010's status update. Any value other than `credit`/`debit` is a 400 (`INVALID_DIRECTION`).
+> **`direction` (added for the Transactions page "Received" tile, UI/UX polish phase):** `credit` restricts the result to credit-direction transactions (`credit > 0`), `debit` to debit-direction (`debit > 0`); omitted applies no direction filter. Independent of `category`/`uncategorized` — passing both is accepted but the two filters simply AND together (a category filter's own implicit `debit > 0` combined with `direction=credit` yields no rows, since a transaction can't be both). The Received tile calls this with `direction=credit` and no `category`, deliberately pulling every credit-direction transaction across all categories — see `docs/spec/decisions.md` ADR-010's status update. Any value other than `credit`/`debit` is a 400 (`INVALID_DIRECTION`).
 >
 > **`sort=amount_desc` (added for the Analytics category deep-dive's "biggest transactions"):** ranks by `ABS(amount)` descending instead of the default `transaction_date DESC, id DESC`. This is a **bounded, non-paginated top-N read**, not a second pagination mode — `cursor` cannot be combined with it (400 `INVALID_SORT`; ranking by magnitude has no stable keyset seek across concurrent inserts the way `(transaction_date, id)` does), and the response always has `nextCursor: null`, `hasMore: false` regardless of how many rows actually match. Ask for a bigger `limit` if you need more than one "page." Any `sort` value other than `date_desc` (the default) or `amount_desc` is a 400 (`INVALID_SORT`).
 
@@ -146,7 +146,7 @@ Query parameters for analytics: `from`, `to`, `granularity` (week/month/year —
 > - `/analytics/comparison` takes **only** `granularity` (default `month`) — it does not accept
 >   `from`/`to`. It is always anchored to *today* (server clock, UTC): the current calendar
 >   week/month/year vs. the immediately preceding one of the same length. Undocumented default,
->   resolved during the Epic 7 handoff review against `docs/user_flows.md`'s "compare this month
+>   resolved during the Epic 7 handoff review against `docs/operations/user_flows.md`'s "compare this month
 >   vs. last" framing — the same category of gap as Epic 5's "trailing 3 months" budget-suggestion
 >   default.
 > - `/analytics/export/pdf` accepts either `from`+`to` **or** `financialYear=<YYYY>` (meaning the
@@ -174,7 +174,7 @@ Query parameters for analytics: `from`, `to`, `granularity` (week/month/year —
 > expense" and is never counted here. `totalIncome` on this synthetic row is therefore always
 > `0`. By contrast, a *real* category's row (e.g. `categoryId: 7`) still includes any credit rows
 > assigned to it in `totalIncome`/`transactionCount` — that per-category behavior is unchanged and
-> intentional (docs/testing.md's Epic 7 summary test covers it): it reflects the full picture for
+> intentional (docs/operations/testing.md's Epic 7 summary test covers it): it reflects the full picture for
 > Analytics/Summary, including refunds. The Transactions page's frontend tiles only ever display
 > each category's `totalSpend` (already debit-only) — never its `totalIncome` — so this
 > distinction is invisible there; it only matters to a future consumer of this endpoint's raw
@@ -270,7 +270,7 @@ Compact schemas for the three endpoints where ambiguity affects the Android–ba
 }
 ```
 
-All fields correspond to the `transactions` table schema. `transaction_id` is required and must be unique per user. For SMS messages that do not include a bank reference number, synthesize it using the rule in `docs/database.md` (`transaction_id` column comment).
+All fields correspond to the `transactions` table schema. `transaction_id` is required and must be unique per user. For SMS messages that do not include a bank reference number, synthesize it using the rule in `docs/spec/database.md` (`transaction_id` column comment).
 
 ### `POST /auth/otp/verify` — Response
 

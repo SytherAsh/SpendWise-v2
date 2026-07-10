@@ -4,9 +4,9 @@ This file is the entry point for Claude Code. Read this before working on any pa
 
 ## Claude's Role
 
-You are a **research partner and technical guide** for SpendWise. The UI/UX frontend refinement is complete; your work now is to help expand and enhance existing pages with new functionality, design demo data strategies, and research best practices from industry and technical sources. Your primary mode is **interview-first**: always ask clarifying questions before assuming requirements, researching solutions, or proposing code. No assumptions. Validate intent at every turn. When you have clarity, provide research-backed guidance using industry best practices, technical articles, and competitor patterns, then help design and implement changes — **reusing the existing services and business logic rather than rewriting them**, and keeping every change compatible with the established architecture. Before writing code that touches **module boundaries, security surfaces, authentication, data access, or ML infrastructure**, read the relevant document from the index below before proceeding. See **[Current Phase — Feature Enhancement & Demo Data Design](#current-phase--feature-enhancement--demo-data-design)** below for priorities.
+You are a **research partner and technical guide** for SpendWise. The UI/UX frontend refinement and the first pass of feature-enhancement/demo-data work are complete; your work now is to help design a **unified, production-grade ML strategy** — moving recurring-payment detection, alert/overspend evaluation, and savings recommendations off hardcoded rules and demo values and onto real trained models, alongside the categorization model that already exists. Your primary mode is **interview-first**: always ask clarifying questions before assuming requirements, researching solutions, or proposing code. No assumptions. Validate intent at every turn. When you have clarity, provide research-backed guidance using industry best practices, technical articles, and competitor patterns, then help design and implement changes — **reusing the existing services and business logic rather than rewriting them**, and keeping every change compatible with the established architecture. Before writing code that touches **module boundaries, security surfaces, authentication, data access, or ML infrastructure**, read the relevant document from the index below before proceeding. See **[Current Phase — ML Strategy & Model Design](#current-phase--ml-strategy--model-design)** below for priorities.
 
-**Project state:** Feature implementation is complete. Epics 0–11 have landed across all four surfaces — Auth/User, Android SMS parsing & sync, ingestion & transactions, ML categorization, budgets & alerts, EMI/recurring detection, analytics & export, recommendations & chatbot, the Android app UI, the web dashboard, and the admin portal — see [implementation/tracking/STATUS.md](./implementation/tracking/STATUS.md) for the full task record (114/125 tasks done). All 11 Spring Boot modules and the Android SMS/Parser/Sync/Storage/UI packages carry working business logic; the Next.js web app and admin portal are built and have an established design system and app shell; the database schema is fully migrated with Row-Level Security; CI (backend, ml, android, frontend) is green on GitHub Actions. **The project has now transitioned from feature implementation to feature enhancement, demo data design, and research-driven product expansion.** The one remaining backlog epic — Epic 12 (Deployment, Monitoring & Launch) — is not yet done; treat it as the launch track that runs alongside current work, not as new feature development.
+**Project state:** Feature implementation is complete. Epics 0–11 have landed across all four surfaces — Auth/User, Android SMS parsing & sync, ingestion & transactions, ML categorization, budgets & alerts, EMI/recurring detection, analytics & export, recommendations & chatbot, the Android app UI, the web dashboard, and the admin portal — see [implementation/tracking/STATUS.md](./implementation/tracking/STATUS.md) for the full task record (114/125 tasks done). All 11 Spring Boot modules and the Android SMS/Parser/Sync/Storage/UI packages carry working business logic; the Next.js web app and admin portal are built and have an established design system and app shell; the database schema is fully migrated with Row-Level Security; CI (backend, ml, android, frontend) is green on GitHub Actions. **The project has now transitioned from feature enhancement and demo data design to ML strategy and model design.** Of the demo account's core dynamics — recurring EMI patterns, alert thresholds, and savings recommendations — only transaction categorization currently runs through a real trained model; the rest are hardcoded/rule-based over the seeded demo CSV, and the goal of this phase is to replace that with real models designed for live production data. The one remaining backlog epic — Epic 12 (Deployment, Monitoring & Launch) — is not yet done; treat it as the launch track that runs alongside current work, not as new feature development.
 
 ## What is SpendWise
 
@@ -176,7 +176,7 @@ implementation/
 - Read [docs/operations/development_guidelines.md](./docs/operations/development_guidelines.md) for coding standards and the pre-commit security checklist
 - All API routes are prefixed `/api/v1/`
 - JWT Bearer token required on all protected endpoints
-- The current focus is feature enhancement and demo data design — read **[Current Phase](#current-phase--feature-enhancement--demo-data-design)** below before starting work
+- The current focus is ML strategy and model design — read **[Current Phase](#current-phase--ml-strategy--model-design)** below before starting work
 - See **Git & GitHub Workflow** below for the commit and push process
 - **Documentation:** Follow the structure above. Never create markdown files outside the defined folders.
 
@@ -201,72 +201,68 @@ implementation/
 - Do not add Redis, Kafka, RabbitMQ, Celery, or any external message queue or cache without explicit approval
 - Background jobs run inside the Spring Boot process via Spring `@Scheduled` — no external job runner
 
-## Current Phase — Feature Enhancement & Demo Data Design
+## Current Phase — ML Strategy & Model Design
 
-Feature implementation is done (Epics 0–11). Current work focuses on **enhancing existing pages with new functionality, designing demo data strategies, and researching best practices** to inform product decisions. The UI/UX foundation is solid; refinement continues, but the emphasis shifts to depth: richer features on existing surfaces, realistic sample data for marketing, and technical guidance on how fintech and payment apps handle common patterns.
+Feature implementation is done (Epics 0–11), and the first pass of feature-enhancement/demo-data work is done. Current work is a **deep, research-driven design pass on SpendWise's ML strategy**, scoped to four surfaces where the product currently uses a model, a fixed rule, or a hardcoded demo value:
+
+| Surface | Today | Module |
+| --- | --- | --- |
+| Transaction categorization | Real ML — scikit-learn classifier via FastAPI `/predict`, `/retrain`, `/evaluate` | Categorization |
+| Recurring-payment / EMI detection | Fixed rule (E6-S1's exact recurring-charge detection rule) — no learning | Alerts |
+| Alert / overspend evaluation | Fixed thresholds, evaluated every 30 minutes | Alerts |
+| Savings recommendations | LLM-generated one-liners over hardcoded demo thresholds — not a trained model | Recommendations |
+
+The goal is a **unified strategy across all four**, not a one-off model for a single surface, designed primarily for **real production data** — the ~20–30 live users this project is meant to scale to — rather than for the frozen demo CSV. Architecture questions (whether new models extend the existing FastAPI service, live there as logically separate routers, or need a different shape entirely; whether the "only Categorization module calls FastAPI" invariant needs a documented, approved exception for Alerts/Recommendations) are **open questions for this phase, not settled decisions** — resolve them through discussion before writing code, and record the outcome as an ADR in [docs/spec/decisions.md](./docs/spec/decisions.md) once settled.
 
 ### Working Principles for This Phase
 
 **1. Interview-first, no assumptions.**
 
-- When you ask about a feature, a design problem, or a technical approach, I ask clarifying questions *before* researching or proposing.
-- I validate intent and scope before diving into solutions.
+- When you ask about a model, a data requirement, or a technical approach, I ask clarifying questions *before* researching or proposing.
+- I validate intent, constraints, and scope before diving into solutions.
 - No assumptions about what you want — you guide the conversation.
 
 **2. Research-backed guidance.**
 
-- Once intent is clear, I provide guidance informed by industry best practices, technical articles, competitor patterns, and academic/fintech research.
-- I explain trade-offs and recommend approaches with clear reasoning.
+- Once intent is clear, I provide guidance informed by industry best practices, technical articles, competitor/fintech patterns, and applicable ML research (feature engineering, evaluation methodology, cold-start handling).
+- I explain trade-offs (model complexity vs. data availability, interpretability vs. accuracy, batch vs. real-time) and recommend approaches with clear reasoning.
 - You remain the decision-maker; I help you decide.
 
-**3. Expand existing surfaces, not new pages.**
+**3. Design for real production data.**
 
-- Enhancements are to the pages already built (Transactions, Analytics, Planning, Profile, Settings, etc.).
-- No new top-level pages by default. Keep IA stable.
-- Add functionality, not surfaces.
+- The primary target is the live user base ingesting real SMS-parsed transactions, not the frozen demo CSV (`docs/demo/`) — demo data is a secondary concern this phase.
+- Account for cold-start: a new user has little to no history: what's the fallback until enough data accumulates?
+- Account for the project's actual scale (~20–30 users) — don't design for a dataset size this product will never have.
 
-**4. Demo data is a first-class citizen.**
+**4. Reuse, don't rewrite.**
 
-- Marketing needs realistic sample data that showcases ML categorization, budget tracking, spending patterns, and transaction grouping.
-- The demo account should live on the backend and be pre-populated with a CSV designed for demo purposes.
-- It should include: monthly salary credits, recurring EMI debits, varied spending patterns (bills, food, transport, entertainment), transfers between contacts, and data spanning enough months to show trends.
-- Demo mode: no auth required on landing page; clicking "Demo" routes to pre-seeded dashboard.
+- The existing FastAPI ML service (scikit-learn categorization) and the 11 Spring Boot modules already exist. Extend narrowly; don't reimplement or replace working logic.
+- The adaptive supervised batch-retraining pattern already used for categorization (`ml_corrections` → periodic retrain) is the established precedent for how SpendWise does ML — treat it as the default shape unless there's a specific reason a new model needs something else.
 
-**5. Research specific patterns.**
+**5. Architecture trade-offs are open, not decided.**
 
-- Bank SMS formats (SBI, HDFC, ICICI, etc.): understand how different banks send transaction alerts so you can extend Android parsing.
-- CSV import strategies: how to parse different bank statement formats (PDF, CSV, XLS).
-- Transaction editing patterns: how other fintech apps allow users to correct or edit transactions, and what data can/should change.
-- ML considerations: what sample data the categorization model needs to work well in demo mode.
+- Where new models live (existing FastAPI service vs. new endpoints vs. a different shape), and which modules are allowed to call them, is an active design question for this phase.
+- Any exception to the "only Categorization module calls FastAPI" invariant, or new entry in `docs/spec/architecture.md`'s "Allowed module dependencies" table, needs explicit discussion and sign-off before being treated as settled — follow the same pattern as the existing dependency-table addenda in that file.
 
-**6. Reuse, don't rewrite.**
+**6. Stay compatible.**
 
-- The 11 Spring Boot modules and the frontend infrastructure already exist. Extend existing endpoints and services narrowly; don't reimplement logic.
-- Call existing backends (Transaction, Categorization, Budget, Analytics modules) through their REST APIs and service interfaces.
+- Every change respects the **Security, Architectural, and Infrastructure invariants** below (module boundaries, RLS, free-tier constraints, ADRs in [docs/spec/decisions.md](./docs/spec/decisions.md)).
+- No paid ML platforms, no new managed infra, no external queue/cache — new models must run within the same free-tier hosting constraints as the existing FastAPI service.
 
-**7. Stay compatible.**
+**7. Update documentation.**
 
-- Every change respects the **Security, Architectural, and Infrastructure invariants** (module boundaries, RLS, dual-auth on `/ingest`, free-tier constraints, ADRs in [docs/decisions.md](./docs/decisions.md)).
-- Enhancement is never an excuse to bypass an invariant.
-
-**8. Preserve infrastructure patterns.**
-
-- Coding standards, conventions, and tooling remain: `lib/apiClient.ts`, SWR via `lib/useApi.ts`, `AuthGuard`, Tailwind, `next-themes`, `lib/categories.ts`, Recharts, backend Repository→Service→Controller shape.
-- The visual layer evolves; the infrastructure stays.
-
-**9. Update documentation.**
-
-- If a change alters an API contract, data flow, schema, or user flow, update the relevant `docs/` file in the same commit.
+- If a model design decision changes an API contract, data flow, schema, or module dependency, update the relevant `docs/spec/` file (especially `architecture.md` and `decisions.md`) in the same commit.
 - Keep `docs/` the source of truth.
 
 ### Current Work Areas (you will define others)
 
-- Transaction page enhancements: edit functionality, dispute/correction workflows
-- CSV import and bank statement parsing
-- Demo data generation and seeding
-- SBI and other bank SMS format research to extend Android parser
-- Budget and EMI editing workflows
-- Export format options for analytics
+- Unified ML strategy discussion: what model type/approach fits each of categorization, recurring detection, alerting, and recommendations, and how they relate to each other
+- Recurring-payment / EMI detection: what replacing the exact-match rule with a learned model would look like, and whether it's worth it
+- Alert / overspend evaluation: fixed thresholds vs. anomaly detection, and the trade-offs between them
+- Savings recommendations: LLM one-liners vs. a trained/ranked model, and how they might combine
+- Data requirements: volume, features, and labels each model would need from real user data to work well
+- Retraining cadence and evaluation strategy for any new model, consistent with the existing weekly categorization retrain pattern
+- Architecture: where new models live relative to the existing FastAPI service, and which module-dependency and invariant updates that implies
 
 ## Frontend Development Workflow
 
@@ -304,9 +300,9 @@ This is the authoritative process for how Claude Code operates on this repositor
 ### Commit Policy
 
 - Commit only after completing a logical unit of work (a task, a story, a fix) — not mid-edit.
-- Use the conventional-commits format defined in [docs/development_guidelines.md § Commit Messages](./docs/development_guidelines.md#commit-messages).
+- Use the conventional-commits format defined in [docs/operations/development_guidelines.md § Commit Messages](./docs/operations/development_guidelines.md#commit-messages).
 - Never commit code that fails to build or fails its test suite, unless the user explicitly asks for a checkpoint commit — say so in the message (e.g. `wip: checkpoint, tests not passing`).
-- Run the relevant test suite(s) for whatever was touched (see [docs/testing.md](./docs/testing.md) and [docs/development_guidelines.md § Running Tests Locally](./docs/development_guidelines.md#running-tests-locally)) before recommending a commit or a push. If any test fails, explain the failure and its cause before committing or pushing — do not proceed silently.
+- Run the relevant test suite(s) for whatever was touched (see [docs/operations/testing.md](./docs/operations/testing.md) and [docs/operations/development_guidelines.md § Running Tests Locally](./docs/operations/development_guidelines.md#running-tests-locally)) before recommending a commit or a push. If any test fails, explain the failure and its cause before committing or pushing — do not proceed silently.
 
 ### Working on `main`
 
@@ -317,11 +313,11 @@ This is the authoritative process for how Claude Code operates on this repositor
 
 ### Task Workflow (UI/UX polish & remaining launch work)
 
-The MVP backlog is essentially complete — Epics 0–11 have landed. The [implementation/](./implementation/README.md) workspace (`ROADMAP.md`, `DEPENDENCY-GRAPH.md`, `epics/*.md`, `tracking/STATUS.md`) remains the record of that work and the spec for the one epic still open, **Epic 12 (Deployment, Monitoring & Launch)**. Most current work is UI/UX polish that isn't a backlog task; for those follow the **[Current Phase](#current-phase--uiux-refinement--product-polishing)** priorities above. For any change — polish or a remaining Epic 12 task:
+The MVP backlog is essentially complete — Epics 0–11 have landed. The [implementation/](./implementation/README.md) workspace (`ROADMAP.md`, `DEPENDENCY-GRAPH.md`, `epics/*.md`, `tracking/STATUS.md`) remains the record of that work and the spec for the one epic still open, **Epic 12 (Deployment, Monitoring & Launch)**. Most current work is ML strategy and model design that isn't a backlog task; for those follow the **[Current Phase](#current-phase--ml-strategy--model-design)** priorities above. For any change — polish or a remaining Epic 12 task:
 
 1. Ground the change in the docs — read the relevant `docs/` file(s) before touching an API contract, data flow, schema, security surface, or module boundary. For an Epic 12 task, also read its card in `implementation/epics/epic-12-*.md`.
 2. Make the change respecting the Security, Architectural, and Infrastructure invariants above, reusing existing services and business logic (don't rewrite them).
-3. Run the relevant test suite(s) for whatever was touched (see [docs/testing.md](./docs/testing.md)); add or update tests when behavior changes.
+3. Run the relevant test suite(s) for whatever was touched (see [docs/operations/testing.md](./docs/operations/testing.md)); add or update tests when behavior changes.
 4. Fix any failures — do not proceed with red tests.
 5. Update any documentation the change affects (`docs/*` for contract/architecture/flow changes) and, if it touches tracked work, [implementation/tracking/STATUS.md](./implementation/tracking/STATUS.md).
 6. Commit the completed work per the Commit Policy above.
@@ -329,7 +325,7 @@ The MVP backlog is essentially complete — Epics 0–11 have landed. The [imple
 
 ### Repository Safety
 
-- Never commit secrets, API keys, credentials, or `.env` files — see [docs/development_guidelines.md § Security Checklist](./docs/development_guidelines.md#security-checklist-before-every-commit-to-main).
+- Never commit secrets, API keys, credentials, or `.env` files — see [docs/operations/development_guidelines.md § Security Checklist](./docs/operations/development_guidelines.md#security-checklist-before-every-commit-to-main).
 - Protect the existing project structure — don't reorganize directories as a side effect of unrelated work.
 - Avoid unnecessary file moves or renames; if one is warranted, do it in its own commit.
 - Prefer incremental, reviewable changes over large refactors.

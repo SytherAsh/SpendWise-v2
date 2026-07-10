@@ -28,10 +28,10 @@ built in parallel with Epic 5.
   - Only 2 matching transactions → not flagged.
   - 3 matching transactions but spanning >60 days → not flagged.
   - 3 matching transactions but one already linked to an active `emis` row → not flagged again.
-- **Required Tests:** Unit tests for exactly the 4 cases above, using synthetic fixture data (per `docs/testing.md` Alerts unit tests — recurring-payment detection).
+- **Required Tests:** Unit tests for exactly the 4 cases above, using synthetic fixture data (per `docs/operations/testing.md` Alerts unit tests — recurring-payment detection).
 - **Estimated Complexity:** Large
 - **Depends on:** E3-S1-T2 (needs the `transactions`/`emis` shape to exist, not a live service)
-- **Grounded in:** `docs/requirements.md` "Recurring payment detection rule"; `docs/user_flows.md` "Recurring Payment Detection" flow; `docs/testing.md` Alerts unit tests.
+- **Grounded in:** `docs/spec/requirements.md` "Recurring payment detection rule"; `docs/operations/user_flows.md` "Recurring Payment Detection" flow; `docs/operations/testing.md` Alerts unit tests.
 
 ---
 
@@ -45,7 +45,7 @@ built in parallel with Epic 5.
 - **Expected Deliverable:** The detector runs as part of (or alongside) the Alerts
   evaluator job (E5-S2-T4) — document the chosen cadence (reusing the existing 30-minute
   schedule is the simplest option, since recurring detection is not time-critical per
-  `docs/requirements.md`'s "Alert SLA: within 1 hour").
+  `docs/spec/requirements.md`'s "Alert SLA: within 1 hour").
 - **Definition of Done:** Given a fixture with a newly-qualifying recurring group, the next
   evaluator run produces exactly one `recurring_payment` alert with a `payload` identifying
   the merchant and amount.
@@ -54,7 +54,7 @@ built in parallel with Epic 5.
   confirm no duplicate alert is created for the same still-unconfirmed group.
 - **Estimated Complexity:** Medium
 - **Depends on:** E6-S1-T1, E5-S2-T4
-- **Grounded in:** `docs/requirements.md` Alerts table (Recurring payment alert trigger); `docs/architecture.md` Background Jobs (Alert evaluator).
+- **Grounded in:** `docs/spec/requirements.md` Alerts table (Recurring payment alert trigger); `docs/spec/architecture.md` Background Jobs (Alert evaluator).
 
 #### E6-S2-T2 — Confirm-as-subscription / dismiss flow
 
@@ -70,7 +70,7 @@ built in parallel with Epic 5.
   violate `idx_emis_source_txn` (second confirm is a no-op or clear error, not a 500).
 - **Estimated Complexity:** Medium
 - **Depends on:** E6-S2-T1, E3-S3-T1
-- **Grounded in:** `docs/user_flows.md` "Recurring Payment Detection" flow (confirm/dismiss); `docs/database.md` `emis.source_transaction_id` + `idx_emis_source_txn`.
+- **Grounded in:** `docs/operations/user_flows.md` "Recurring Payment Detection" flow (confirm/dismiss); `docs/spec/database.md` `emis.source_transaction_id` + `idx_emis_source_txn`.
 
 ---
 

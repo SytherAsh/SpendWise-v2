@@ -3,7 +3,7 @@
 **Date:** 2026‑07‑05
 **Scope:** Full local stack (Next.js frontend → Spring Boot backend → Postgres → Firebase auth → CORS → REST). Investigation focused on the reported blocking symptom: *login succeeds, but the frontend then shows only failed requests and nothing works.*
 
-**Method:** Read the documentation first (CLAUDE.md, `docs/architecture.md`, `docs/api.md`, `docs/security.md`, `docs/deployment.md`, `README.md`) as the source of truth, then traced the runtime path the browser actually exercises after login: `LoginForm` → `authApi` → `apiClient` → Spring Security filter chains → controllers.
+**Method:** Read the documentation first (CLAUDE.md, `docs/spec/architecture.md`, `docs/spec/api.md`, `docs/spec/security.md`, `docs/operations/deployment.md`, `README.md`) as the source of truth, then traced the runtime path the browser actually exercises after login: `LoginForm` → `authApi` → `apiClient` → Spring Security filter chains → controllers.
 
 ---
 

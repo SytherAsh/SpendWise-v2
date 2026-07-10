@@ -25,7 +25,7 @@ data; resuming a prior session shows full history.
 - **Required Tests:** An architecture-style test asserting no vendor SDK import exists outside the designated package; unit test exercising the stub's deterministic response shape.
 - **Estimated Complexity:** Medium
 - **Depends on:** E0-S1-T1
-- **Grounded in:** `CLAUDE.md` "LLM: Provider intentionally abstracted... Do not hardcode any LLM SDK into business logic"; `docs/requirements.md` AI Chatbot section; `docs/system-diagram.md` `LLMSVC` (vendor-abstracted, TBD).
+- **Grounded in:** `CLAUDE.md` "LLM: Provider intentionally abstracted... Do not hardcode any LLM SDK into business logic"; `docs/spec/requirements.md` AI Chatbot section; `docs/system-diagram.md` `LLMSVC` (vendor-abstracted, TBD).
 
 ---
 
@@ -48,11 +48,11 @@ data; resuming a prior session shows full history.
   - Running the job again with no new threshold-crossing produces no duplicate.
   - The job never calls Alerts, Chatbot, Ingest, or Categorization (module dependency rule).
 - **Required Tests:** Integration test: threshold-crossing fixture → one recommendation
-  created; re-run with no change → no duplicate (per `docs/architecture.md`'s idempotency
+  created; re-run with no change → no duplicate (per `docs/spec/architecture.md`'s idempotency
   description); unit test asserting no forbidden module calls occur (mock verification).
 - **Estimated Complexity:** Large
 - **Depends on:** E8-S1-T1, E7-S1-T1
-- **Grounded in:** `docs/architecture.md` Background Jobs table (Recommendation generator, full idempotency description) + module dependency table (Recommendations: may call Analytics; must not call Alerts/Chatbot/Ingest/Categorization); `docs/database.md` `recommendations` + `idx_recs_user_category_active`.
+- **Grounded in:** `docs/spec/architecture.md` Background Jobs table (Recommendation generator, full idempotency description) + module dependency table (Recommendations: may call Analytics; must not call Alerts/Chatbot/Ingest/Categorization); `docs/spec/database.md` `recommendations` + `idx_recs_user_category_active`.
 
 #### E8-S2-T2 — `GET /recommendations`, `PUT /recommendations/:id/dismiss`
 
@@ -63,7 +63,7 @@ data; resuming a prior session shows full history.
 - **Required Tests:** Integration test: dismiss then re-fetch feed excludes it; feed ordering matches expected recency order.
 - **Estimated Complexity:** Small
 - **Depends on:** E8-S2-T1
-- **Grounded in:** `docs/api.md` `/recommendations` table; `docs/user_flows.md` "Viewing Savings Recommendations" flow.
+- **Grounded in:** `docs/spec/api.md` `/recommendations` table; `docs/operations/user_flows.md` "Viewing Savings Recommendations" flow.
 
 ---
 
@@ -81,7 +81,7 @@ data; resuming a prior session shows full history.
 - **Required Tests:** Integration test: create 2 sessions, confirm list order; confirm cross-user access is rejected (404, not leaking existence).
 - **Estimated Complexity:** Small
 - **Depends on:** E0-S2-T5, E1-S1-T7
-- **Grounded in:** `docs/api.md` `/chatbot` table + "Session lifecycle" note; `docs/database.md` `chatbot_sessions`.
+- **Grounded in:** `docs/spec/api.md` `/chatbot` table + "Session lifecycle" note; `docs/spec/database.md` `chatbot_sessions`.
 
 #### E8-S3-T2 — `POST /chatbot/message` with context injection
 
@@ -98,7 +98,7 @@ data; resuming a prior session shows full history.
   captures its input).
 - **Estimated Complexity:** Large
 - **Depends on:** E8-S3-T1, E8-S1-T1, E3-S2-T1, E7-S1-T1
-- **Grounded in:** `docs/api.md` `/chatbot` table; `docs/architecture.md` Chatbot module dependency row; `docs/database.md` `chatbot_conversations`; `docs/user_flows.md` Chatbot Interaction flow.
+- **Grounded in:** `docs/spec/api.md` `/chatbot` table; `docs/spec/architecture.md` Chatbot module dependency row; `docs/spec/database.md` `chatbot_conversations`; `docs/operations/user_flows.md` Chatbot Interaction flow.
 
 ---
 

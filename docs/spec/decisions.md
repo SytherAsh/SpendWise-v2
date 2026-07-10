@@ -187,10 +187,10 @@ too, e.g. by splitting `Transfers` into `Transfers-Family`, `Transfers-Friend`,
 **Options considered**:
 1. Expand the category set so ML predicts counterparty type as part of (or instead of)
    the spending category — e.g. more/split Transfer categories.
-2. Keep the ML model's label set exactly the 12 categories in `docs/requirements.md`;
+2. Keep the ML model's label set exactly the 12 categories in `docs/spec/requirements.md`;
    treat counterparty type as separate metadata, sourced from the Payee Knowledge Base,
    attached to a transaction in a later, independent enrichment step (Analytics-layer,
-   post-MVP — see `docs/architecture.md` "Future Enhancement: Counterparty Metadata
+   post-MVP — see `docs/spec/architecture.md` "Future Enhancement: Counterparty Metadata
    Enrichment").
 
 **Decision**: Option 2. The classifier continues to predict only the 12 transaction
@@ -211,7 +211,7 @@ categories. Counterparty type is deliberately kept out of the ML problem entirel
   mean either training a model that overfits to one user's contacts, or building
   per-user models far earlier than the per-user personalization already planned in
   `docs/roadmap.md` Phase 4. A simple knowledge-base lookup has no such constraint.
-- **Extensibility**: `docs/requirements.md`'s 12 categories are meant to stay stable —
+- **Extensibility**: `docs/spec/requirements.md`'s 12 categories are meant to stay stable —
   `CATEGORY_GUIDELINES.md` explicitly says don't add/split categories without updating
   that doc. Counterparty types (friend/family/merchant/employer/subscription/settlement)
   are a fundamentally open-ended, growable list with different governance than the
@@ -221,19 +221,19 @@ categories. Counterparty type is deliberately kept out of the ML problem entirel
   touching the ML pipeline, the `categories` table, or the `transaction_categories`
   assignment — no retraining required to change how counterparties are grouped or
   labeled.
-- Consistent with the existing architectural boundary in `docs/architecture.md`: the
+- Consistent with the existing architectural boundary in `docs/spec/architecture.md`: the
   Analytics module is strictly read-only and must not call write methods on any other
   module. A counterparty-enrichment feature is a natural fit for that boundary if it's
   read-only lookup/display, not a fit for the ML training loop.
 
 **Consequence**: Epic 4 trains and evaluates against exactly the 12 categories in
-`docs/requirements.md`, no more. Counterparty metadata enrichment is deferred to a
+`docs/spec/requirements.md`, no more. Counterparty metadata enrichment is deferred to a
 post-MVP enhancement (`docs/roadmap.md` Phase 9), most naturally landing in Epic 7
 (Analytics) or a dedicated future epic once prioritized — not built or scoped now.
 
 **Status update (2026-07-09, UI/UX polish phase):** the deferred sketch above has now
-been built, per this ADR's own Option 2 shape — see `docs/database.md`'s `contacts`
-table and `docs/api.md`'s `/contacts` endpoint group. It landed as a plain per-user
+been built, per this ADR's own Option 2 shape — see `docs/spec/database.md`'s `contacts`
+table and `docs/spec/api.md`'s `/contacts` endpoint group. It landed as a plain per-user
 CRUD table owned by the User module, matched against `transactions.recipient_name`/
 `upi_id` client-side by the frontend — never as an ML category, never joined onto
 `transactions`/`transaction_categories` server-side, and with no dependency added from
@@ -283,7 +283,7 @@ optimization — sketched below for a later epic to pick up — but was not impl
   transaction event occurs that day — the rule's own semantics require a calendar tick
   that no transaction event can provide. Any design must keep a scheduled component for
   this rule regardless of what happens with the other two.
-- **Module boundaries don't have a call path for it.** `docs/architecture.md`'s "Allowed
+- **Module boundaries don't have a call path for it.** `docs/spec/architecture.md`'s "Allowed
   module dependencies" table lists Ingest's callable modules as "Transaction
   (persist), Categorization (trigger), User (device API key validation only), Auth
   (session validation only) | Must not call: Any other module" — Ingest → Alerts is
@@ -293,7 +293,7 @@ optimization — sketched below for a later epic to pick up — but was not impl
   prohibit. A decoupled `ApplicationEvent`/`@EventListener` (Option 3) sidesteps the
   compile-time dependency and avoids the cycle, but is still a new mechanism this
   document didn't previously describe.
-- **The product doesn't need the responsiveness.** `docs/requirements.md`: "Alert SLA:
+- **The product doesn't need the responsiveness.** `docs/spec/requirements.md`: "Alert SLA:
   within 1 hour of a transaction being processed" and "Users review spending at end of
   day — near-real-time is not required." A 30-minute sweep meets this SLA with margin,
   for a portfolio-scale product (20–30 users).
@@ -312,7 +312,7 @@ new infrastructure — CLAUDE.md forbids adding Kafka/RabbitMQ/Redis without app
 Alerts module re-runs `CategoryOverspendRule`/`CategoryApproachingLimitRule` for that one
 user only, calling the same `AlertsService.recordIfNotAlreadyTriggeredThisMonth` and
 `AlertDispatchService` the scheduled job already uses — no duplicated rule logic. This
-would need its own ADR amendment to `docs/architecture.md`'s module table (an event
+would need its own ADR amendment to `docs/spec/architecture.md`'s module table (an event
 publisher/listener pair isn't a "call" in the existing table's sense, but should still be
 documented) before implementation, and is only worth the added complexity if a future
 epic's requirements actually demand near-real-time alerts — nothing in the current MVP

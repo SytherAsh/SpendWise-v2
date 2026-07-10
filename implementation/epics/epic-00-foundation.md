@@ -25,7 +25,7 @@ already fixed in `CLAUDE.md` and each service's `README.md`.
   backend module plugs into.
 - **Expected Deliverable:** `backend/build.gradle(.kts)`, Gradle wrapper, `Application.java`
   main class, `application.yml` with `local`/`dev`/`prod` Spring profiles, `spring.threads.virtual.enabled=true`
-  (ADR-009), and an `.env.example` matching the Spring Boot env var list in `docs/deployment.md`.
+  (ADR-009), and an `.env.example` matching the Spring Boot env var list in `docs/operations/deployment.md`.
 - **Definition of Done:**
   - `./gradlew bootRun` starts the app on port 8080 with no errors against a local profile.
   - Package layout matches `CLAUDE.md`'s Module Map (`com.spendwise.<module>` packages already exist as empty dirs — confirm they're on the Gradle source set).
@@ -33,14 +33,14 @@ already fixed in `CLAUDE.md` and each service's `README.md`.
 - **Required Tests:** A single smoke test (`ApplicationContextTests`) asserting the Spring context loads.
 - **Estimated Complexity:** Medium
 - **Depends on:** —
-- **Grounded in:** `CLAUDE.md` (Tech Stack, Module Map), `docs/decisions.md` ADR-009, `docs/deployment.md` env vars.
+- **Grounded in:** `CLAUDE.md` (Tech Stack, Module Map), `docs/spec/decisions.md` ADR-009, `docs/operations/deployment.md` env vars.
 
 #### E0-S1-T2 — Next.js project skeleton
 
 - **Objective:** Stand up the Next.js/React web dashboard shell.
 - **Expected Deliverable:** Next.js app (App Router) under `frontend/`, strict TypeScript
   mode, ESLint config per `docs/development_guidelines.md`, `.env.example` matching the
-  frontend env vars in `docs/deployment.md`.
+  frontend env vars in `docs/operations/deployment.md`.
 - **Definition of Done:**
   - `npm run dev` serves a placeholder home page at `localhost:3000`.
   - Folder structure matches `frontend/README.md` (`src/app`, `src/components/{dashboard,transactions,chatbot,charts,shared}`, `src/lib`, `src/styles`).
@@ -48,7 +48,7 @@ already fixed in `CLAUDE.md` and each service's `README.md`.
 - **Required Tests:** `npm run build` completes with zero type errors.
 - **Estimated Complexity:** Small
 - **Depends on:** —
-- **Grounded in:** `CLAUDE.md` Tech Stack, `docs/deployment.md` Next.js env vars, `docs/development_guidelines.md` TypeScript/React conventions.
+- **Grounded in:** `CLAUDE.md` Tech Stack, `docs/operations/deployment.md` Next.js env vars, `docs/development_guidelines.md` TypeScript/React conventions.
 
 #### E0-S1-T3 — Android project skeleton
 
@@ -68,7 +68,7 @@ already fixed in `CLAUDE.md` and each service's `README.md`.
 
 - **Objective:** Stand up the FastAPI ML service shell.
 - **Expected Deliverable:** `ml/api/main.py`, `requirements.txt`, Pydantic settings class
-  reading the FastAPI env vars from `docs/deployment.md`, `GET /health` route.
+  reading the FastAPI env vars from `docs/operations/deployment.md`, `GET /health` route.
 - **Definition of Done:**
   - `uvicorn api.main:app` serves `GET /health` → `200`.
   - `black`-formatted, type hints on all signatures per `docs/development_guidelines.md`.
@@ -76,7 +76,7 @@ already fixed in `CLAUDE.md` and each service's `README.md`.
 - **Required Tests:** `pytest` smoke test hitting `/health` via `TestClient`.
 - **Estimated Complexity:** Small
 - **Depends on:** —
-- **Grounded in:** `docs/deployment.md` FastAPI env vars, `docs/architecture.md` FastAPI ML Service section.
+- **Grounded in:** `docs/operations/deployment.md` FastAPI env vars, `docs/spec/architecture.md` FastAPI ML Service section.
 
 #### E0-S1-T5 — Root tooling audit
 
@@ -97,7 +97,7 @@ already fixed in `CLAUDE.md` and each service's `README.md`.
 
 ### E0-S2 — Database Foundation
 
-Stand up the Supabase Postgres schema exactly as specified in `docs/database.md`, including
+Stand up the Supabase Postgres schema exactly as specified in `docs/spec/database.md`, including
 every index and constraint called out there, plus RLS.
 
 **Independently testable via:** running the migration tool against a fresh Postgres
@@ -116,14 +116,14 @@ instance (local Docker or Supabase) and querying `information_schema` for expect
 - **Required Tests:** A migration-runner smoke test confirming the `flyway_schema_history` (or equivalent) table exists after startup.
 - **Estimated Complexity:** Medium
 - **Depends on:** E0-S1-T1
-- **Grounded in:** `docs/deployment.md` (Supabase, env vars), `docs/database.md` (System section).
+- **Grounded in:** `docs/operations/deployment.md` (Supabase, env vars), `docs/spec/database.md` (System section).
 
 #### E0-S2-T2 — Migration: identity & session tables
 
 - **Objective:** Create the tables that back authentication and onboarding.
 - **Expected Deliverable:** Migration script creating `users`, `user_preferences`,
   `user_consent`, `refresh_tokens`, `device_api_keys` — verbatim schema, constraints, and
-  indexes from `docs/database.md`.
+  indexes from `docs/spec/database.md`.
 - **Definition of Done:**
   - All 5 tables, their CHECK constraints, and all listed indexes (`idx_users_unique_phone`,
     `idx_users_unique_google_id`, `idx_refresh_tokens_hash`, `idx_refresh_tokens_user`,
@@ -132,7 +132,7 @@ instance (local Docker or Supabase) and querying `information_schema` for expect
 - **Required Tests:** SQL-level test (or a Testcontainers-backed integration test) inserting a violating row and asserting the constraint fires.
 - **Estimated Complexity:** Medium
 - **Depends on:** E0-S2-T1
-- **Grounded in:** `docs/database.md` `users`, `user_preferences`, `user_consent`, `refresh_tokens`, `device_api_keys` sections.
+- **Grounded in:** `docs/spec/database.md` `users`, `user_preferences`, `user_consent`, `refresh_tokens`, `device_api_keys` sections.
 
 #### E0-S2-T3 — Migration: transactions & categories
 
@@ -143,18 +143,18 @@ instance (local Docker or Supabase) and querying `information_schema` for expect
 - **Definition of Done:**
   - `chk_dr_cr_consistency` constraint verified against both a DR and a CR case (positive and negative test).
   - `idx_transactions_unique_dedup` verified to reject a duplicate `(user_id, transaction_id)` insert.
-  - Seed query returns exactly the 10 categories with the exact names/icons from the table in `docs/database.md`.
+  - Seed query returns exactly the 10 categories with the exact names/icons from the table in `docs/spec/database.md`.
 - **Required Tests:** Testcontainers integration test asserting seed row count = 10 and exact `(id, name, icon)` tuples; constraint-violation tests for `chk_dr_cr_consistency` and the dedup unique index.
 - **Estimated Complexity:** Medium
 - **Depends on:** E0-S2-T2
-- **Grounded in:** `docs/database.md` `transactions`, `categories`, `transaction_categories` sections; `docs/requirements.md` Transaction Categories list.
-- **Amended (2026-07-02):** `categories` extended from 10 to 12 rows by migration `V7__add_medical_and_fees_categories.sql` (Medical, Fees & Debt). This task's original deliverable (V2, 10 rows) is unchanged as a historical record; current seed count is 12 — see `docs/database.md`.
+- **Grounded in:** `docs/spec/database.md` `transactions`, `categories`, `transaction_categories` sections; `docs/spec/requirements.md` Transaction Categories list.
+- **Amended (2026-07-02):** `categories` extended from 10 to 12 rows by migration `V7__add_medical_and_fees_categories.sql` (Medical, Fees & Debt). This task's original deliverable (V2, 10 rows) is unchanged as a historical record; current seed count is 12 — see `docs/spec/database.md`.
 
 #### E0-S2-T4 — Migration: budgets, alerts, EMIs
 
 - **Objective:** Create the budgeting and alerting schema.
 - **Expected Deliverable:** Migration creating `budgets`, `alert_type` enum, `alerts`, `emis`
-  — verbatim schema/constraints/indexes from `docs/database.md`.
+  — verbatim schema/constraints/indexes from `docs/spec/database.md`.
 - **Definition of Done:**
   - `chk_budget_limit_positive` and `chk_emi_amount_positive` verified to reject non-positive values.
   - `idx_emis_source_txn` verified to reject two EMIs pointing at the same `source_transaction_id`.
@@ -162,7 +162,7 @@ instance (local Docker or Supabase) and querying `information_schema` for expect
 - **Required Tests:** Constraint-violation integration tests for each CHECK/UNIQUE listed above.
 - **Estimated Complexity:** Medium
 - **Depends on:** E0-S2-T3
-- **Grounded in:** `docs/database.md` `budgets`, `alerts`, `emis` sections.
+- **Grounded in:** `docs/spec/database.md` `budgets`, `alerts`, `emis` sections.
 
 #### E0-S2-T5 — Migration: ML, admin, and chatbot tables
 
@@ -178,11 +178,11 @@ instance (local Docker or Supabase) and querying `information_schema` for expect
 - **Required Tests:** Constraint-violation tests for `chk_correction_different_category` (including the null-old-category case) and the recommendations partial unique index.
 - **Estimated Complexity:** Medium
 - **Depends on:** E0-S2-T4
-- **Grounded in:** `docs/database.md` `recommendations`, `ml_corrections`, `admin_logs`, `chatbot_sessions`, `chatbot_conversations` sections.
+- **Grounded in:** `docs/spec/database.md` `recommendations`, `ml_corrections`, `admin_logs`, `chatbot_sessions`, `chatbot_conversations` sections.
 
 #### E0-S2-T6 — Row-Level Security policies
 
-- **Objective:** Enable RLS as the database-level backstop described in `docs/security.md`,
+- **Objective:** Enable RLS as the database-level backstop described in `docs/spec/security.md`,
   including the session-variable mechanism needed because Spring Boot connects with a
   service-role key.
 - **Expected Deliverable:** Migration enabling RLS on every table with a `user_id` column,
@@ -190,19 +190,19 @@ instance (local Docker or Supabase) and querying `information_schema` for expect
   `set_config('app.current_user_id', ..., true)` call wired into a Spring Boot
   request-scoped interceptor/aspect that runs before every user-scoped query.
 - **Definition of Done:**
-  - Every table listed in `docs/security.md`'s Supabase RLS section has an active policy.
+  - Every table listed in `docs/spec/security.md`'s Supabase RLS section has an active policy.
   - A query executed without `set_config` first returns zero rows (safe-fail deny), proven by a test.
   - A query executed with `set_config` set to user A's UUID cannot see user B's rows, proven by a test.
 - **Required Tests:** Integration test: (1) no session var set → RLS-protected query returns empty; (2) session var set to user A → only user A's rows returned even though rows for user B exist in the same table.
 - **Estimated Complexity:** Large
 - **Depends on:** E0-S2-T5
-- **Grounded in:** `docs/security.md` Supabase Row-Level Security section (full detail, including the `current_setting(..., true)` safe-fail behavior); `CLAUDE.md` security invariants.
+- **Grounded in:** `docs/spec/security.md` Supabase Row-Level Security section (full detail, including the `current_setting(..., true)` safe-fail behavior); `CLAUDE.md` security invariants.
 
 ---
 
 ### E0-S3 — CI Skeleton
 
-Wire up the four CI jobs described in `docs/deployment.md` and `docs/testing.md` so every
+Wire up the four CI jobs described in `docs/operations/deployment.md` and `docs/operations/testing.md` so every
 later epic's tests run automatically on every push to `main` (and on any optional PR).
 
 **Independently testable via:** pushing to `main` and watching all 4 jobs go green.
@@ -217,7 +217,7 @@ later epic's tests run automatically on every push to `main` (and on any optiona
 - **Required Tests:** N/A — the deliverable *is* the test runner; verify by triggering the workflow on a throwaway commit.
 - **Estimated Complexity:** Medium
 - **Depends on:** E0-S1-T1, E0-S2-T6
-- **Grounded in:** `docs/deployment.md` CI section, `docs/testing.md` "Why Testcontainers".
+- **Grounded in:** `docs/operations/deployment.md` CI section, `docs/operations/testing.md` "Why Testcontainers".
 
 #### E0-S3-T2 — CI: FastAPI pytest
 
@@ -227,29 +227,29 @@ later epic's tests run automatically on every push to `main` (and on any optiona
 - **Required Tests:** N/A — verify by triggering the workflow.
 - **Estimated Complexity:** Small
 - **Depends on:** E0-S1-T4
-- **Grounded in:** `docs/deployment.md` CI section, `docs/testing.md` §2.
+- **Grounded in:** `docs/operations/deployment.md` CI section, `docs/operations/testing.md` §2.
 
 #### E0-S3-T3 — CI: Android unit tests
 
 - **Objective:** Automate `./gradlew test` for the Android Kotlin unit tests.
-- **Expected Deliverable:** GitHub Actions job running Android Gradle tests (no emulator required — unit tests only, per `docs/testing.md`).
+- **Expected Deliverable:** GitHub Actions job running Android Gradle tests (no emulator required — unit tests only, per `docs/operations/testing.md`).
 - **Definition of Done:** Job passes against the Epic 0 skeleton.
 - **Required Tests:** N/A — verify by triggering the workflow.
 - **Estimated Complexity:** Small
 - **Depends on:** E0-S1-T3
-- **Grounded in:** `docs/deployment.md` CI section, `docs/testing.md` §3.
+- **Grounded in:** `docs/operations/deployment.md` CI section, `docs/operations/testing.md` §3.
 
 #### E0-S3-T4 — CI: frontend build/lint
 
 - **Objective:** Automate `npm run build` and lint for the Next.js app on every push/PR (not
-  explicitly listed as a named CI step in `docs/deployment.md`, but required so frontend
+  explicitly listed as a named CI step in `docs/operations/deployment.md`, but required so frontend
   regressions are caught before the E2E/manual QA stage).
 - **Expected Deliverable:** GitHub Actions job running `npm ci && npm run lint && npm run build`.
 - **Definition of Done:** Job passes against the Epic 0 placeholder page.
 - **Required Tests:** N/A — verify by triggering the workflow.
 - **Estimated Complexity:** Small
 - **Depends on:** E0-S1-T2
-- **Grounded in:** `docs/deployment.md` CI section (extended to frontend for parity — see task note above), `docs/development_guidelines.md` TypeScript conventions.
+- **Grounded in:** `docs/operations/deployment.md` CI section (extended to frontend for parity — see task note above), `docs/development_guidelines.md` TypeScript conventions.
 
 #### E0-S3-T5 — Branch protection (solo direct-to-`main` guardrails)
 
@@ -266,7 +266,7 @@ later epic's tests run automatically on every push to `main` (and on any optiona
   succeeds and CI triggers, and that a force-push is rejected.
 - **Estimated Complexity:** Small
 - **Depends on:** E0-S3-T1, E0-S3-T2, E0-S3-T3, E0-S3-T4
-- **Grounded in:** `docs/development_guidelines.md` Git Workflow; `docs/deployment.md`
+- **Grounded in:** `docs/development_guidelines.md` Git Workflow; `docs/operations/deployment.md`
   Version Control & Branching (branch-protection recommendation); `CLAUDE.md` Git & GitHub Workflow.
 - **Note:** Configuring GitHub repo settings requires repo-admin access and, per `CLAUDE.md`,
   explicit user approval — so this is a **manual step for the repo owner**, not something the

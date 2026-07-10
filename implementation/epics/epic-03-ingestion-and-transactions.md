@@ -21,13 +21,13 @@ here).
   whole system per `CLAUDE.md`.
 - **Expected Deliverable:** A guard (filter/interceptor/annotation) on `POST /ingest/transactions`
   composing the user-JWT filter (E1-S1-T7) with the device-key validation service (E1-S4-T1).
-- **Definition of Done:** All 4 cases from `docs/testing.md` pass: valid JWT + valid device
+- **Definition of Done:** All 4 cases from `docs/operations/testing.md` pass: valid JWT + valid device
   key → proceeds; missing JWT → `401`; missing device key → `401`; device key not matching
   the JWT's `user_id` → `401`; inactive device key → `401`.
 - **Required Tests:** Integration tests for exactly the 4+1 cases listed above.
 - **Estimated Complexity:** Medium
 - **Depends on:** E1-S1-T7, E1-S4-T1
-- **Grounded in:** `CLAUDE.md` security invariants; `docs/api.md` `/ingest` section; `docs/testing.md` Ingest unit tests (dual-auth validation).
+- **Grounded in:** `CLAUDE.md` security invariants; `docs/spec/api.md` `/ingest` section; `docs/operations/testing.md` Ingest unit tests (dual-auth validation).
 
 #### E3-S1-T2 — Batch persistence with two-layer dedup
 
@@ -35,7 +35,7 @@ here).
   (`transaction_id`) and secondary (`upi_id`, `amount`, `transaction_date`) dedup checks,
   with per-item `409` on conflict that does not fail the rest of the batch.
 - **Expected Deliverable:** Batch-insert logic that: checks primary dedup (relies on the DB
-  unique index as the authoritative guard, per `docs/database.md`), falls back to the
+  unique index as the authoritative guard, per `docs/spec/database.md`), falls back to the
   secondary check only when `upi_id` is present, and returns a per-item result so a single
   `409` doesn't abort sibling inserts.
 - **Definition of Done:**
@@ -46,7 +46,7 @@ here).
   mixed-batch partial failure → 2 of 3 persist with correct per-item statuses.
 - **Estimated Complexity:** Large
 - **Depends on:** E3-S1-T1, E0-S2-T3
-- **Grounded in:** `docs/database.md` Deduplication Strategy + `idx_transactions_unique_dedup`; `docs/api.md` `/ingest` idempotency note; `docs/testing.md` Ingest dedup unit tests + integration test "POST same transaction twice".
+- **Grounded in:** `docs/spec/database.md` Deduplication Strategy + `idx_transactions_unique_dedup`; `docs/spec/api.md` `/ingest` idempotency note; `docs/operations/testing.md` Ingest dedup unit tests + integration test "POST same transaction twice".
 
 #### E3-S1-T3 — `sms_raw_text` response-exclusion enforcement
 
@@ -59,11 +59,11 @@ here).
 - **Definition of Done:** An integration test asserting `sms_raw_text` is absent from the
   JSON body of every Transaction-module endpoint response, including when the field is
   deliberately populated in the test fixture.
-- **Required Tests:** Integration test per `docs/testing.md`: populate `sms_raw_text` on a
+- **Required Tests:** Integration test per `docs/operations/testing.md`: populate `sms_raw_text` on a
   fixture row, call each transaction-returning endpoint, assert the key is absent from the response.
 - **Estimated Complexity:** Medium
 - **Depends on:** E3-S1-T2
-- **Grounded in:** `CLAUDE.md` Security invariants (first bullet); `docs/database.md` `transactions.sms_raw_text` comment; `docs/testing.md` integration tests list.
+- **Grounded in:** `CLAUDE.md` Security invariants (first bullet); `docs/spec/database.md` `transactions.sms_raw_text` comment; `docs/operations/testing.md` integration tests list.
 
 ---
 
@@ -74,15 +74,15 @@ here).
 #### E3-S2-T1 — `GET /transactions` (cursor pagination + filters)
 
 - **Objective:** List transactions with cursor-based pagination and optional `category`/`from`/`to` filters.
-- **Expected Deliverable:** Endpoint returning the `{data, nextCursor, hasMore}` shape from `docs/api.md`, default page size 50.
+- **Expected Deliverable:** Endpoint returning the `{data, nextCursor, hasMore}` shape from `docs/spec/api.md`, default page size 50.
 - **Definition of Done:** Pagination is stable under concurrent inserts (cursor uses `id`,
   not offset, per ADR-008); filters compose correctly (category + date range together).
 - **Required Tests:** Integration test verifying cursor pagination returns consistent,
   non-duplicated results across pages even when new rows are inserted between page fetches
-  (per `docs/testing.md` "Pagination" integration test).
+  (per `docs/operations/testing.md` "Pagination" integration test).
 - **Estimated Complexity:** Medium
 - **Depends on:** E3-S1-T3
-- **Grounded in:** `docs/api.md` `/transactions` table + Pagination section; `docs/decisions.md` ADR-008.
+- **Grounded in:** `docs/spec/api.md` `/transactions` table + Pagination section; `docs/spec/decisions.md` ADR-008.
 
 #### E3-S2-T2 — `GET /transactions/:id`
 
@@ -92,7 +92,7 @@ here).
 - **Required Tests:** Integration test: user A cannot fetch user B's transaction by id.
 - **Estimated Complexity:** Small
 - **Depends on:** E3-S2-T1
-- **Grounded in:** `docs/api.md` `/transactions` table; `CLAUDE.md` security invariants (query scoping).
+- **Grounded in:** `docs/spec/api.md` `/transactions` table; `CLAUDE.md` security invariants (query scoping).
 
 #### E3-S2-T3 — `POST /transactions` (manual entry)
 
@@ -103,7 +103,7 @@ here).
 - **Required Tests:** Integration test: create, then confirm it appears in `GET /transactions` with `source: "manual"`.
 - **Estimated Complexity:** Small
 - **Depends on:** E3-S2-T1
-- **Grounded in:** `docs/api.md` `/transactions` table; `docs/database.md` `transaction_source` enum.
+- **Grounded in:** `docs/spec/api.md` `/transactions` table; `docs/spec/database.md` `transaction_source` enum.
 
 #### E3-S2-T4 — `PUT /transactions/:id/category` (correction + `ml_corrections` write)
 
@@ -116,21 +116,22 @@ here).
   - Both writes commit atomically (rollback together on failure).
   - `ml_corrections.old_category_id` reflects the prior assignment; a correction that would
     set old = new is either a no-op or rejected consistent with `chk_correction_different_category`.
-- **Required Tests:** Integration test per `docs/testing.md`: verify both tables update
+- **Required Tests:** Integration test per `docs/operations/testing.md`: verify both tables update
   atomically; test `404` for missing transaction; test `400` for invalid `category_id`.
 - **Estimated Complexity:** Medium
 - **Depends on:** E3-S2-T1, E0-S2-T5
-- **Grounded in:** `docs/api.md` `PUT /transactions/:id/category` section (ownership note) + request schema; `docs/database.md` `ml_corrections`; `docs/testing.md` Transaction Management unit tests.
+- **Grounded in:** `docs/spec/api.md` `PUT /transactions/:id/category` section (ownership note) + request schema; `docs/spec/database.md` `ml_corrections`; `docs/operations/testing.md` Transaction Management unit tests.
 
 #### E3-S2-T5 — `GET /categories`
 
 - **Objective:** Serve the 10 predefined categories.
 - **Expected Deliverable:** Endpoint returning all rows from the `categories` table, served by the Transaction module (not Categorization).
 - **Definition of Done:** Returns exactly the 10 seeded categories with correct `id`/`name`/`icon`.
-- **Required Tests:** Integration test asserting response matches the seed table in `docs/database.md`.
+- **Required Tests:** Integration test asserting response matches the seed table in `docs/spec/database.md`.
 - **Estimated Complexity:** Small
 - **Depends on:** E0-S2-T3
-- **Grounded in:** `docs/api.md` `/categories` section (module ownership note); `docs/requirements.md` Transaction Categories list.
+- **Grounded in:** `docs/spec/api.md` `/categories` section (module ownership note); `docs/spec/requirements.md` Transaction Categories list.
+- **Amended (2026-07-11):** `categories` extended from 10 to 12 rows by migration `V7__add_medical_and_fees_categories.sql` (Medical, Fees & Debt), landed 2026-07-02. This task's original Objective/DoD (V2, 10 rows) is unchanged as a historical record; `GET /categories` now returns 12 rows — see `docs/spec/database.md`.
 
 ---
 
@@ -147,7 +148,7 @@ here).
 - **Required Tests:** Integration test: create manual EMI, list it, confirm fields.
 - **Estimated Complexity:** Small
 - **Depends on:** E0-S2-T4
-- **Grounded in:** `docs/api.md` `/emis` table; `docs/database.md` `emis` schema.
+- **Grounded in:** `docs/spec/api.md` `/emis` table; `docs/spec/database.md` `emis` schema.
 
 #### E3-S3-T2 — `PUT /emis/:id`, `PATCH /emis/:id` (deactivate)
 
@@ -158,7 +159,7 @@ here).
 - **Required Tests:** Integration test: deactivate, confirm `is_active = false` and row still exists; confirm it's excluded from `GET /emis`.
 - **Estimated Complexity:** Small
 - **Depends on:** E3-S3-T1
-- **Grounded in:** `docs/api.md` `/emis` table; `docs/user_flows.md` EMI/Subscriptions Management flow.
+- **Grounded in:** `docs/spec/api.md` `/emis` table; `docs/operations/user_flows.md` EMI/Subscriptions Management flow.
 
 ---
 

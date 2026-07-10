@@ -51,16 +51,16 @@ ML_RETRAIN_CRON=0 0 3 * * SUN
 
 > `ML_LOW_CONFIDENCE_THRESHOLD` (E4-S3-T1): not specified elsewhere in this doc set — a
 > `/predict` response below this confidence is treated the same as a failed call and left
-> uncategorized for the categorization retry job (`docs/architecture.md` Background Jobs
+> uncategorized for the categorization retry job (`docs/spec/architecture.md` Background Jobs
 > table) rather than written to `transaction_categories`. Defaults to `0.5` if unset.
 >
-> `ML_RETRAIN_CRON` (E4-S3-T4): the "Weekly (configurable)" schedule from `docs/architecture.md`'s
+> `ML_RETRAIN_CRON` (E4-S3-T4): the "Weekly (configurable)" schedule from `docs/spec/architecture.md`'s
 > Background Jobs table. Defaults to Sunday 03:00 server time if unset.
 >
 > `SPRING_DATASOURCE_JOBS_USERNAME`/`_PASSWORD` (E4-S3-T3/T4) follow the same pattern as
 > `SPRING_DATASOURCE_URL`/`_USERNAME`/`_PASSWORD` above — internal JDBC role credentials for
 > the second, `BYPASSRLS`-enabled connection pool background jobs use, not part of Supabase's
-> client-SDK credential set, so omitted from this list too. See `docs/security.md`
+> client-SDK credential set, so omitted from this list too. See `docs/spec/security.md`
 > "Cross-user reads for background jobs" and `backend/.env.example`.
 >
 > **No `FCM_SERVER_KEY` (removed during Epic 5 implementation):** the original epic spec
@@ -237,4 +237,4 @@ GET /api/v1/health
 
 UptimeRobot pings this every 5 minutes. The response checks both the Supabase database connection and the FastAPI ML service reachability.
 
-> This is an operational endpoint not listed in the API reference (`docs/api.md`). It is unauthenticated and intended for infrastructure monitoring only.
+> This is an operational endpoint not listed in the API reference (`docs/spec/api.md`). It is unauthenticated and intended for infrastructure monitoring only.

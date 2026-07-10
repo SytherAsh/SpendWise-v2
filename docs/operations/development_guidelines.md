@@ -108,7 +108,7 @@ All four test suites must pass before pushing to `main`.
 
 ## Environment Setup
 
-See [docs/deployment.md](./deployment.md) for the full list of required environment variables.
+See [docs/operations/deployment.md](./deployment.md) for the full list of required environment variables.
 
 Copy `.env.example` files (where present) to `.env` and fill in values. Never commit `.env` files.
 
@@ -124,7 +124,7 @@ When adding parser support for a new bank or payment app:
 ## Adding a New Category
 
 1. Add the category via an additive Flyway migration (don't edit an already-run migration's seed data)
-2. Update `docs/requirements.md`, `docs/database.md`, and `docs/api.md` with the new category
+2. Update `docs/spec/requirements.md`, `docs/spec/database.md`, and `docs/spec/api.md` with the new category
 3. Update the ML training pipeline (`ml/api/categories.py` and `ml/labeling/`) to include the new label
 4. Re-run model evaluation to confirm accuracy is not degraded
 5. Update UI category list in both Android and Next.js

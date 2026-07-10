@@ -6,7 +6,7 @@
 |---|---|---|
 | E0 Foundation | — | — (must go first) |
 | E1 Auth & User | E0 | **E2** (Android parsing has zero backend dependency) |
-| E2 Android SMS Parsing & Sync | E0 | **E1** (no shared code — parser is pure Kotlin, only shares the JSON contract already frozen in `docs/api.md`) |
+| E2 Android SMS Parsing & Sync | E0 | **E1** (no shared code — parser is pure Kotlin, only shares the JSON contract already frozen in `docs/spec/api.md`) |
 | E3 Ingestion & Transactions | E0, E1 | E2 continuing in background; E4-S1/S2 (FastAPI service itself, see below) |
 | E4 ML Categorization | E3 (only for S3 backend integration) | **E4-S1/S2** (FastAPI app + model training are a standalone Python service — start these the moment E0 lands, don't wait for E3) |
 | E5 Budget & Alerts | E3, E4 | E6-S1 (recurring-detection algorithm is pure logic against synthetic data, doesn't need E5 wired yet) |
@@ -25,7 +25,7 @@ task ID the other one produces, and they don't touch the same files. The most va
 parallel tracks in this backlog:
 
 1. **Backend core vs. Android parser** (E1 + E3 vs. E2) — completely disjoint codebases
-   sharing only a JSON contract that is already frozen in `docs/api.md`. Ideal for two
+   sharing only a JSON contract that is already frozen in `docs/spec/api.md`. Ideal for two
    people or two agent sessions from day one.
 2. **FastAPI ML service vs. Spring Boot** (E4-S1/S2 vs. E3) — the ML service and its model
    training are a standalone Python process. Only E4-S3 (Categorization module's HTTP
@@ -34,7 +34,7 @@ parallel tracks in this backlog:
    lands, its corresponding screen can be built on both platforms simultaneously by
    different people without either blocking the other.
 4. **Analytics vs. Budget/Alerts/EMI** (E7 vs. E5/E6) — Analytics is strictly read-only
-   (`docs/architecture.md` module dependency rules) and reads from Transaction/Categorization
+   (`docs/spec/architecture.md` module dependency rules) and reads from Transaction/Categorization
    only, so it never contends with Budget/Alerts/EMI's write paths.
 
 ## E9 (Android UI) per-story dependency

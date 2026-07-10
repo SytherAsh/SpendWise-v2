@@ -1,10 +1,12 @@
 # Product Roadmap
 
-## Current Phase: MVP
+## MVP Scope (Complete)
 
-**Goal**: Working end-to-end product for personal use + family (~5–10 users).
+**Status**: Shipped. All MVP features below are complete (Epics 0–11 — see [implementation/tracking/STATUS.md](../implementation/tracking/STATUS.md)). This section is the historical feature-scope definition used to plan the MVP, not a live phase tracker — for what's being worked on now, see `CLAUDE.md`'s Current Phase section.
 
-Core features (must be complete before any post-MVP work):
+**Original goal**: Working end-to-end product for personal use + family (~5–10 users).
+
+Core features (delivered as part of MVP):
 
 - SMS ingestion (SBI, Paytm, GPay)
 - Bank statement upload (historical transaction seed + budget suggestions)
@@ -109,7 +111,7 @@ Trigger: when free-tier limits are consistently hit and paid infrastructure beco
 ### Phase 9: Counterparty Metadata Enrichment (Analytics/Dashboard)
 
 **Transactions-page slice built 2026-07-09** (UI/UX polish phase) — a `contacts` table
-and `/api/v1/contacts` CRUD (`docs/database.md`, `docs/api.md`), matched client-side
+and `/api/v1/contacts` CRUD (`docs/spec/database.md`, `docs/spec/api.md`), matched client-side
 against `recipient_name`/`upi_id` to group and tag Transfers on the Transactions page.
 The Analytics-layer read-only join described below **remains unbuilt** — this phase
 entry now tracks that remaining Analytics-integration slice specifically, not the
@@ -122,11 +124,11 @@ whole feature.
   employers, or subscriptions (`ml/labeling/knowledge_base/`)
 - Proposed: a post-ML-prediction enrichment step (read-only, Analytics-layer) attaches
   this counterparty metadata to a transaction for display/filtering purposes — the ML
-  model itself keeps predicting only the 12 categories in `docs/requirements.md`,
+  model itself keeps predicting only the 12 categories in `docs/spec/requirements.md`,
   unchanged
-- Design sketch: `docs/architecture.md` "Future Enhancement: Counterparty Metadata
+- Design sketch: `docs/spec/architecture.md` "Future Enhancement: Counterparty Metadata
   Enrichment"; rationale for keeping it out of the ML problem: ADR-010 in
-  `docs/decisions.md`
+  `docs/spec/decisions.md`
 - Natural landing point: Epic 7 (Analytics) once prioritized, or a dedicated future
   epic — not scoped into any current epic
 - Would need: porting `merchant_rules.csv`-style rules into a queryable table, a

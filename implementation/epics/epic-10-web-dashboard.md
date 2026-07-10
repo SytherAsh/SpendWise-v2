@@ -27,7 +27,7 @@ one block. See `../DEPENDENCY-GRAPH.md`'s "E10 per-story dependency" table.
 - **Required Tests:** Component test for the login form's success/error states (mocked API).
 - **Estimated Complexity:** Large
 - **Depends on:** E1-S1-T3, E1-S1-T4
-- **Grounded in:** `CLAUDE.md` Auth pattern; `docs/deployment.md` Next.js env vars.
+- **Grounded in:** `CLAUDE.md` Auth pattern; `docs/operations/deployment.md` Next.js env vars.
 
 #### E10-S1-T2 — Client-side token storage, refresh, protected routes
 
@@ -39,7 +39,7 @@ one block. See `../DEPENDENCY-GRAPH.md`'s "E10 per-story dependency" table.
 - **Required Tests:** Component/unit test for the refresh-on-401 interceptor logic.
 - **Estimated Complexity:** Medium
 - **Depends on:** E10-S1-T1
-- **Grounded in:** `docs/security.md` Authentication & Authorization (rotation); `docs/user_flows.md` Multi-Device Flow.
+- **Grounded in:** `docs/spec/security.md` Authentication & Authorization (rotation); `docs/operations/user_flows.md` Multi-Device Flow.
 
 ---
 
@@ -55,7 +55,7 @@ Each task is independently gated by its own backend epic — see `../DEPENDENCY-
 - **Required Tests:** Component tests for each dashboard section with mocked API responses.
 - **Estimated Complexity:** Large
 - **Depends on:** E5-S1-T3, E7-S1-T4, E8-S2-T2, E5-S4-T1
-- **Grounded in:** `docs/user_flows.md` "Reviewing Transactions".
+- **Grounded in:** `docs/operations/user_flows.md` "Reviewing Transactions".
 
 #### E10-S2-T2 — Transactions page
 
@@ -65,7 +65,7 @@ Each task is independently gated by its own backend epic — see `../DEPENDENCY-
 - **Required Tests:** Component tests for pagination and filter state; one test for the category-correction flow (mocked API).
 - **Estimated Complexity:** Large
 - **Depends on:** E3-S2-T1, E3-S2-T2, E3-S2-T4
-- **Grounded in:** `docs/user_flows.md` "Browsing the Transaction List" + "Correcting a Category".
+- **Grounded in:** `docs/operations/user_flows.md` "Browsing the Transaction List" + "Correcting a Category".
 
 #### E10-S2-T3 — Budget page
 
@@ -75,7 +75,7 @@ Each task is independently gated by its own backend epic — see `../DEPENDENCY-
 - **Required Tests:** Component test for the edit form and suggestion-accept flow.
 - **Estimated Complexity:** Medium
 - **Depends on:** E5-S1-T1, E5-S1-T4
-- **Grounded in:** `docs/user_flows.md` "Setting / Editing a Budget".
+- **Grounded in:** `docs/operations/user_flows.md` "Setting / Editing a Budget".
 
 #### E10-S2-T4 — EMI/Subscriptions page
 
@@ -85,7 +85,7 @@ Each task is independently gated by its own backend epic — see `../DEPENDENCY-
 - **Required Tests:** Component test for deactivate flow.
 - **Estimated Complexity:** Medium
 - **Depends on:** E3-S3-T1, E3-S3-T2
-- **Grounded in:** `docs/user_flows.md` "EMI / Subscriptions Management".
+- **Grounded in:** `docs/operations/user_flows.md` "EMI / Subscriptions Management".
 
 #### E10-S2-T5 — Chatbot page
 
@@ -95,7 +95,7 @@ Each task is independently gated by its own backend epic — see `../DEPENDENCY-
 - **Required Tests:** Component test for sending a message and rendering the response; test for resuming a session's history.
 - **Estimated Complexity:** Large
 - **Depends on:** E8-S3-T1, E8-S3-T2
-- **Grounded in:** `docs/user_flows.md` "Chatbot Interaction".
+- **Grounded in:** `docs/operations/user_flows.md` "Chatbot Interaction".
 
 #### E10-S2-T6 — Export page
 
@@ -105,7 +105,7 @@ Each task is independently gated by its own backend epic — see `../DEPENDENCY-
 - **Required Tests:** Component test for the range-picker validation (end date before start date rejected, etc.).
 - **Estimated Complexity:** Medium
 - **Depends on:** E7-S2-T1, E7-S2-T2
-- **Grounded in:** `docs/user_flows.md` "Exporting a Report".
+- **Grounded in:** `docs/operations/user_flows.md` "Exporting a Report".
 
 #### E10-S2-T7 — Settings page
 
@@ -115,7 +115,7 @@ Each task is independently gated by its own backend epic — see `../DEPENDENCY-
 - **Required Tests:** Component test for the preferences form save flow.
 - **Estimated Complexity:** Small
 - **Depends on:** E1-S3-T2, E1-S1-T6
-- **Grounded in:** `docs/security.md` Privacy Policy requirement.
+- **Grounded in:** `docs/spec/security.md` Privacy Policy requirement.
 
 ---
 
@@ -125,14 +125,14 @@ Each task is independently gated by its own backend epic — see `../DEPENDENCY-
 
 - **Objective:** Serve last-fetched data with a visible stale indicator when the backend is unreachable — no server-side cache, per the architecture note.
 - **Expected Deliverable:** A client-side caching layer (browser storage / in-memory React
-  state, per `docs/architecture.md`'s explicit note that no server-side cache is used) that
+  state, per `docs/spec/architecture.md`'s explicit note that no server-side cache is used) that
   intercepts failed requests and falls back to the last successful response, rendering a stale-data banner.
 - **Definition of Done:** Killing the backend mid-session on the dashboard page continues to
   show the last-loaded data with a visible "stale" indicator, rather than an error screen or blank page.
 - **Required Tests:** Component test simulating a failed fetch after a successful one — asserts stale data + indicator both render.
 - **Estimated Complexity:** Medium
 - **Depends on:** E10-S2-T1
-- **Grounded in:** `docs/architecture.md` "Web dashboard offline behavior" note; `docs/requirements.md` Availability ("Web dashboard: caching layer serves stale data when backend is unavailable").
+- **Grounded in:** `docs/spec/architecture.md` "Web dashboard offline behavior" note; `docs/spec/requirements.md` Availability ("Web dashboard: caching layer serves stale data when backend is unavailable").
 
 ---
 

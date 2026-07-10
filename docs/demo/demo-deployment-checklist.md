@@ -19,7 +19,7 @@
 ### Database
 
 - [ ] PostgreSQL/Supabase is accessible
-- [ ] Row-Level Security (RLS) is configured per `docs/database.md`
+- [ ] Row-Level Security (RLS) is configured per `docs/spec/database.md`
 - [ ] Demo user does NOT already exist (check below)
 
 **Check if demo user exists:**

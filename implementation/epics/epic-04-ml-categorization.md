@@ -23,11 +23,11 @@ backend** and should start as soon as Epic 0 lands, in parallel with Epic 3. Onl
   Categorization module, per the internal-only invariant.
 - **Expected Deliverable:** FastAPI middleware rejecting any request to `/predict`,
   `/retrain`, `/evaluate` that lacks a matching `X-Internal-Key` header (compared against `ML_INTERNAL_KEY`).
-- **Definition of Done:** Request without the header, or with a wrong value, → `401`; `/health` remains exempt (used by uptime monitoring, unauthenticated per `docs/deployment.md`).
+- **Definition of Done:** Request without the header, or with a wrong value, → `401`; `/health` remains exempt (used by uptime monitoring, unauthenticated per `docs/operations/deployment.md`).
 - **Required Tests:** `pytest`: missing header → 401; wrong value → 401; correct value → passes through to the route handler.
 - **Estimated Complexity:** Small
 - **Depends on:** E0-S1-T4
-- **Grounded in:** `docs/architecture.md` FastAPI ML Service "Internal access only" note; `docs/security.md` API Security Checklist last item; `docs/deployment.md` `ML_INTERNAL_KEY`.
+- **Grounded in:** `docs/spec/architecture.md` FastAPI ML Service "Internal access only" note; `docs/spec/security.md` API Security Checklist last item; `docs/operations/deployment.md` `ML_INTERNAL_KEY`.
 
 ---
 
@@ -40,14 +40,14 @@ backend** and should start as soon as Epic 0 lands, in parallel with Epic 3. Onl
 - **Objective:** Convert a raw transaction dict into a feature vector for the classifier.
 - **Expected Deliverable:** A preprocessing module extracting features from
   `recipient_name`, `upi_id`, `bank`, `transaction_mode`, `amount`, `note` — handling nulls
-  gracefully (per the real-data nullability notes in `docs/database.md`).
+  gracefully (per the real-data nullability notes in `docs/spec/database.md`).
 - **Definition of Done:** Given a transaction dict with all fields null except `amount`, the
   pipeline produces a valid feature vector without throwing.
-- **Required Tests:** Unit tests per `docs/testing.md` §2: each field extracted correctly;
+- **Required Tests:** Unit tests per `docs/operations/testing.md` §2: each field extracted correctly;
   null `note`/`bank` handled; empty-ish transaction handled.
 - **Estimated Complexity:** Medium
 - **Depends on:** E4-S1-T1
-- **Grounded in:** `docs/testing.md` §2 Preprocessing pipeline / Feature extraction; `docs/database.md` "Notes from Real Data" nullability facts.
+- **Grounded in:** `docs/operations/testing.md` §2 Preprocessing pipeline / Feature extraction; `docs/spec/database.md` "Notes from Real Data" nullability facts.
 
 #### E4-S2-T2 — Train baseline scikit-learn classifier
 
@@ -55,27 +55,27 @@ backend** and should start as soon as Epic 0 lands, in parallel with Epic 3. Onl
   statement dataset, per ADR-003/ADR-004 (supervised, server-side, scikit-learn — not deep
   learning, not on-device).
 - **Expected Deliverable:** `ml/training/train.py` script; committed model artifact at
-  `MODEL_PATH` (per `docs/deployment.md` — model is version-controlled, no external store at MVP).
+  `MODEL_PATH` (per `docs/operations/deployment.md` — model is version-controlled, no external store at MVP).
 - **Definition of Done:** Running `python training/train.py --output models/` reproducibly
-  produces a loadable model artifact; the 12 categories from `docs/requirements.md` are the
+  produces a loadable model artifact; the 12 categories from `docs/spec/requirements.md` are the
   full label set.
 - **Required Tests:** A test that loads the committed artifact and confirms it predicts one
   of the 12 valid `category_id`s for a known-good sample input.
 - **Estimated Complexity:** Large
 - **Depends on:** E4-S2-T1
-- **Grounded in:** `docs/decisions.md` ADR-003, ADR-004; `docs/deployment.md` "Model artifacts" note; `docs/requirements.md` Transaction Categories.
+- **Grounded in:** `docs/spec/decisions.md` ADR-003, ADR-004; `docs/operations/deployment.md` "Model artifacts" note; `docs/spec/requirements.md` Transaction Categories.
 
 #### E4-S2-T3 — `POST /predict`
 
 - **Objective:** Serve category predictions.
 - **Expected Deliverable:** Endpoint accepting the feature payload shown in
-  `docs/deployment.md`'s Backend Service Communication example, returning
+  `docs/operations/deployment.md`'s Backend Service Communication example, returning
   `{category_id, category_name, confidence}`.
 - **Definition of Done:** Response schema matches exactly; confidence is a float in `[0,1]`.
-- **Required Tests:** `pytest` with a mocked model: verify response schema per `docs/testing.md` §2.
+- **Required Tests:** `pytest` with a mocked model: verify response schema per `docs/operations/testing.md` §2.
 - **Estimated Complexity:** Small
 - **Depends on:** E4-S2-T2
-- **Grounded in:** `docs/deployment.md` "Backend Service Communication" example request/response; `docs/architecture.md` FastAPI endpoint table.
+- **Grounded in:** `docs/operations/deployment.md` "Backend Service Communication" example request/response; `docs/spec/architecture.md` FastAPI endpoint table.
 
 #### E4-S2-T4 — `POST /retrain`
 
@@ -84,12 +84,12 @@ backend** and should start as soon as Epic 0 lands, in parallel with Epic 3. Onl
   rows, supplied by the Spring Boot caller — see E4-S3-T4) and retraining the model, replacing the artifact.
 - **Definition of Done:** Endpoint runs the training pipeline without error and returns a
   success indicator; the new artifact is loadable afterward.
-- **Required Tests:** `pytest` per `docs/testing.md` §2: verify it loads corrections data and
+- **Required Tests:** `pytest` per `docs/operations/testing.md` §2: verify it loads corrections data and
   triggers training without error (mocked training call is acceptable at unit level; a
   slower end-to-end training test may be marked slow/optional).
 - **Estimated Complexity:** Medium
 - **Depends on:** E4-S2-T2
-- **Grounded in:** `docs/architecture.md` FastAPI endpoint table; `docs/decisions.md` ADR-003; `docs/testing.md` §2 Retrain endpoint.
+- **Grounded in:** `docs/spec/architecture.md` FastAPI endpoint table; `docs/spec/decisions.md` ADR-003; `docs/operations/testing.md` §2 Retrain endpoint.
 
 #### E4-S2-T5 — `GET /evaluate` + evaluation script
 
@@ -104,7 +104,7 @@ backend** and should start as soon as Epic 0 lands, in parallel with Epic 3. Onl
   metric sections present.
 - **Estimated Complexity:** Medium
 - **Depends on:** E4-S2-T2
-- **Grounded in:** `docs/testing.md` §2 Model Evaluation Script (exact command + output metrics + report location).
+- **Grounded in:** `docs/operations/testing.md` §2 Model Evaluation Script (exact command + output metrics + report location).
 
 ---
 
@@ -126,7 +126,7 @@ backend** and should start as soon as Epic 0 lands, in parallel with Epic 3. Onl
   failure path does not throw uncaught, leaves the transaction uncategorized for retry.
 - **Estimated Complexity:** Medium
 - **Depends on:** E4-S2-T3, E3-S1-T2
-- **Grounded in:** `docs/architecture.md` module dependency table ("Categorization → Transaction (update category)"); `CLAUDE.md` invariant "FastAPI is called only from the Categorization module"; `docs/testing.md` Categorization unit tests.
+- **Grounded in:** `docs/spec/architecture.md` module dependency table ("Categorization → Transaction (update category)"); `CLAUDE.md` invariant "FastAPI is called only from the Categorization module"; `docs/operations/testing.md` Categorization unit tests.
 
 #### E4-S3-T2 — Wire Ingest → Categorization trigger
 
@@ -139,7 +139,7 @@ backend** and should start as soon as Epic 0 lands, in parallel with Epic 3. Onl
   `transaction_categories` has a matching row (using a real or test-double FastAPI instance).
 - **Estimated Complexity:** Small
 - **Depends on:** E4-S3-T1
-- **Grounded in:** `docs/architecture.md` module dependency table ("Ingest may call: Transaction, Categorization"); SMS Ingestion Flow diagram.
+- **Grounded in:** `docs/spec/architecture.md` module dependency table ("Ingest may call: Transaction, Categorization"); SMS Ingestion Flow diagram.
 
 #### E4-S3-T3 — Categorization retry job (every 30 minutes)
 
@@ -153,12 +153,12 @@ backend** and should start as soon as Epic 0 lands, in parallel with Epic 3. Onl
   the job method manually (not waiting for the real 30-minute schedule), assert it becomes categorized.
 - **Estimated Complexity:** Medium
 - **Depends on:** E4-S3-T1
-- **Grounded in:** `docs/architecture.md` Background Jobs table ("Categorization retry — every 30 minutes").
+- **Grounded in:** `docs/spec/architecture.md` Background Jobs table ("Categorization retry — every 30 minutes").
 
 #### E4-S3-T4 — ML retraining weekly job
 
 - **Objective:** Periodically send `ml_corrections` data to FastAPI `/retrain`.
-- **Expected Deliverable:** A `@Scheduled` weekly job (configurable per `docs/architecture.md`)
+- **Expected Deliverable:** A `@Scheduled` weekly job (configurable per `docs/spec/architecture.md`)
   that reads `ml_corrections` and calls the Categorization service's retrain method.
 - **Definition of Done:** Manually invoking the job method triggers a real `/retrain` call
   against a running FastAPI test instance and completes without error.
@@ -166,7 +166,7 @@ backend** and should start as soon as Epic 0 lands, in parallel with Epic 3. Onl
   FastAPI `/retrain` endpoint was called (via a test double or a real call against E4-S2-T4).
 - **Estimated Complexity:** Medium
 - **Depends on:** E4-S3-T1, E4-S2-T4
-- **Grounded in:** `docs/architecture.md` Background Jobs table ("ML retraining — Weekly (configurable)").
+- **Grounded in:** `docs/spec/architecture.md` Background Jobs table ("ML retraining — Weekly (configurable)").
 
 #### E4-S3-T5 — Admin-triggered retrain + evaluate (service-interface only)
 
@@ -180,7 +180,7 @@ backend** and should start as soon as Epic 0 lands, in parallel with Epic 3. Onl
   Categorization package depends on the FastAPI client class.
 - **Estimated Complexity:** Small
 - **Depends on:** E4-S3-T1
-- **Grounded in:** `docs/architecture.md` "Admin calls Categorization's service interface... FastAPI is never called directly from Admin"; `CLAUDE.md` architectural invariants.
+- **Grounded in:** `docs/spec/architecture.md` "Admin calls Categorization's service interface... FastAPI is never called directly from Admin"; `CLAUDE.md` architectural invariants.
 
 ---
 

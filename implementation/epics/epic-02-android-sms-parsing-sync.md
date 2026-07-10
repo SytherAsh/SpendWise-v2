@@ -1,15 +1,15 @@
 # Epic 2 — Android SMS Parsing & Sync (No UI)
 
 **Working Milestone:** All Kotlin unit tests green for the parser (SBI/Paytm/GPay/unknown
-sender/dedup/invalid formats — the exact cases enumerated in `docs/testing.md` §3); an
+sender/dedup/invalid formats — the exact cases enumerated in `docs/operations/testing.md` §3); an
 instrumented test demonstrates a raw SMS string flowing through the keyword filter →
 regex parser → dedup check → Room DB queue → a serialized batch payload that matches the
-`POST /ingest/transactions` request schema in `docs/api.md` byte-for-byte in shape. No
+`POST /ingest/transactions` request schema in `docs/spec/api.md` byte-for-byte in shape. No
 Android UI exists yet — this epic is pure SMS/Parser/Sync/Storage module work per
 `CLAUDE.md`'s Android Module Map.
 
 This epic has **zero dependency on the backend** — the JSON contract it targets is already
-frozen in `docs/api.md`. It can be built entirely in parallel with Epic 1.
+frozen in `docs/spec/api.md`. It can be built entirely in parallel with Epic 1.
 
 ---
 
@@ -30,48 +30,48 @@ frozen in `docs/api.md`. It can be built entirely in parallel with Epic 1.
 - **Required Tests:** Unit tests for the three cases above, using realistic sample text (store samples under `android/app/src/test/kotlin/com/spendwise/parser/samples/`).
 - **Estimated Complexity:** Medium
 - **Depends on:** E0-S1-T3
-- **Grounded in:** `docs/architecture.md` SMS Ingestion Flow ("Financial keyword filter"); `docs/testing.md` §3 "Invalid / Unknown SMS formats"; `docs/development_guidelines.md` "Adding a New SMS Sender".
+- **Grounded in:** `docs/spec/architecture.md` SMS Ingestion Flow ("Financial keyword filter"); `docs/operations/testing.md` §3 "Invalid / Unknown SMS formats"; `docs/development_guidelines.md` "Adding a New SMS Sender".
 
 ---
 
 ### E2-S2 — Regex Parsers per Sender
 
-**Independently testable via:** Kotlin unit tests against the sample SMS strings given in `docs/testing.md`.
+**Independently testable via:** Kotlin unit tests against the sample SMS strings given in `docs/operations/testing.md`.
 
 #### E2-S2-T1 — SBI parser
 
 - **Objective:** Parse SBI debit/credit SMS formats into structured transaction fields.
 - **Expected Deliverable:** Regex-based parser handling both sample formats in
-  `docs/testing.md` (debit with UPI ref, credit without full ref detail).
+  `docs/operations/testing.md` (debit with UPI ref, credit without full ref detail).
 - **Definition of Done:** For every valid SBI sample, all of `transaction_date`, `amount`,
   `debit`, `credit`, `dr_cr_indicator`, `transaction_id` are non-null and DR/CR-consistent
   (`DR` ⇒ `amount<0, debit>0, credit=0`; `CR` ⇒ `amount>0, credit>0, debit=0`);
   `recipient_name`/`upi_id`/`bank` are present or null, never throwing.
-- **Required Tests:** Exactly the two SBI sample strings from `docs/testing.md` §3, plus one
+- **Required Tests:** Exactly the two SBI sample strings from `docs/operations/testing.md` §3, plus one
   malformed/partial-data SBI-like string that must not crash the parser.
 - **Estimated Complexity:** Medium
 - **Depends on:** E2-S1-T1
-- **Grounded in:** `docs/testing.md` §3 SBI SMS formats + Field extraction assertions; `docs/database.md` `transactions` schema (field types/nullability, `chk_dr_cr_consistency`).
+- **Grounded in:** `docs/operations/testing.md` §3 SBI SMS formats + Field extraction assertions; `docs/spec/database.md` `transactions` schema (field types/nullability, `chk_dr_cr_consistency`).
 
 #### E2-S2-T2 — Paytm parser
 
 - **Objective:** Parse Paytm UPI SMS formats.
-- **Expected Deliverable:** Regex-based parser for the Paytm sample format in `docs/testing.md`.
+- **Expected Deliverable:** Regex-based parser for the Paytm sample format in `docs/operations/testing.md`.
 - **Definition of Done:** Same field-extraction assertions as E2-S2-T1, applied to Paytm's format.
-- **Required Tests:** The Paytm sample string from `docs/testing.md` §3, plus one partial-data variant.
+- **Required Tests:** The Paytm sample string from `docs/operations/testing.md` §3, plus one partial-data variant.
 - **Estimated Complexity:** Medium
 - **Depends on:** E2-S1-T1
-- **Grounded in:** `docs/testing.md` §3 Paytm SMS format; `docs/database.md` `transactions` schema.
+- **Grounded in:** `docs/operations/testing.md` §3 Paytm SMS format; `docs/spec/database.md` `transactions` schema.
 
 #### E2-S2-T3 — GPay parser
 
 - **Objective:** Parse Google Pay UPI SMS formats.
-- **Expected Deliverable:** Regex-based parser for the GPay sample format in `docs/testing.md`.
+- **Expected Deliverable:** Regex-based parser for the GPay sample format in `docs/operations/testing.md`.
 - **Definition of Done:** Same field-extraction assertions as E2-S2-T1, applied to GPay's format.
-- **Required Tests:** The GPay sample string from `docs/testing.md` §3, plus one partial-data variant.
+- **Required Tests:** The GPay sample string from `docs/operations/testing.md` §3, plus one partial-data variant.
 - **Estimated Complexity:** Medium
 - **Depends on:** E2-S1-T1
-- **Grounded in:** `docs/testing.md` §3 GPay SMS format; `docs/database.md` `transactions` schema.
+- **Grounded in:** `docs/operations/testing.md` §3 GPay SMS format; `docs/spec/database.md` `transactions` schema.
 
 #### E2-S2-T4 — Unknown-sender fallback extractor
 
@@ -86,7 +86,7 @@ frozen in `docs/api.md`. It can be built entirely in parallel with Epic 1.
   when present in text.
 - **Estimated Complexity:** Medium
 - **Depends on:** E2-S1-T1
-- **Grounded in:** `docs/architecture.md` SMS Ingestion Flow ("unknown sender: keyword-based field extraction"); `docs/testing.md` §3 "Unknown sender financial SMS".
+- **Grounded in:** `docs/spec/architecture.md` SMS Ingestion Flow ("unknown sender: keyword-based field extraction"); `docs/operations/testing.md` §3 "Unknown sender financial SMS".
 
 ---
 
@@ -105,10 +105,10 @@ frozen in `docs/api.md`. It can be built entirely in parallel with Epic 1.
   - Same bank-provided `transaction_id` twice → second call returns null (duplicate).
   - Same synthesized `transaction_id` twice → second call returns null (duplicate).
   - A genuinely different transaction → returns the parsed object.
-- **Required Tests:** The three cases in `docs/testing.md` §3 "Deduplication logic" exactly.
+- **Required Tests:** The three cases in `docs/operations/testing.md` §3 "Deduplication logic" exactly.
 - **Estimated Complexity:** Medium
 - **Depends on:** E2-S2-T1, E2-S2-T2, E2-S2-T3, E2-S2-T4
-- **Grounded in:** `docs/database.md` `transactions.transaction_id` column comment (synthesis rule); `docs/testing.md` §3 Deduplication logic; `docs/architecture.md` SMS Ingestion Flow "Deduplication check".
+- **Grounded in:** `docs/spec/database.md` `transactions.transaction_id` column comment (synthesis rule); `docs/operations/testing.md` §3 Deduplication logic; `docs/spec/architecture.md` SMS Ingestion Flow "Deduplication check".
 
 ---
 
@@ -120,14 +120,14 @@ frozen in `docs/api.md`. It can be built entirely in parallel with Epic 1.
 
 - **Objective:** Build the offline queue that holds parsed-but-unsynced transactions.
 - **Expected Deliverable:** `com.spendwise.storage` Room `@Entity` mirroring the ingest
-  payload shape (`docs/api.md` `POST /ingest/transactions` request schema) plus a `synced`
+  payload shape (`docs/spec/api.md` `POST /ingest/transactions` request schema) plus a `synced`
   flag, and a DAO with insert/query-unsynced/mark-synced/delete operations.
 - **Definition of Done:** Insert → appears in unsynced query; mark-synced → excluded from
   unsynced query; entity fields map 1:1 to the ingest payload's transaction object fields.
 - **Required Tests:** Room instrumented test: insert, query unsynced, mark synced, query again.
 - **Estimated Complexity:** Medium
 - **Depends on:** E2-S3-T1
-- **Grounded in:** `CLAUDE.md` Android Module Map (Storage); `docs/api.md` ingest request schema.
+- **Grounded in:** `CLAUDE.md` Android Module Map (Storage); `docs/spec/api.md` ingest request schema.
 
 ---
 
@@ -151,7 +151,7 @@ frozen in `docs/api.md`. It can be built entirely in parallel with Epic 1.
   (some 201, one 409, one 500) → queue ends up with only the 500 item still pending.
 - **Estimated Complexity:** Large
 - **Depends on:** E2-S4-T1
-- **Grounded in:** `docs/architecture.md` "Deduplication is two-layered" note; `docs/api.md` `/ingest` idempotency note; `docs/requirements.md` "Background sync interval: ~15-30 minutes"; `docs/user_flows.md` "Backend Offline" edge case.
+- **Grounded in:** `docs/spec/architecture.md` "Deduplication is two-layered" note; `docs/spec/api.md` `/ingest` idempotency note; `docs/spec/requirements.md` "Background sync interval: ~15-30 minutes"; `docs/operations/user_flows.md` "Backend Offline" edge case.
 
 #### E2-S5-T2 — Real-time SMS capture (BroadcastReceiver + foreground service)
 
@@ -164,7 +164,7 @@ frozen in `docs/api.md`. It can be built entirely in parallel with Epic 1.
 - **Required Tests:** Instrumented test broadcasting a mock SMS intent and asserting the Room DB state.
 - **Estimated Complexity:** Large
 - **Depends on:** E2-S4-T1
-- **Grounded in:** `docs/architecture.md` SMS Ingestion Flow (full diagram); `CLAUDE.md` Android Module Map (SMS).
+- **Grounded in:** `docs/spec/architecture.md` SMS Ingestion Flow (full diagram); `CLAUDE.md` Android Module Map (SMS).
 
 #### E2-S5-T3 — First-launch SMS inbox backfill
 
@@ -180,7 +180,7 @@ frozen in `docs/api.md`. It can be built entirely in parallel with Epic 1.
   messages, asserting the resulting Room DB queue contents and that sync is triggered exactly once at the end.
 - **Estimated Complexity:** Large
 - **Depends on:** E2-S5-T1, E2-S5-T2
-- **Grounded in:** `docs/architecture.md` "First-Launch SMS Inbox Backfill" section (full flow); `docs/user_flows.md` Onboarding step 8.
+- **Grounded in:** `docs/spec/architecture.md` "First-Launch SMS Inbox Backfill" section (full flow); `docs/operations/user_flows.md` Onboarding step 8.
 
 ---
 

@@ -23,7 +23,7 @@ SMTP/FCM sandbox.
   call's response reflects the (possibly updated) value; call with `monthly_limit <= 0` → `400`.
 - **Estimated Complexity:** Small
 - **Depends on:** E0-S2-T4, E1-S1-T7
-- **Grounded in:** `docs/api.md` "Budget upsert" note; `docs/database.md` `budgets` schema + `chk_budget_limit_positive` comment.
+- **Grounded in:** `docs/spec/api.md` "Budget upsert" note; `docs/spec/database.md` `budgets` schema + `chk_budget_limit_positive` comment.
 
 #### E5-S1-T2 — `GET /budgets`
 
@@ -33,20 +33,20 @@ SMTP/FCM sandbox.
 - **Required Tests:** Integration test with budgets across two different months — only current month returned.
 - **Estimated Complexity:** Small
 - **Depends on:** E5-S1-T1
-- **Grounded in:** `docs/api.md` `/budgets` table.
+- **Grounded in:** `docs/spec/api.md` `/budgets` table.
 
 #### E5-S1-T3 — `GET /budgets/progress`
 
 - **Objective:** Return budget-vs-actual spend per category for the current month.
 - **Expected Deliverable:** Endpoint joining `budgets` with a read-only aggregation over
-  `transactions`/`transaction_categories` (Budget module's only permitted read: Transaction, read-only, per `docs/architecture.md`).
+  `transactions`/`transaction_categories` (Budget module's only permitted read: Transaction, read-only, per `docs/spec/architecture.md`).
 - **Definition of Done:** For a seeded set of transactions and a budget, the returned
   percent-spent matches a hand-computed value exactly.
-- **Required Tests:** Integration test per `docs/testing.md` Budget unit tests: progress
+- **Required Tests:** Integration test per `docs/operations/testing.md` Budget unit tests: progress
   calculation (% spent) matches expected for a fixed fixture.
 - **Estimated Complexity:** Medium
 - **Depends on:** E5-S1-T1, E3-S2-T4
-- **Grounded in:** `docs/api.md` `/budgets` table; `docs/architecture.md` Budget module dependency row ("Transaction (read-only)"); `docs/testing.md` Budget unit tests.
+- **Grounded in:** `docs/spec/api.md` `/budgets` table; `docs/spec/architecture.md` Budget module dependency row ("Transaction (read-only)"); `docs/operations/testing.md` Budget unit tests.
 
 #### E5-S1-T4 — `GET /budgets/suggestions`
 
@@ -61,7 +61,7 @@ SMTP/FCM sandbox.
 - **Required Tests:** Integration test: seeded history → non-null suggestion; no history → graceful empty response, not a 500.
 - **Estimated Complexity:** Medium
 - **Depends on:** E5-S1-T1, E3-S2-T4
-- **Grounded in:** `docs/api.md` `/budgets/suggestions`; `docs/requirements.md` Budget section ("system suggests a starting budget"); `docs/user_flows.md` "First-Time User" edge case.
+- **Grounded in:** `docs/spec/api.md` `/budgets/suggestions`; `docs/spec/requirements.md` Budget section ("system suggests a starting budget"); `docs/operations/user_flows.md` "First-Time User" edge case.
 
 ---
 
@@ -74,20 +74,20 @@ SMTP/FCM sandbox.
 - **Objective:** Detect when a user has spent 50% of their *total* monthly budget by mid-month.
 - **Expected Deliverable:** Evaluation function producing a `mid_month_budget` alert with `priority = 'high'` when triggered.
 - **Definition of Done:** Fixture at exactly 50% by the 15th triggers; fixture below 50% does not.
-- **Required Tests:** Unit tests per `docs/testing.md` Budget unit tests: mid-month 50% total-budget threshold (high priority).
+- **Required Tests:** Unit tests per `docs/operations/testing.md` Budget unit tests: mid-month 50% total-budget threshold (high priority).
 - **Estimated Complexity:** Medium
 - **Depends on:** E5-S1-T3
-- **Grounded in:** `docs/requirements.md` Alerts table (Mid-month budget alert); `docs/database.md` `alert_type` enum.
+- **Grounded in:** `docs/spec/requirements.md` Alerts table (Mid-month budget alert); `docs/spec/database.md` `alert_type` enum.
 
 #### E5-S2-T2 — Category 80%-approaching-limit rule
 
 - **Objective:** Detect when a specific category budget hits 80% spent.
 - **Expected Deliverable:** Evaluation function producing a `category_approaching_limit` alert with `priority = 'medium'`.
 - **Definition of Done:** Fixture at 80%+ but below 100% triggers; below 80% does not; at/above 100% is handled by E5-S2-T3 instead (no double-firing both rules for the same state — document the boundary rule, e.g. overspend rule takes precedence once ≥100%).
-- **Required Tests:** Unit test per `docs/testing.md`: 80% per-category threshold (medium priority, in-app only).
+- **Required Tests:** Unit test per `docs/operations/testing.md`: 80% per-category threshold (medium priority, in-app only).
 - **Estimated Complexity:** Medium
 - **Depends on:** E5-S1-T3
-- **Grounded in:** `docs/requirements.md` Alerts table (Category overspending) + priority table (Medium — 80% — in-app only).
+- **Grounded in:** `docs/spec/requirements.md` Alerts table (Category overspending) + priority table (Medium — 80% — in-app only).
 
 #### E5-S2-T3 — Category overspend rule
 
@@ -97,7 +97,7 @@ SMTP/FCM sandbox.
 - **Required Tests:** Unit test: ≥100% triggers; running the evaluator twice against the same state does not create a second alert.
 - **Estimated Complexity:** Medium
 - **Depends on:** E5-S1-T3
-- **Grounded in:** `docs/requirements.md` Alerts table + priority table (High — budget exceeded — push + email); `docs/testing.md` Alerts evaluation engine unit tests.
+- **Grounded in:** `docs/spec/requirements.md` Alerts table + priority table (High — budget exceeded — push + email); `docs/operations/testing.md` Alerts evaluation engine unit tests.
 
 #### E5-S2-T4 — Alert evaluator scheduled job (every 30 minutes)
 
@@ -111,7 +111,7 @@ SMTP/FCM sandbox.
   assert each user's `alerts` rows are correct and isolated from each other.
 - **Estimated Complexity:** Large
 - **Depends on:** E5-S2-T1, E5-S2-T2, E5-S2-T3
-- **Grounded in:** `docs/architecture.md` Background Jobs table (Alert evaluator, every 30 min) + Alerts module dependency row.
+- **Grounded in:** `docs/spec/architecture.md` Background Jobs table (Alert evaluator, every 30 min) + Alerts module dependency row.
 
 ---
 
@@ -127,7 +127,7 @@ SMTP/FCM sandbox.
 - **Required Tests:** Unit test: success sets `delivered_at`; failure is handled gracefully (logged, not thrown).
 - **Estimated Complexity:** Medium
 - **Depends on:** E5-S2-T4
-- **Grounded in:** `docs/requirements.md` Alerts priority/delivery table; `docs/deployment.md` `FCM_SERVER_KEY`; `docs/user_flows.md` "Handling an Alert" (`delivered_at` set automatically by server on FCM/SMTP confirmation).
+- **Grounded in:** `docs/spec/requirements.md` Alerts priority/delivery table; `docs/operations/deployment.md` `FCM_SERVER_KEY`; `docs/operations/user_flows.md` "Handling an Alert" (`delivered_at` set automatically by server on FCM/SMTP confirmation).
 
 #### E5-S3-T2 — SMTP email dispatch
 
@@ -137,7 +137,7 @@ SMTP/FCM sandbox.
 - **Required Tests:** Unit test: success and failure paths, mirroring E5-S3-T1's structure.
 - **Estimated Complexity:** Medium
 - **Depends on:** E5-S2-T4
-- **Grounded in:** `docs/requirements.md` "Default delivery: push notification + email"; `docs/deployment.md` `EMAIL_SMTP_*` env vars.
+- **Grounded in:** `docs/spec/requirements.md` "Default delivery: push notification + email"; `docs/operations/deployment.md` `EMAIL_SMTP_*` env vars.
 
 ---
 
@@ -153,7 +153,7 @@ SMTP/FCM sandbox.
 - **Required Tests:** Integration test: mixed read/unread alerts, filter returns only unread when requested.
 - **Estimated Complexity:** Small
 - **Depends on:** E5-S2-T4
-- **Grounded in:** `docs/api.md` `/alerts` table; `docs/database.md` `idx_alerts_unread`.
+- **Grounded in:** `docs/spec/api.md` `/alerts` table; `docs/spec/database.md` `idx_alerts_unread`.
 
 #### E5-S4-T2 — `PUT /alerts/:id/read`
 
@@ -163,7 +163,7 @@ SMTP/FCM sandbox.
 - **Required Tests:** Integration test: mark read, confirm `is_read=true` and `delivered_at` unchanged; user B cannot mark user A's alert as read.
 - **Estimated Complexity:** Small
 - **Depends on:** E5-S4-T1
-- **Grounded in:** `docs/api.md` `/alerts` table; `docs/user_flows.md` "Handling an Alert" flow note on `delivered_at`.
+- **Grounded in:** `docs/spec/api.md` `/alerts` table; `docs/operations/user_flows.md` "Handling an Alert" flow note on `delivered_at`.
 
 ---
 

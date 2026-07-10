@@ -5,7 +5,7 @@
 > architecture (`frontend/src/styles/globals.css`, `components/ui`, `components/shared`,
 > Recharts + `lib/chart-theme.ts`) — it does not replace the engineering. All backend
 > services, `lib/apiClient.ts`, `lib/useApi.ts`/SWR, `AuthGuard`, and the module architecture
-> are reused unchanged, per [CLAUDE.md](../CLAUDE.md) (reuse, don't rewrite).
+> are reused unchanged, per [CLAUDE.md](../../CLAUDE.md) (reuse, don't rewrite).
 >
 > **Scope of this redesign:** Next.js **landing page + web app + admin portal**. The Android
 > app inherits the *design language* (color, type, motion, component intent) in a later pass
@@ -324,7 +324,7 @@ Info/Contacts; Settings → Preferences/Appearance/Security/Privacy & Data/Expor
 contextual sidebar** with the sub-nav; simple sections (Dashboard) render full-width with no
 sidebar. Sidebar is collapsible to an icon rail (density for power users); active item shows the
 emerald edge + tint. (In the current implementation, Profile and Settings use top tabs rather
-than a left sidebar — see `docs/user_flows.md`'s Web IA note.)
+than a left sidebar — see `docs/operations/user_flows.md`'s Web IA note.)
 
 ### 7.3 Breadcrumbs
 Under the top bar on **deep pages** (e.g. `Analytics › Categories › Food`), mono/label styling,

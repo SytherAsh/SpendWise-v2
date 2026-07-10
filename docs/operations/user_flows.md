@@ -199,6 +199,6 @@ Admin navigates to admin portal URL (separate from user app)
 
 ### First-Time User (No Historical Data, No Bank Statement)
 
-- ML model uses global baseline model (trained on 3-year bank statement)
+- ML model uses global baseline model (trained on the labeled bank statement + SMS dataset, `ml/data/spendwise_labeled.xlsx`, April 2023–June 2026 — see `docs/spec/database.md` "Notes from Real Data")
 - User is prompted to set budgets manually (no suggestions available)
 - First 2–4 weeks of real transactions provide enough data for budget suggestions

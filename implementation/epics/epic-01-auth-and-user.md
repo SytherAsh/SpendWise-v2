@@ -30,7 +30,7 @@ as the backend session).
 - **Required Tests:** Unit tests mocking the Firebase Admin SDK: valid token → UID; expired token → exception; malformed token → exception.
 - **Estimated Complexity:** Medium
 - **Depends on:** E0-S1-T1
-- **Grounded in:** `CLAUDE.md` Auth pattern note, `docs/decisions.md` ADR-007, `docs/deployment.md` Firebase env vars.
+- **Grounded in:** `CLAUDE.md` Auth pattern note, `docs/spec/decisions.md` ADR-007, `docs/operations/deployment.md` Firebase env vars.
 
 #### E1-S1-T2 — JWT issuance & refresh-token storage
 
@@ -40,12 +40,12 @@ as the backend session).
   + SHA-256 hashing before persisting to `refresh_tokens` (raw token never stored).
 - **Definition of Done:**
   - Issued access token has 7-day (604800s) expiry claim.
-  - `refresh_tokens` row is written with `token_hash`, `expires_at` = issuance + 30 days (per `docs/security.md`), `revoked_at` null.
+  - `refresh_tokens` row is written with `token_hash`, `expires_at` = issuance + 30 days (per `docs/spec/security.md`), `revoked_at` null.
   - Raw refresh token never appears in any log line or DB column.
 - **Required Tests:** Unit test asserting `expiresIn` claim = 604800; unit test asserting the persisted `token_hash` is the SHA-256 of the returned raw token and not equal to it.
 - **Estimated Complexity:** Medium
 - **Depends on:** E1-S1-T1, E0-S2-T2
-- **Grounded in:** `docs/security.md` Authentication & Authorization; `docs/database.md` `refresh_tokens`; `docs/api.md` `/auth/otp/verify` response schema.
+- **Grounded in:** `docs/spec/security.md` Authentication & Authorization; `docs/spec/database.md` `refresh_tokens`; `docs/spec/api.md` `/auth/otp/verify` response schema.
 
 #### E1-S1-T3 — `POST /auth/otp/send` + `/auth/otp/verify`
 
@@ -55,11 +55,11 @@ as the backend session).
 - **Definition of Done:**
   - 6th OTP-send request for the same phone number within an hour returns `429`.
   - `/auth/otp/verify` with an expired/invalid OTP returns `400`.
-  - Success response matches the exact schema in `docs/api.md` (`accessToken`, `refreshToken`, `expiresIn`, `user.{id,phone,email}` with `email: null` for phone-only users).
+  - Success response matches the exact schema in `docs/spec/api.md` (`accessToken`, `refreshToken`, `expiresIn`, `user.{id,phone,email}` with `email: null` for phone-only users).
 - **Required Tests:** Integration tests: happy path returns matching schema; 6th send in an hour → 429; invalid OTP → 400.
 - **Estimated Complexity:** Medium
 - **Depends on:** E1-S1-T2
-- **Grounded in:** `docs/api.md` `/auth` table + `POST /auth/otp/verify — Response` schema; `docs/security.md` Rate Limiting; `docs/requirements.md` non-functional (n/a) — this task also satisfies the OTP rate-limit item in the API Security Checklist.
+- **Grounded in:** `docs/spec/api.md` `/auth` table + `POST /auth/otp/verify — Response` schema; `docs/spec/security.md` Rate Limiting; `docs/spec/requirements.md` non-functional (n/a) — this task also satisfies the OTP rate-limit item in the API Security Checklist.
 
 #### E1-S1-T4 — `POST /auth/google`
 
@@ -73,7 +73,7 @@ as the backend session).
 - **Required Tests:** Integration test: first login creates a user; second login with same Google ID returns the same `user.id`.
 - **Estimated Complexity:** Medium
 - **Depends on:** E1-S1-T1, E1-S1-T2
-- **Grounded in:** `docs/api.md` `/auth` table; `docs/database.md` `users` unique indexes.
+- **Grounded in:** `docs/spec/api.md` `/auth` table; `docs/spec/database.md` `users` unique indexes.
 
 #### E1-S1-T5 — `POST /auth/token/refresh` with rotation + replay detection
 
@@ -89,7 +89,7 @@ as the backend session).
 - **Required Tests:** Integration tests: (1) normal rotation succeeds and old token stops working; (2) replaying an already-rotated token revokes all sessions for that user, verified by asserting a second, unrelated valid token for the same user also stops working afterward.
 - **Estimated Complexity:** Large
 - **Depends on:** E1-S1-T2
-- **Grounded in:** `docs/security.md` Authentication & Authorization (Rotation paragraph); `docs/testing.md` Auth unit tests (replay attack detection).
+- **Grounded in:** `docs/spec/security.md` Authentication & Authorization (Rotation paragraph); `docs/operations/testing.md` Auth unit tests (replay attack detection).
 
 #### E1-S1-T6 — `POST /auth/logout`
 
@@ -101,7 +101,7 @@ as the backend session).
 - **Required Tests:** Integration test: logout then attempt refresh with the same token → `401`.
 - **Estimated Complexity:** Small
 - **Depends on:** E1-S1-T5
-- **Grounded in:** `docs/security.md` "Logout" paragraph; `docs/api.md` `/auth` table.
+- **Grounded in:** `docs/spec/security.md` "Logout" paragraph; `docs/spec/api.md` `/auth` table.
 
 #### E1-S1-T7 — User JWT auth filter (protected-route guard)
 
@@ -112,10 +112,10 @@ as the backend session).
 - **Definition of Done:**
   - Missing/invalid/expired Bearer token → `401` on any protected route.
   - A token signed with `ADMIN_JWT_SECRET` is rejected by this filter even if it carries a role claim.
-- **Required Tests:** Unit test: `JWT_SECRET`-signed token passes; `ADMIN_JWT_SECRET`-signed token is rejected by this filter (per `docs/testing.md` Auth unit tests — JWT secret routing).
+- **Required Tests:** Unit test: `JWT_SECRET`-signed token passes; `ADMIN_JWT_SECRET`-signed token is rejected by this filter (per `docs/operations/testing.md` Auth unit tests — JWT secret routing).
 - **Estimated Complexity:** Medium
 - **Depends on:** E1-S1-T2
-- **Grounded in:** `CLAUDE.md` security invariants; `docs/security.md` Authentication & Authorization; `docs/testing.md` Auth unit tests.
+- **Grounded in:** `CLAUDE.md` security invariants; `docs/spec/security.md` Authentication & Authorization; `docs/operations/testing.md` Auth unit tests.
 
 ---
 
@@ -132,10 +132,10 @@ as the backend session).
 - **Definition of Done:**
   - A `JWT_SECRET`-signed user token (even with an admin role claim, if one were added) is rejected at any `/admin/*` route with `401`/`403`.
   - An `ADMIN_JWT_SECRET`-signed token is rejected by the user filter on any non-admin route.
-- **Required Tests:** Integration test per `docs/testing.md`: "Admin route rejects a `JWT_SECRET`-signed token even with an admin role claim."
+- **Required Tests:** Integration test per `docs/operations/testing.md`: "Admin route rejects a `JWT_SECRET`-signed token even with an admin role claim."
 - **Estimated Complexity:** Medium
 - **Depends on:** E1-S1-T7
-- **Grounded in:** `CLAUDE.md` security invariants (Admin authentication paragraph); `docs/security.md` Authentication & Authorization; `docs/testing.md`.
+- **Grounded in:** `CLAUDE.md` security invariants (Admin authentication paragraph); `docs/spec/security.md` Authentication & Authorization; `docs/operations/testing.md`.
 
 ---
 
@@ -152,7 +152,7 @@ as the backend session).
 - **Required Tests:** Integration test: update then re-fetch reflects the change.
 - **Estimated Complexity:** Small
 - **Depends on:** E1-S1-T7
-- **Grounded in:** `docs/api.md` `/users` table.
+- **Grounded in:** `docs/spec/api.md` `/users` table.
 
 #### E1-S3-T2 — `GET/PUT /users/me/preferences`
 
@@ -162,7 +162,7 @@ as the backend session).
 - **Required Tests:** Integration test: PUT with `{"push": false, "email": true}` then GET reflects it.
 - **Estimated Complexity:** Small
 - **Depends on:** E1-S1-T7, E0-S2-T2
-- **Grounded in:** `docs/api.md` `/users` table; `docs/database.md` `user_preferences`.
+- **Grounded in:** `docs/spec/api.md` `/users` table; `docs/spec/database.md` `user_preferences`.
 
 #### E1-S3-T3 — `POST /users/me/onboarding`
 
@@ -174,13 +174,13 @@ as the backend session).
   stores the hash in `device_api_keys`, and returns the **raw** key exactly once in the
   response body.
 - **Definition of Done:**
-  - Response matches `docs/api.md`'s onboarding response schema exactly (`deviceApiKey`, `user.{id,phone}`).
+  - Response matches `docs/spec/api.md`'s onboarding response schema exactly (`deviceApiKey`, `user.{id,phone}`).
   - The raw key is never persisted anywhere — only `key_hash` is stored.
-  - A second call to this endpoint for the same user does not silently leak or regenerate an unintended duplicate active key without an explicit reason (define and document the re-onboarding behavior — e.g., issue a new device key and leave prior ones active, since multi-device is allowed per `docs/user_flows.md` Multi-Device Flow).
+  - A second call to this endpoint for the same user does not silently leak or regenerate an unintended duplicate active key without an explicit reason (define and document the re-onboarding behavior — e.g., issue a new device key and leave prior ones active, since multi-device is allowed per `docs/operations/user_flows.md` Multi-Device Flow).
 - **Required Tests:** Integration test: response contains raw key; DB contains only the hash; a database query for the raw key string returns nothing.
 - **Estimated Complexity:** Large
 - **Depends on:** E1-S3-T1, E0-S2-T2
-- **Grounded in:** `docs/api.md` `/users` table + onboarding response schema; `docs/security.md` Device API Key section; `docs/user_flows.md` Onboarding flow steps 2-3; `docs/requirements.md` DPDP compliance.
+- **Grounded in:** `docs/spec/api.md` `/users` table + onboarding response schema; `docs/spec/security.md` Device API Key section; `docs/operations/user_flows.md` Onboarding flow steps 2-3; `docs/spec/requirements.md` DPDP compliance.
 
 ---
 
@@ -198,10 +198,10 @@ as the backend session).
 - **Definition of Done:**
   - Valid active key for the correct user → success, `last_used_at` updated.
   - Valid key hash but wrong `user_id`, or `is_active = false` → rejected.
-- **Required Tests:** Unit tests covering all 4 cases from `docs/testing.md` Ingest dual-auth validation (valid → pass; missing → reject; inactive → reject; mismatched user_id → reject) — this task covers the device-key half; the JWT half and the composed guard are Epic 3's concern.
+- **Required Tests:** Unit tests covering all 4 cases from `docs/operations/testing.md` Ingest dual-auth validation (valid → pass; missing → reject; inactive → reject; mismatched user_id → reject) — this task covers the device-key half; the JWT half and the composed guard are Epic 3's concern.
 - **Estimated Complexity:** Medium
 - **Depends on:** E1-S3-T3
-- **Grounded in:** `docs/database.md` `device_api_keys`; `docs/security.md` Device API Key validation flow; `docs/testing.md` Ingest unit tests.
+- **Grounded in:** `docs/spec/database.md` `device_api_keys`; `docs/spec/security.md` Device API Key validation flow; `docs/operations/testing.md` Ingest unit tests.
 
 ---
 

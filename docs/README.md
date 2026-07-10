@@ -10,11 +10,11 @@ The docs are organized into 5 categories for clarity and discoverability:
 
 | Category | Purpose | When to Read |
 |----------|---------|--------------|
-| **[spec/](#spec)** | Core product spec — architecture, API, database, security decisions | Before proposing any architectural or API change |
-| **[operations/](#operations)** | Development & deployment practices — testing, CI/CD, guidelines | When setting up dev environment or deploying |
-| **[design/](#design)** | Visual identity, design system, brand tokens | When implementing UI or updating visual design |
-| **[demo/](#demo)** | Demo account setup, feature completeness, deployment | When preparing demo or marketing materials |
-| **[archive/](#archive)** | Deprecated docs (kept for reference only) | Historical reference only — not active |
+| **[spec/](#spec--product-definition)** | Core product spec — architecture, API, database, security decisions | Before proposing any architectural or API change |
+| **[operations/](#operations--development--deployment)** | Development & deployment practices — testing, CI/CD, guidelines | When setting up dev environment or deploying |
+| **[design/](#design--visual--brand)** | Visual identity, design system, brand tokens | When implementing UI or updating visual design |
+| **[demo/](#demo--marketing--demo-mode)** | Demo account setup, feature completeness, deployment | When preparing demo or marketing materials |
+| **[archive/](#archive--deprecated-docs)** | Deprecated docs (kept for reference only) | Historical reference only — not active |
 
 **Root level:** [roadmap.md](roadmap.md) — post-MVP feature roadmap (kept at root for easy access)
 

@@ -75,7 +75,7 @@ CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id, expires_at);
 
 ### `transactions`
 
-Schema grounded in real SBI bank statement data (1,653 transactions, April 2023 – March 2026).
+Schema grounded in real SBI bank statement + SMS data, now fully labeled: `ml/data/spendwise_labeled.xlsx` (1,810 transactions, April 2023 – June 2026; see `ml/labeling/tracking/LABELING_STATUS.md` for labeling provenance and category distribution).
 
 ```sql
 CREATE TYPE transaction_source AS ENUM ('sms', 'bank_statement', 'manual');
@@ -92,10 +92,10 @@ CREATE TABLE transactions (
     dr_cr_indicator  CHAR(2) NOT NULL,           -- 'DR' or 'CR'
     transaction_id   VARCHAR NOT NULL,           -- bank ref number (dedup key); for SMS without an explicit ref,
                                                  -- synthesize: hex(SHA-256(user_id || upi_id_or_recipient_name || amount || date_trunc('minute', transaction_date)))
-    recipient_name   VARCHAR,                    -- nullable (48 nulls in real data)
-    bank             VARCHAR,                    -- recipient bank code: HDFC, SBIN, PYTM (nullable — 180 nulls)
-    upi_id           VARCHAR,                    -- nullable (absent for IMPS/NEFT — 180 nulls)
-    note             TEXT,                       -- nullable (933/1653 null in real data)
+    recipient_name   VARCHAR,                    -- nullable (3 nulls in real data)
+    bank             VARCHAR,                    -- recipient bank code: HDFC, SBIN, PYTM (nullable — 189 nulls)
+    upi_id           VARCHAR,                    -- nullable (absent for IMPS/NEFT — 189 nulls)
+    note             TEXT,                       -- nullable (995/1810 null in real data)
     sms_raw_text     TEXT,                       -- stored for debugging; never exposed via user API
     source           transaction_source NOT NULL,
     parsed_at        TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -124,7 +124,7 @@ CREATE TABLE categories (
 
 Seed data (12 categories; 1-10 seeded in V2, 11-12 added later in V7 once
 labeling ML training data surfaced medical/fee transactions with no home
-among the original 10 — see `docs/requirements.md` and
+among the original 10 — see `docs/spec/requirements.md` and
 `ml/labeling/CATEGORY_GUIDELINES.md`):
 
 | id | name | icon |
@@ -342,11 +342,11 @@ CREATE TABLE contacts (
 CREATE INDEX idx_contacts_user_id ON contacts(user_id);
 ```
 
-Added V10, UI/UX polish phase (2026-07-09) — this is the counterparty-metadata table sketched (and deliberately deferred) in [ADR-010](./decisions.md#adr-010-counterparty-metadata-is-not-an-ml-category) and the "Future Enhancement: Counterparty Metadata Enrichment" note in [architecture.md](./architecture.md). Per that ADR, `contacts` is **never** a new ML category or a new `categories` row, and it is **never** joined onto `transactions`/`transaction_categories` server-side. The Transaction module has no dependency on it. The frontend fetches the full list via `GET /api/v1/contacts` and matches it against a transaction's `recipient_name`/`upi_id` client-side (see `docs/api.md` "Contacts") to group and tag Transfer-category transactions in the UI — matching is always computed live at read time, never written back onto a transaction row, so editing or deleting a contact takes effect immediately with no backfill step. `relationship_type` is intentionally a free-standing, growable list (unlike the frozen 12-category spending taxonomy) — see ADR-010's "Extensibility" rationale.
+Added V10, UI/UX polish phase (2026-07-09) — this is the counterparty-metadata table sketched (and deliberately deferred) in [ADR-010](./decisions.md#adr-010-counterparty-metadata-is-not-an-ml-category) and the "Future Enhancement: Counterparty Metadata Enrichment" note in [architecture.md](./architecture.md). Per that ADR, `contacts` is **never** a new ML category or a new `categories` row, and it is **never** joined onto `transactions`/`transaction_categories` server-side. The Transaction module has no dependency on it. The frontend fetches the full list via `GET /api/v1/contacts` and matches it against a transaction's `recipient_name`/`upi_id` client-side (see `docs/spec/api.md` "Contacts") to group and tag Transfer-category transactions in the UI — matching is always computed live at read time, never written back onto a transaction row, so editing or deleting a contact takes effect immediately with no backfill step. `relationship_type` is intentionally a free-standing, growable list (unlike the frozen 12-category spending taxonomy) — see ADR-010's "Extensibility" rationale.
 
 ### Auth login lookup addendum (V6, added during Epic 1 implementation)
 
-`V5__row_level_security.sql`'s `users` policy only permits access when `id = current_setting('app.current_user_id')`. Login (OTP verify / Google login) must find an existing user **by phone or google_id** before any `app.current_user_id` exists — that policy can never match during this lookup, and under `FORCE ROW LEVEL SECURITY` the query would always return zero rows. `V6__auth_lookup_policy.sql` adds a second, permissive, SELECT-only policy on `users` (Postgres SELECT policies OR together): a row is visible only when the caller first sets `app.auth_lookup_identifier` to the exact phone/google_id being searched for. The same gap exists on `refresh_tokens` — `/auth/token/refresh` and `/auth/logout` must find a row **by `token_hash`** before knowing its `user_id` — so V6 adds an analogous SELECT-only policy there too, gated by `app.auth_lookup_token_hash`; exposing "a row with this exact SHA-256 hash exists" grants no capability beyond what already holding that raw token implies. See `docs/security.md` Supabase Row-Level Security for the full rationale. Approved by project owner 2026-07-02 as a deviation from this document's original RLS design.
+`V5__row_level_security.sql`'s `users` policy only permits access when `id = current_setting('app.current_user_id')`. Login (OTP verify / Google login) must find an existing user **by phone or google_id** before any `app.current_user_id` exists — that policy can never match during this lookup, and under `FORCE ROW LEVEL SECURITY` the query would always return zero rows. `V6__auth_lookup_policy.sql` adds a second, permissive, SELECT-only policy on `users` (Postgres SELECT policies OR together): a row is visible only when the caller first sets `app.auth_lookup_identifier` to the exact phone/google_id being searched for. The same gap exists on `refresh_tokens` — `/auth/token/refresh` and `/auth/logout` must find a row **by `token_hash`** before knowing its `user_id` — so V6 adds an analogous SELECT-only policy there too, gated by `app.auth_lookup_token_hash`; exposing "a row with this exact SHA-256 hash exists" grants no capability beyond what already holding that raw token implies. See `docs/spec/security.md` Supabase Row-Level Security for the full rationale. Approved by project owner 2026-07-02 as a deviation from this document's original RLS design.
 
 ## Deduplication Strategy
 
@@ -355,10 +355,18 @@ Before inserting a transaction, check:
 1. **Primary**: `transaction_id` matches an existing row for the same `user_id` → reject as duplicate. Enforced by `UNIQUE INDEX idx_transactions_unique_dedup ON (user_id, transaction_id)` — the DB constraint is authoritative; the application check provides a cleaner 409 error response.
 2. **Secondary**: `(upi_id, amount, transaction_date)` all match an existing row → reject as duplicate. Note: `upi_id` is nullable — this check degenerates silently for IMPS/NEFT transactions where `upi_id IS NULL`. Primary dedup handles those cases.
 
-## Notes from Real Data (EDA on 3-year bank statement)
+## Notes from Real Data (EDA on labeled SBI bank statement + SMS data)
 
-- 1,653 transactions spanning April 2023 – March 2026
-- 47% of transactions are ₹0–50 (small everyday payments)
+Finalized labeled dataset: `ml/data/spendwise_labeled.xlsx` (1,810 rows, produced from
+the 1,920-row `spendwise_4yr_sbi_statement` raw export via the pipeline in
+`ml/labeling/` — see `ml/labeling/tracking/LABELING_STATUS.md` and
+`ml/labeling/tracking/EPIC_4_HANDOFF.md` for full provenance, the 110 rows/59 recipient
+groups intentionally excluded, and the per-category distribution — Transfers is ~50% of
+rows and Sports & Fitness has zero examples, both relevant to model training).
+
+- 1,810 transactions spanning April 2023 – June 2026
+- 1,417 debit / 393 credit (`dr_cr_indicator`)
+- ~30% of transactions are ₹0–50 (small everyday payments)
 - `balance`, `bank`, `upi_id` are nullable — verified against real data
 - `note` is sparse (56% null) — treated as optional enrichment
 - `transaction_mode` has ~2% nulls in real data

@@ -54,7 +54,7 @@ Alert priority levels:
 | Medium (approaching limit — 80% of category budget spent) | In-app pop-up only |
 | Low (general savings insight) | Passive dashboard feed only |
 
-*Alert priority is stored as a `priority` column on the `alerts` table (`high` / `medium` / `low`). See `docs/database.md`.*
+*Alert priority is stored as a `priority` column on the `alerts` table (`high` / `medium` / `low`). See `docs/spec/database.md`.*
 
 ### Bank Statement Upload
 

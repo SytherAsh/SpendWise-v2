@@ -89,14 +89,14 @@ SpendWise is built as a **modular monolith** for the MVP. The codebase is organi
 > interfaces only) — `DeviceApiKeyService`'s own Javadoc anticipated this consumer from E1-S4-T1.
 > Both are read-only/validation-only calls, not writes, and don't create a cycle: User and Auth
 > never call back into Ingest. Approved by project owner 2026-07-02 as a deviation from this
-> document's original dependency table, analogous to docs/database.md's V6 RLS addendum.
+> document's original dependency table, analogous to docs/spec/database.md's V6 RLS addendum.
 
 > **Alerts' User dependency (added during Epic 5 implementation):** the module table's original
 > "May call" list for Alerts (Transaction, Budget) had no path to the contact info notification
 > dispatch actually needs — `users.email` for SMTP, `user_preferences.fcm_token`/`alert_channels`
 > for FCM — even though this same document's module table already assigns Alerts "notification
 > dispatch (push via FCM, email via SMTP)" as a responsibility. This was a gap in the original
-> table, not a deliberate restriction (`docs/api.md`/`docs/requirements.md` never suggested Alerts
+> table, not a deliberate restriction (`docs/spec/api.md`/`docs/spec/requirements.md` never suggested Alerts
 > should resolve dispatch targets any other way). Read-only, single-direction (User never calls
 > Alerts), no cycle. Approved by project owner 2026-07-03 as a deviation from this document's
 > original dependency table, same pattern as the two addenda above.
@@ -255,7 +255,7 @@ Dashboard and budget suggestions reflect imported data
 
 | Job | Owner | Schedule | What it does |
 | --- | --- | --- | --- |
-| Alert evaluator | Alerts | Every 30 minutes | Checks mid-month budget thresholds and category overspend for all users; also runs recurring-payment detection (E6-S2-T1) — reuses this same cadence since detection isn't time-critical (`docs/decisions.md` ADR-011's scheduled-over-event-driven reasoning applies here too) |
+| Alert evaluator | Alerts | Every 30 minutes | Checks mid-month budget thresholds and category overspend for all users; also runs recurring-payment detection (E6-S2-T1) — reuses this same cadence since detection isn't time-critical (`docs/spec/decisions.md` ADR-011's scheduled-over-event-driven reasoning applies here too) |
 | Recommendation generator | Recommendations | Every 6 hours | Reads spending aggregations from Analytics; generates recommendations where a threshold has been crossed since the last generation for that user and category, determined by comparing transaction and budget timestamps against the time of its own last run. Idempotent — suppresses duplicates by checking `generated_at` on the most recent record per user per category. |
 | ML retraining | Categorization | Weekly (configurable) | Sends `ml_corrections` data to FastAPI /retrain |
 | Categorization retry | Categorization | Every 30 minutes | Re-triggers ML categorization for transactions ingested but not yet categorized (e.g., FastAPI unavailable during ingest) |
@@ -263,15 +263,15 @@ Dashboard and budget suggestions reflect imported data
 ## Counterparty Metadata Enrichment (built 2026-07-09, UI/UX polish phase)
 
 **Built, per the sketch below.** Originally recorded here as a not-yet-built design
-sketch — see `docs/roadmap.md` Phase 9 and ADR-010 in `docs/decisions.md` for the
+sketch — see `docs/roadmap.md` Phase 9 and ADR-010 in `docs/spec/decisions.md` for the
 product framing, rationale, and build status. The sketch is left in place because the
-shipped implementation follows it closely: a `contacts` table (`docs/database.md`)
-owned by the User module, served by `/api/v1/contacts` (`docs/api.md`), matched against
+shipped implementation follows it closely: a `contacts` table (`docs/spec/database.md`)
+owned by the User module, served by `/api/v1/contacts` (`docs/spec/api.md`), matched against
 `transactions.recipient_name`/`upi_id` **client-side by the frontend** rather than by a
 server-side join — the Analytics module's read-only join described just below remains
 unbuilt and out of scope for this slice (Transactions-page-only for v1).
 
-**Problem:** the 12 ML transaction categories (`docs/requirements.md`) intentionally
+**Problem:** the 12 ML transaction categories (`docs/spec/requirements.md`) intentionally
 don't distinguish *who* a Transfer went to or came from — Transfers is one ML class
 covering family, friends, self-transfers, and settlements alike. During ML training-data
 labeling (`ml/labeling/`), a Payee Knowledge Base was built that already captures this:

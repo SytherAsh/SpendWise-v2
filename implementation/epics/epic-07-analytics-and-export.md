@@ -18,11 +18,11 @@ An architecture-level test proves Analytics never writes to any other module.
 - **Expected Deliverable:** Endpoint accepting `from`/`to` query params, aggregating over
   `transactions` joined to `transaction_categories`, read-only.
 - **Definition of Done:** Totals match a hand-computed value against a fixed fixture; full
-  computed result returned (not paginated, per `docs/api.md`'s Pagination note).
+  computed result returned (not paginated, per `docs/spec/api.md`'s Pagination note).
 - **Required Tests:** Integration test with a fixed multi-category, multi-month fixture — assert exact totals.
 - **Estimated Complexity:** Medium
 - **Depends on:** E3-S2-T1, E4-S3-T2
-- **Grounded in:** `docs/api.md` `/analytics` table + query params; `docs/architecture.md` Analytics module (read-only, no business logic).
+- **Grounded in:** `docs/spec/api.md` `/analytics` table + query params; `docs/spec/architecture.md` Analytics module (read-only, no business logic).
 
 #### E7-S1-T2 — `GET /analytics/categories`
 
@@ -33,7 +33,7 @@ An architecture-level test proves Analytics never writes to any other module.
 - **Required Tests:** Integration test asserting per-category totals and counts.
 - **Estimated Complexity:** Medium
 - **Depends on:** E7-S1-T1
-- **Grounded in:** `docs/api.md` `/analytics` table.
+- **Grounded in:** `docs/spec/api.md` `/analytics` table.
 
 #### E7-S1-T3 — `GET /analytics/comparison`
 
@@ -44,7 +44,7 @@ An architecture-level test proves Analytics never writes to any other module.
 - **Required Tests:** Integration test for each granularity value against a fixture spanning enough time to exercise it.
 - **Estimated Complexity:** Medium
 - **Depends on:** E7-S1-T1
-- **Grounded in:** `docs/api.md` `/analytics` table + query params (`granularity`); `docs/user_flows.md` "Reviewing Transactions" (compare this month vs. last, this year vs. last).
+- **Grounded in:** `docs/spec/api.md` `/analytics` table + query params (`granularity`); `docs/operations/user_flows.md` "Reviewing Transactions" (compare this month vs. last, this year vs. last).
 
 #### E7-S1-T4 — `GET /analytics/trends`
 
@@ -54,7 +54,7 @@ An architecture-level test proves Analytics never writes to any other module.
 - **Required Tests:** Integration test asserting bucketed totals for a known fixture.
 - **Estimated Complexity:** Medium
 - **Depends on:** E7-S1-T1
-- **Grounded in:** `docs/api.md` `/analytics` table.
+- **Grounded in:** `docs/spec/api.md` `/analytics` table.
 
 ---
 
@@ -71,7 +71,7 @@ An architecture-level test proves Analytics never writes to any other module.
 - **Required Tests:** Integration test: parse the returned CSV and assert row count/values; assert no `sms_raw_text` column.
 - **Estimated Complexity:** Medium
 - **Depends on:** E7-S1-T1
-- **Grounded in:** `docs/requirements.md` Export section (CSV — raw transaction data); `CLAUDE.md` security invariant on `sms_raw_text`.
+- **Grounded in:** `docs/spec/requirements.md` Export section (CSV — raw transaction data); `CLAUDE.md` security invariant on `sms_raw_text`.
 
 #### E7-S2-T2 — `GET /analytics/export/pdf`
 
@@ -85,7 +85,7 @@ An architecture-level test proves Analytics never writes to any other module.
   number, and that a parsed text extraction contains the expected total figure.
 - **Estimated Complexity:** Large
 - **Depends on:** E7-S1-T1
-- **Grounded in:** `docs/requirements.md` Export section (PDF — formatted monthly/date-range report; custom date range or full financial year).
+- **Grounded in:** `docs/spec/requirements.md` Export section (PDF — formatted monthly/date-range report; custom date range or full financial year).
 
 ---
 
@@ -105,7 +105,7 @@ An architecture-level test proves Analytics never writes to any other module.
 - **Required Tests:** The ArchUnit rule itself, run as part of `./gradlew test`.
 - **Estimated Complexity:** Medium
 - **Depends on:** E7-S1-T1
-- **Grounded in:** `CLAUDE.md` Architectural invariants ("The Analytics module is strictly read-only"); `docs/architecture.md` Analytics module dependency row.
+- **Grounded in:** `CLAUDE.md` Architectural invariants ("The Analytics module is strictly read-only"); `docs/spec/architecture.md` Analytics module dependency row.
 
 ---
 

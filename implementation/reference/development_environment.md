@@ -63,7 +63,7 @@ local machine (new install, version change, OS change, etc.).
 
 ## 2. Required framework/SDK versions (per finalized spec)
 
-These are the versions fixed by `CLAUDE.md` and `docs/decisions.md` — treat
+These are the versions fixed by `CLAUDE.md` and `docs/spec/decisions.md` — treat
 them as constraints, not preferences. Do not upgrade or downgrade without an
 ADR update. Entries marked **(placeholder)** have no exact version pinned in
 the docs yet — record the actual version once the corresponding service is
@@ -71,7 +71,7 @@ scaffolded, and do not invent a number before then.
 
 | Component | Required version | Source |
 | --- | --- | --- |
-| Java | 21 (LTS) | `CLAUDE.md` Tech Stack; [ADR-009](../docs/decisions.md) |
+| Java | 21 (LTS) | `CLAUDE.md` Tech Stack; [ADR-009](../../docs/spec/decisions.md) |
 | Spring Boot | 3.x, 3.2+ for virtual threads **(placeholder — record exact version at E0-S1-T1)** | `CLAUDE.md` Tech Stack; `spring.threads.virtual.enabled=true` per ADR-009 |
 | Gradle | Whatever version the Gradle Wrapper pins (no global install) **(placeholder — record wrapper version at E0-S1-T1/T3)** | `implementation/epics/epic-00-foundation.md` E0-S1-T1 |
 | Node.js | 18.17+ / 20+ recommended for Next.js App Router (no exact pin in docs) | `frontend/README.md` |
@@ -81,8 +81,8 @@ scaffolded, and do not invent a number before then.
 | Android compile/target SDK (installed) | API 36 (`android-36.1`) | local SDK snapshot, §1 |
 | Python | 3.10+ | `ml/README.md` |
 | FastAPI | **(placeholder — record exact version at E0-S1-T4)** | `ml/README.md` |
-| scikit-learn / pandas / numpy | Exact model TBD during training **(placeholder)** | `ml/README.md`; `docs/decisions.md` |
-| PostgreSQL | Hosted via Supabase (no local server needed); Testcontainers provisions a real Postgres container for integration tests | `docs/deployment.md`; `docs/testing.md` "Why Testcontainers" |
+| scikit-learn / pandas / numpy | Exact model TBD during training **(placeholder)** | `ml/README.md`; `docs/spec/decisions.md` |
+| PostgreSQL | Hosted via Supabase (no local server needed); Testcontainers provisions a real Postgres container for integration tests | `docs/operations/deployment.md`; `docs/operations/testing.md` "Why Testcontainers" |
 | Firebase Authentication | Phone OTP + Google login, backend-issued JWT is authoritative (not Firebase ID tokens) | `CLAUDE.md` Auth pattern |
 
 ---
@@ -116,12 +116,12 @@ This is now the standard local container runtime for the project:
 
 - **Testcontainers are fully supported** for Spring Boot integration tests
   (E0-S2-T2 through E0-S2-T6, and any later module's integration test
-  suite per `docs/testing.md`) — no further setup required.
+  suite per `docs/operations/testing.md`) — no further setup required.
 - **Local PostgreSQL integration testing is supported** — Testcontainers
   spins up a real ephemeral Postgres container per test run, matching the
   PostgreSQL-specific features the schema relies on (ENUM types, JSONB,
   `gen_random_uuid()`, `set_config()` for RLS session variables), exactly
-  as described in `docs/testing.md`'s "Why Testcontainers" section.
+  as described in `docs/operations/testing.md`'s "Why Testcontainers" section.
 - **CI parity**: GitHub Actions' `ubuntu-latest` runner already has Docker
   preinstalled for E0-S3-T1, so local and CI integration test behavior
   match.

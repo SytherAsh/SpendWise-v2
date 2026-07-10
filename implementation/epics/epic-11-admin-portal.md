@@ -26,7 +26,7 @@ after which a verification query confirms all of that user's data is purged (wit
   on an admin route and fails on a user route (and vice versa for a user token on an admin route).
 - **Estimated Complexity:** Medium
 - **Depends on:** E1-S2-T1
-- **Grounded in:** `CLAUDE.md` "Admin authentication uses a separate JWT..."; `docs/user_flows.md` Admin Flow ("Logs in with admin credentials (separate from any user account)").
+- **Grounded in:** `CLAUDE.md` "Admin authentication uses a separate JWT..."; `docs/operations/user_flows.md` Admin Flow ("Logs in with admin credentials (separate from any user account)").
 
 ---
 
@@ -45,7 +45,7 @@ after which a verification query confirms all of that user's data is purged (wit
 - **Required Tests:** Integration test verifying `sms_raw_text` absence even on the admin detail view; verifying non-admin tokens get 401/403.
 - **Estimated Complexity:** Medium
 - **Depends on:** E11-S1-T1, E3-S2-T1
-- **Grounded in:** `docs/api.md` `/admin` table; `docs/requirements.md` Admin Access section; `CLAUDE.md` security invariant on `sms_raw_text` (applies universally, not just to non-admin routes).
+- **Grounded in:** `docs/spec/api.md` `/admin` table; `docs/spec/requirements.md` Admin Access section; `CLAUDE.md` security invariant on `sms_raw_text` (applies universally, not just to non-admin routes).
 
 #### E11-S2-T2 — `GET /admin/analytics`, `GET /admin/analytics/comparison`
 
@@ -57,7 +57,7 @@ after which a verification query confirms all of that user's data is purged (wit
   summed per-user `/analytics/summary` results for a fixed fixture.
 - **Estimated Complexity:** Medium
 - **Depends on:** E11-S1-T1, E7-S1-T1
-- **Grounded in:** `docs/api.md` `/admin` table; `docs/user_flows.md` Admin Flow ("aggregate stats, cross-user spending comparison").
+- **Grounded in:** `docs/spec/api.md` `/admin` table; `docs/operations/user_flows.md` Admin Flow ("aggregate stats, cross-user spending comparison").
 
 #### E11-S2-T3 — `GET /admin/logs`
 
@@ -67,7 +67,7 @@ after which a verification query confirms all of that user's data is purged (wit
 - **Required Tests:** Integration test with seeded log rows of different types — filter returns only the matching type.
 - **Estimated Complexity:** Small
 - **Depends on:** E11-S1-T1, E0-S2-T5
-- **Grounded in:** `docs/api.md` `/admin` table; `docs/database.md` `admin_logs`.
+- **Grounded in:** `docs/spec/api.md` `/admin` table; `docs/spec/database.md` `admin_logs`.
 
 #### E11-S2-T4 — `GET /admin/ml/accuracy`, `POST /admin/ml/retrain`
 
@@ -80,7 +80,7 @@ after which a verification query confirms all of that user's data is purged (wit
   the Categorization service interface (test double); accuracy endpoint returns the shape from `/evaluate`.
 - **Estimated Complexity:** Small
 - **Depends on:** E11-S1-T1, E4-S3-T5
-- **Grounded in:** `docs/api.md` `/admin` table; `docs/architecture.md` "Admin calls Categorization's service interface... FastAPI is never called directly from Admin".
+- **Grounded in:** `docs/spec/api.md` `/admin` table; `docs/spec/architecture.md` "Admin calls Categorization's service interface... FastAPI is never called directly from Admin".
 
 #### E11-S2-T5 — `DELETE /admin/users/:id` (full erasure, DPDP)
 
@@ -90,7 +90,7 @@ after which a verification query confirms all of that user's data is purged (wit
   DELETE CASCADE` to `user_preferences`, `user_consent`, `refresh_tokens`, `transactions`,
   `budgets`, `alerts`, `emis`, `recommendations`, `chatbot_sessions`,
   `chatbot_conversations`, `device_api_keys` — confirm every FK is indeed `ON DELETE
-  CASCADE` per `docs/database.md`), and separately scrubs `admin_logs` rows referencing the
+  CASCADE` per `docs/spec/database.md`), and separately scrubs `admin_logs` rows referencing the
   deleted user: sets `user_id = NULL` (already `ON DELETE SET NULL`) **and** additionally
   scrubs/removes any identifying string in `event_type` or `payload` for that user's rows.
 - **Definition of Done:**
@@ -103,7 +103,7 @@ after which a verification query confirms all of that user's data is purged (wit
   dependent table is empty for that user and the `admin_logs` row is scrubbed, not just null-`user_id`.
 - **Estimated Complexity:** Large
 - **Depends on:** E11-S1-T1, all of Epic 3, E0-S2-T5
-- **Grounded in:** `docs/api.md` `/admin` table; `docs/security.md` Data Subject Rights "Deletion" (including the `admin_logs` exception clause verbatim); `docs/requirements.md` Data Retention.
+- **Grounded in:** `docs/spec/api.md` `/admin` table; `docs/spec/security.md` Data Subject Rights "Deletion" (including the `admin_logs` exception clause verbatim); `docs/spec/requirements.md` Data Retention.
 
 ---
 
@@ -122,7 +122,7 @@ after which a verification query confirms all of that user's data is purged (wit
   delete request without confirming).
 - **Estimated Complexity:** Large
 - **Depends on:** E11-S2-T1, E11-S2-T2, E11-S2-T3, E11-S2-T4, E11-S2-T5
-- **Grounded in:** `docs/user_flows.md` Admin Flow (full flow); `docs/requirements.md` Admin Access.
+- **Grounded in:** `docs/operations/user_flows.md` Admin Flow (full flow); `docs/spec/requirements.md` Admin Access.
 
 ---
 
