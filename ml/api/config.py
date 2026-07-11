@@ -12,6 +12,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # the artifact lives without a circular import between api/ and training/.
 MODEL_FILENAME = "category_classifier.joblib"
 
+# Same pattern, recurring-payment classifier (training/train_recurring.py,
+# api/recurring_model_store.py).
+RECURRING_MODEL_FILENAME = "recurring_classifier.joblib"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

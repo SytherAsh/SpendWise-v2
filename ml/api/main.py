@@ -7,21 +7,29 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from api import model_store
+from api import model_store, recurring_model_store
 from api.evaluate import router as evaluate_router
+from api.evaluate_recurring import router as evaluate_recurring_router
 from api.predict import router as predict_router
+from api.predict_recurring import router as predict_recurring_router
 from api.retrain import router as retrain_router
+from api.retrain_recurring import router as retrain_recurring_router
 from api.security import InternalKeyMiddleware
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # docs/deployment.md: "The service loads the model at startup." A missing
-    # artifact (e.g. a fresh checkout before training/train.py has run) must
-    # not prevent /health from coming up — /predict falls back to lazily
-    # loading on first call if this fails.
+    # docs/operations/deployment.md: "The service loads the model at startup."
+    # A missing artifact (e.g. a fresh checkout before training/train.py has
+    # run) must not prevent /health from coming up — /predict falls back to
+    # lazily loading on first call if this fails. Same contract for the
+    # recurring-payment classifier (training/train_recurring.py).
     try:
         model_store.load_model()
+    except FileNotFoundError:
+        pass
+    try:
+        recurring_model_store.load_model()
     except FileNotFoundError:
         pass
     yield
@@ -32,6 +40,9 @@ app.add_middleware(InternalKeyMiddleware)
 app.include_router(predict_router)
 app.include_router(retrain_router)
 app.include_router(evaluate_router)
+app.include_router(predict_recurring_router)
+app.include_router(retrain_recurring_router)
+app.include_router(evaluate_recurring_router)
 
 
 @app.get("/health")

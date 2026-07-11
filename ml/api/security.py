@@ -1,10 +1,17 @@
 """Internal-only access guard for the ML service (E4-S1-T1).
 
-See docs/architecture.md -> FastAPI ML Service "Internal access only" note and
-docs/security.md's API Security Checklist last item: /predict, /retrain, and
-/evaluate must reject any caller that doesn't present the shared secret in
-X-Internal-Key. /health stays exempt (unauthenticated uptime monitoring, per
-docs/deployment.md).
+See docs/spec/architecture.md -> FastAPI ML Service "Internal access only" note
+and docs/spec/security.md's API Security Checklist last item: every prediction/
+retrain/evaluate route must reject any caller that doesn't present the shared
+secret in X-Internal-Key. /health stays exempt (unauthenticated uptime
+monitoring, per docs/operations/deployment.md).
+
+PROTECTED_PATHS is a hardcoded allowlist rather than "everything except
+/health" deliberately -- a new route silently landing unprotected (as
+happened here when /predict-recurring, /retrain-recurring, and
+/evaluate-recurring were first added and forgotten from this set) is a worse
+failure mode than a new route the middleware doesn't yet know to protect
+returning an unexpected 401 until this set is updated.
 """
 
 from fastapi import Request
@@ -14,7 +21,14 @@ from starlette.types import ASGIApp
 
 from api.config import get_settings
 
-PROTECTED_PATHS = {"/predict", "/retrain", "/evaluate"}
+PROTECTED_PATHS = {
+    "/predict",
+    "/retrain",
+    "/evaluate",
+    "/predict-recurring",
+    "/retrain-recurring",
+    "/evaluate-recurring",
+}
 
 
 class InternalKeyMiddleware(BaseHTTPMiddleware):

@@ -71,3 +71,64 @@ class EvaluationResponse(BaseModel):
     confusion_matrix_labels: list[int]
     confidence_distribution: ConfidenceDistribution
     report_path: str
+
+
+class RecurringPredictionRequest(BaseModel):
+    """One candidate group's features (training/recurring_features.py's
+    compute_features() output) -- the caller (Alerts, via the Categorization
+    gateway) computes these from its own loose candidate generation, mirroring
+    this same feature shape."""
+
+    occurrence_count: int
+    interval_mean_days: float
+    interval_cv: float
+    amount_mean: float
+    amount_cv: float
+    span_days: float
+    days_since_last_occurrence: float
+
+
+class RecurringPredictionResponse(BaseModel):
+    is_recurring: bool
+    confidence: float
+    cadence: str  # weekly/biweekly/monthly/quarterly/annual/irregular -- only meaningful when is_recurring
+
+
+class RecurringCorrection(RecurringPredictionRequest):
+    """Same shape as recurring_corrections (once that table exists,
+    production phase) -- a candidate group's features plus the user's
+    confirm/dismiss outcome."""
+
+    was_recurring: bool
+
+
+class RecurringRetrainRequest(BaseModel):
+    corrections: list[RecurringCorrection] = []
+
+
+class RecurringRetrainResponse(BaseModel):
+    status: str
+    trained_candidate_groups: int
+
+
+class RecurringConfidenceDistribution(BaseModel):
+    mean: float
+    median: float
+    min: float
+    max: float
+
+
+class RecurringEvaluationResponse(BaseModel):
+    generated_at: str
+    n_candidate_groups: int
+    n_test_samples: int
+    accuracy: float
+    precision_recurring: float
+    recall_recurring: float
+    f1_recurring: float
+    support_recurring: int
+    support_not_recurring: int
+    confusion_matrix: list[list[int]]
+    confusion_matrix_labels: list[int]
+    confidence_distribution: RecurringConfidenceDistribution
+    report_path: str

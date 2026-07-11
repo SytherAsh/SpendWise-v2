@@ -49,8 +49,8 @@ def _build_column_transformer() -> ColumnTransformer:
     )
 
 
-def _build_random_forest() -> RandomForestClassifier:
-    return RandomForestClassifier(n_estimators=300, class_weight="balanced", random_state=42, n_jobs=-1)
+def _build_random_forest(n_estimators: int = 300) -> RandomForestClassifier:
+    return RandomForestClassifier(n_estimators=n_estimators, class_weight="balanced", random_state=42, n_jobs=-1)
 
 
 def build_transfer_pipeline() -> Pipeline:
@@ -62,6 +62,30 @@ def build_subcategory_pipeline() -> Pipeline:
     """Stage 2: which of the 11 non-Transfer categories. Only ever fit/predicted
     on rows Stage 1 called Spend."""
     return Pipeline([("features", _build_column_transformer()), ("classifier", _build_random_forest())])
+
+
+# Recurring-payment detection (ml/training/recurring_features.py) -- the Stage 2
+# classifier for "is this candidate group actually recurring." All inputs are
+# already-numeric statistics (interval/amount mean & coefficient of variation,
+# occurrence count, span, recency), so unlike categorization's pipelines there
+# is no text/categorical preprocessing step -- a bare RandomForestClassifier is
+# the whole "pipeline."
+RECURRING_FEATURE_COLUMNS = [
+    "occurrence_count",
+    "interval_mean_days",
+    "interval_cv",
+    "amount_mean",
+    "amount_cv",
+    "span_days",
+    "days_since_last_occurrence",
+]
+
+
+def build_recurring_pipeline() -> RandomForestClassifier:
+    # Fewer trees than categorization's 300 -- far fewer training examples
+    # (candidate groups, not individual transactions) and only 7 features, so
+    # 300 trees would mostly be redundant.
+    return _build_random_forest(n_estimators=150)
 
 
 class HierarchicalCategoryModel:
