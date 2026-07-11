@@ -3,6 +3,8 @@ package com.spendwise.categorization;
 import com.spendwise.categorization.dto.MlEvaluationResponse;
 import com.spendwise.categorization.dto.MlPredictionRequest;
 import com.spendwise.categorization.dto.MlPredictionResponse;
+import com.spendwise.categorization.dto.MlRecurringPredictionRequest;
+import com.spendwise.categorization.dto.MlRecurringPredictionResponse;
 import com.spendwise.categorization.dto.MlRetrainRequest;
 import com.spendwise.categorization.dto.MlRetrainResponse;
 import com.spendwise.transaction.MlCorrectionRecord;
@@ -136,6 +138,25 @@ class CategorizationServiceImplTest {
         MlEvaluationResponse result = service.getAccuracyMetrics();
 
         assertThat(result).isEqualTo(response);
+    }
+
+    @Test
+    void predictRecurringReturnsMlClientResponseUnchanged() {
+        MlRecurringPredictionRequest request = new MlRecurringPredictionRequest(3, 30.0, 0.05, 199.0, 0.02, 60.0, 2.0);
+        MlRecurringPredictionResponse response = new MlRecurringPredictionResponse(true, 0.92, "monthly");
+        given(mlClient.predictRecurring(request)).willReturn(response);
+
+        MlRecurringPredictionResponse result = service.predictRecurring(request);
+
+        assertThat(result).isEqualTo(response);
+    }
+
+    @Test
+    void predictRecurringPropagatesMlClientFailure() {
+        MlRecurringPredictionRequest request = new MlRecurringPredictionRequest(3, 30.0, 0.05, 199.0, 0.02, 60.0, 2.0);
+        when(mlClient.predictRecurring(request)).thenThrow(new RuntimeException("FastAPI unreachable"));
+
+        assertThatThrownBy(() -> service.predictRecurring(request)).isInstanceOf(RuntimeException.class);
     }
 
     private Transaction transaction() {

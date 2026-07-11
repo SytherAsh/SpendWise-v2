@@ -1,15 +1,21 @@
 package com.spendwise.categorization;
 
 import com.spendwise.categorization.dto.MlEvaluationResponse;
+import com.spendwise.categorization.dto.MlRecurringPredictionRequest;
+import com.spendwise.categorization.dto.MlRecurringPredictionResponse;
 
 import java.util.UUID;
 
 /**
  * Service interface for the Categorization module — the only module permitted to call the
  * FastAPI ML service (CLAUDE.md invariant). Consumed cross-module by Ingest (E4-S3-T2, via {@link
- * #categorize}), by this module's own scheduled jobs (E4-S3-T3/T4), and, in Epic 11, by Admin
- * (via {@link #triggerRetrain} and {@link #getAccuracyMetrics}, added in E4-S3-T5) — never the
- * reverse, and never by any module reaching into {@link MlClient} directly.
+ * #categorize}), by this module's own scheduled jobs (E4-S3-T3/T4), by Admin (via {@link
+ * #triggerRetrain} and {@link #getAccuracyMetrics}, added in E4-S3-T5), and now by Alerts (ML
+ * strategy phase, 2026-07-11, via {@link #predictRecurring}) — never the reverse, and never by any
+ * module reaching into {@link MlClient} directly. Categorization acting as the ML gateway for a
+ * second capability (not just transaction categorization) is a deliberate widening of this
+ * module's role rather than a new exception to the "only Categorization calls FastAPI" invariant
+ * — see docs/spec/decisions.md.
  */
 public interface CategorizationService {
 
@@ -42,4 +48,16 @@ public interface CategorizationService {
      * @throws org.springframework.web.client.RestClientException on network failure or non-2xx response
      */
     MlEvaluationResponse getAccuracyMetrics();
+
+    /**
+     * Calls FastAPI {@code /predict-recurring} for one candidate group's features and returns the
+     * raw response — unlike {@link #categorize}, this never writes to the database itself; Alerts
+     * (the only caller) owns what happens with the result (creating a {@code recurring_payment}
+     * alert, or not). Propagates on failure rather than swallowing it, since the caller
+     * ({@code AlertEvaluatorJob}) already wraps each user's evaluation in its own try/catch — same
+     * reasoning as {@link #triggerRetrain}'s contract.
+     *
+     * @throws org.springframework.web.client.RestClientException on network failure or non-2xx response
+     */
+    MlRecurringPredictionResponse predictRecurring(MlRecurringPredictionRequest request);
 }

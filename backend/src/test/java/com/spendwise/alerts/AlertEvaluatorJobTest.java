@@ -2,6 +2,9 @@ package com.spendwise.alerts;
 
 import com.spendwise.budget.Budget;
 import com.spendwise.budget.BudgetService;
+import com.spendwise.categorization.CategorizationService;
+import com.spendwise.categorization.dto.MlRecurringPredictionRequest;
+import com.spendwise.categorization.dto.MlRecurringPredictionResponse;
 import com.spendwise.transaction.EmiService;
 import com.spendwise.transaction.RecurringCandidateTransaction;
 import com.spendwise.transaction.TransactionService;
@@ -29,7 +32,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-/** Required test for E5-S2-T4 (docs/testing.md Alerts evaluation engine unit tests). */
+/** Required test for E5-S2-T4 (docs/operations/testing.md Alerts evaluation engine unit tests). */
 class AlertEvaluatorJobTest {
 
     private final BudgetService budgetService = mock(BudgetService.class);
@@ -37,8 +40,9 @@ class AlertEvaluatorJobTest {
     private final EmiService emiService = mock(EmiService.class);
     private final AlertsService alertsService = mock(AlertsService.class);
     private final AlertDispatchService alertDispatchService = mock(AlertDispatchService.class);
-    private final AlertEvaluatorJob job =
-            new AlertEvaluatorJob(budgetService, transactionService, emiService, alertsService, alertDispatchService);
+    private final CategorizationService categorizationService = mock(CategorizationService.class);
+    private final AlertEvaluatorJob job = new AlertEvaluatorJob(
+            budgetService, transactionService, emiService, alertsService, alertDispatchService, categorizationService);
 
     private final YearMonth currentMonth = YearMonth.now();
 
@@ -162,11 +166,13 @@ class AlertEvaluatorJobTest {
     }
 
     @Test
-    void qualifyingRecurringGroupRecordsAMediumPriorityAlertAndNeverDispatches() {
+    void aCandidateGroupMlJudgesRecurringRecordsAMediumPriorityAlertAndNeverDispatches() {
         UUID userId = UUID.randomUUID();
         stubBulkReads(List.of(), List.of()); // no budgets — recurring pass runs independently
         given(transactionService.findAllForRecurringDetection(any())).willReturn(recurringGroupFixture(userId));
         given(emiService.findAllActiveSourceTransactionIds()).willReturn(Set.of());
+        given(categorizationService.predictRecurring(any(MlRecurringPredictionRequest.class)))
+                .willReturn(new MlRecurringPredictionResponse(true, 0.92, "monthly"));
         Alert alert = new Alert(
                 UUID.randomUUID(), userId, AlertType.RECURRING_PAYMENT, AlertPriority.MEDIUM, Instant.now(), null, false, Map.of());
         given(alertsService.recordRecurringPaymentIfNotAlreadyTriggeredThisMonth(eq(userId), eq("netflix@okicici"), any(), any()))
@@ -180,15 +186,50 @@ class AlertEvaluatorJobTest {
     }
 
     @Test
+    void aCandidateGroupMlJudgesNotRecurringNeverRecordsAnAlert() {
+        UUID userId = UUID.randomUUID();
+        stubBulkReads(List.of(), List.of());
+        given(transactionService.findAllForRecurringDetection(any())).willReturn(recurringGroupFixture(userId));
+        given(emiService.findAllActiveSourceTransactionIds()).willReturn(Set.of());
+        given(categorizationService.predictRecurring(any(MlRecurringPredictionRequest.class)))
+                .willReturn(new MlRecurringPredictionResponse(false, 0.3, "irregular"));
+
+        job.run();
+
+        verify(alertsService, never()).recordRecurringPaymentIfNotAlreadyTriggeredThisMonth(any(), any(), any(), any());
+    }
+
+    @Test
+    void aFailedMlCallSkipsTheCandidateWithoutCrashingTheRun() {
+        UUID userId = UUID.randomUUID();
+        stubBulkReads(List.of(), List.of());
+        given(transactionService.findAllForRecurringDetection(any())).willReturn(recurringGroupFixture(userId));
+        given(emiService.findAllActiveSourceTransactionIds()).willReturn(Set.of());
+        given(categorizationService.predictRecurring(any(MlRecurringPredictionRequest.class)))
+                .willThrow(new RuntimeException("FastAPI unreachable"));
+
+        assertThatCode(job::run).doesNotThrowAnyException();
+
+        verify(alertsService, never()).recordRecurringPaymentIfNotAlreadyTriggeredThisMonth(any(), any(), any(), any());
+    }
+
+    @Test
     void aTransactionAlreadyLinkedToAnActiveEmiIsExcludedFromRecurringDetection() {
         UUID userId = UUID.randomUUID();
         stubBulkReads(List.of(), List.of());
-        List<RecurringCandidateTransaction> candidates = recurringGroupFixture(userId);
+        // Only 2 candidate transactions here (not 3) so excluding one leaves a single non-excluded
+        // transaction — below MIN_GROUP_SIZE, so no candidate is even proposed to ML.
+        Instant now = Instant.now();
+        BigDecimal amount = BigDecimal.valueOf(199);
+        List<RecurringCandidateTransaction> candidates = List.of(
+                new RecurringCandidateTransaction(userId, UUID.randomUUID(), now.minus(50, ChronoUnit.DAYS), amount, "netflix@okicici", "Netflix"),
+                new RecurringCandidateTransaction(userId, UUID.randomUUID(), now, amount, "netflix@okicici", "Netflix"));
         given(transactionService.findAllForRecurringDetection(any())).willReturn(candidates);
         given(emiService.findAllActiveSourceTransactionIds()).willReturn(Set.of(candidates.get(0).transactionId()));
 
         job.run();
 
+        verify(categorizationService, never()).predictRecurring(any());
         verify(alertsService, never()).recordRecurringPaymentIfNotAlreadyTriggeredThisMonth(any(), any(), any(), any());
     }
 

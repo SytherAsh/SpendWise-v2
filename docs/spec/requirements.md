@@ -44,7 +44,7 @@ All alerts are user-configurable. Default delivery: push notification + email. P
 | Category overspending alert | User exceeds their self-set budget for a specific category |
 | Recurring payment alert | System detects a recurring charge not already tracked in the `emis` table |
 
-**Recurring payment detection rule:** A recurring charge is defined as 3+ transactions from the same `upi_id` or `recipient_name` within a rolling 60-day window, with amounts within ±10% of each other, that are not already tracked in the `emis` table.
+**Recurring payment detection (updated V11, ML strategy phase, 2026-07-11):** candidates are proposed by grouping 2+ transactions from the same `upi_id` or `recipient_name` within a rolling 400-day window, with amounts within ±40% of each other, that are not already tracked in the `emis` table (`RecurringPaymentDetector`) — a loosened version of the original rule, wide enough to admit quarterly/annual cadences and larger amount drift. Whether a candidate actually becomes a `recurring_payment` alert is then decided by a trained classifier (`ml/training/train_recurring.py`, served via `CategorizationService#predictRecurring`), not the loosened thresholds directly — see ADR-012 in `decisions.md`. The original strict definition (3+ transactions, ±10% amount tolerance, 60-day window) survives only as the classifier's bootstrap-label rule (`ml/training/recurring_labels.py`), not as production behavior.
 
 Alert priority levels:
 

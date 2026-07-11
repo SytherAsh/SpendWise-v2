@@ -201,6 +201,12 @@ CREATE INDEX idx_alerts_unread ON alerts(user_id, triggered_at DESC) WHERE is_re
 
 ### `emis`
 
+`cadence`/`confidence_score` added V11 (ML strategy phase, 2026-07-11) — populated only
+when an EMI is created from an ML-confirmed recurring detection
+(`AlertsServiceImpl#confirmRecurringPayment`); null for manual entries, same nullability
+story as `source_transaction_id`. See ADR-012 in `decisions.md` and `recurring_corrections`
+below.
+
 ```sql
 CREATE TABLE emis (
     id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -211,6 +217,8 @@ CREATE TABLE emis (
     detected_from_sms     BOOLEAN NOT NULL DEFAULT TRUE,
     is_active             BOOLEAN NOT NULL DEFAULT TRUE,
     source_transaction_id UUID REFERENCES transactions(id) ON DELETE SET NULL,  -- representative transaction that triggered auto-detection; null for manual entries
+    cadence               VARCHAR CHECK (cadence IN ('weekly','biweekly','monthly','quarterly','annual','irregular')),  -- V11, nullable
+    confidence_score      FLOAT,  -- V11, nullable -- ML model confidence 0-1, mirrors transaction_categories.confidence_score
     CONSTRAINT chk_emi_amount_positive CHECK (amount > 0)  -- EMI amounts are always positive; the debit direction is implicit in the fact that it is a scheduled outgoing payment
 );
 
@@ -218,6 +226,38 @@ CREATE TABLE emis (
 CREATE UNIQUE INDEX idx_emis_source_txn   ON emis(source_transaction_id) WHERE source_transaction_id IS NOT NULL;
 -- Covers the EMI tracking panel query: active EMIs for a user.
 CREATE INDEX         idx_emis_user_active ON emis(user_id, is_active);
+```
+
+### `recurring_corrections`
+
+Added V11 (ML strategy phase, 2026-07-11) — mirrors `ml_corrections`' role for the
+recurring-payment classifier: every confirm/dismiss of a `recurring_payment` alert
+(`AlertsServiceImpl#confirmRecurringPayment` / `#markRead`) becomes a labeled training
+example for `ml/api/retrain-recurring`, replacing the bootstrap labels
+(`ml/training/recurring_labels.py`) with real user judgment over time (ADR-003 adaptive
+supervised learning). Stores the exact feature snapshot from prediction time (see
+`ml/training/recurring_features.py`'s `compute_features()` / `RecurringPaymentDetector
+.computeFeatures`), not a live re-computation, so a correction stays meaningful even if
+the underlying transactions are later edited or deleted.
+
+```sql
+CREATE TABLE recurring_corrections (
+    id                             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id                        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    representative_transaction_id  UUID REFERENCES transactions(id) ON DELETE SET NULL,
+    occurrence_count               INT NOT NULL,
+    interval_mean_days             FLOAT NOT NULL,
+    interval_cv                    FLOAT NOT NULL,
+    amount_mean                    FLOAT NOT NULL,
+    amount_cv                      FLOAT NOT NULL,
+    span_days                      FLOAT NOT NULL,
+    days_since_last_occurrence     FLOAT NOT NULL,
+    was_recurring                  BOOLEAN NOT NULL,
+    corrected_at                   TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- Covers the retraining job's incremental read, same pattern as idx_ml_corrections_date.
+CREATE INDEX idx_recurring_corrections_date ON recurring_corrections(corrected_at);
 ```
 
 ### `recommendations`

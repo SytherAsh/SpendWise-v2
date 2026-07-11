@@ -54,13 +54,14 @@ public class EmiServiceImpl implements EmiService {
 
     @Override
     @Transactional
-    public Emi createFromDetection(UUID userId, String label, BigDecimal amount, UUID sourceTransactionId) {
+    public Emi createFromDetection(
+            UUID userId, String label, BigDecimal amount, UUID sourceTransactionId, String cadence, Double confidenceScore) {
         Optional<Emi> existing = emiRepository.findBySourceTransactionId(userId, sourceTransactionId);
         if (existing.isPresent()) {
             return existing.get();
         }
         try {
-            return emiRepository.insertFromDetection(userId, label, amount, sourceTransactionId);
+            return emiRepository.insertFromDetection(userId, label, amount, sourceTransactionId, cadence, confidenceScore);
         } catch (DuplicateKeyException e) {
             // Race between the check above and this insert (e.g. a double-click confirming the
             // same alert) — idx_emis_source_txn is the authoritative guard; fall back to the row

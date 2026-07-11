@@ -3,6 +3,8 @@ package com.spendwise.categorization;
 import com.spendwise.categorization.dto.MlEvaluationResponse;
 import com.spendwise.categorization.dto.MlPredictionRequest;
 import com.spendwise.categorization.dto.MlPredictionResponse;
+import com.spendwise.categorization.dto.MlRecurringPredictionRequest;
+import com.spendwise.categorization.dto.MlRecurringPredictionResponse;
 import com.spendwise.categorization.dto.MlRetrainCorrection;
 import com.spendwise.categorization.dto.MlRetrainRequest;
 import com.spendwise.transaction.MlCorrectionRecord;
@@ -67,6 +69,11 @@ public class CategorizationServiceImpl implements CategorizationService {
     @Override
     public MlEvaluationResponse getAccuracyMetrics() {
         return mlClient.evaluate();
+    }
+
+    @Override
+    public MlRecurringPredictionResponse predictRecurring(MlRecurringPredictionRequest request) {
+        return mlClient.predictRecurring(request);
     }
 
     private static MlPredictionRequest toPredictionRequest(Transaction transaction) {

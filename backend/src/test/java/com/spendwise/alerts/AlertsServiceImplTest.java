@@ -26,7 +26,8 @@ class AlertsServiceImplTest {
 
     private final AlertRepository alertRepository = mock(AlertRepository.class);
     private final EmiService emiService = mock(EmiService.class);
-    private final AlertsServiceImpl service = new AlertsServiceImpl(alertRepository, emiService);
+    private final RecurringCorrectionsRepository recurringCorrectionsRepository = mock(RecurringCorrectionsRepository.class);
+    private final AlertsServiceImpl service = new AlertsServiceImpl(alertRepository, emiService, recurringCorrectionsRepository);
     private final UUID userId = UUID.randomUUID();
 
     @Test
@@ -139,7 +140,7 @@ class AlertsServiceImplTest {
         given(alertRepository.findById(userId, alertId)).willReturn(Optional.of(sampleAlert(AlertType.CATEGORY_OVERSPEND, AlertPriority.HIGH)));
 
         assertThrows(InvalidAlertConfirmationException.class, () -> service.confirmRecurringPayment(userId, alertId));
-        verify(emiService, never()).createFromDetection(any(), any(), any(), any());
+        verify(emiService, never()).createFromDetection(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -154,17 +155,14 @@ class AlertsServiceImplTest {
     void confirmCreatesTheLinkedEmiAndMarksTheAlertRead() {
         UUID alertId = UUID.randomUUID();
         UUID sourceTransactionId = UUID.randomUUID();
-        // Payload values are Double/String here, not BigDecimal/UUID — mirroring what
-        // AlertRepository#fromJson actually hands back after a JSON round-trip.
-        Map<String, Object> payload = Map.of(
-                "merchant_key", "netflix@okicici",
-                "merchant_label", "Netflix",
-                "representative_amount", 199.0,
-                "representative_transaction_id", sourceTransactionId.toString());
+        Map<String, Object> payload = recurringPayload(sourceTransactionId);
         Alert alert = new Alert(alertId, userId, AlertType.RECURRING_PAYMENT, AlertPriority.MEDIUM, Instant.now(), null, false, payload);
         given(alertRepository.findById(userId, alertId)).willReturn(Optional.of(alert));
-        Emi createdEmi = new Emi(UUID.randomUUID(), userId, "Netflix", BigDecimal.valueOf(199.0), null, true, true, sourceTransactionId);
-        given(emiService.createFromDetection(userId, "Netflix", BigDecimal.valueOf(199.0), sourceTransactionId)).willReturn(createdEmi);
+        given(emiService.findBySourceTransaction(userId, sourceTransactionId)).willReturn(Optional.empty());
+        Emi createdEmi = new Emi(
+                UUID.randomUUID(), userId, "Netflix", BigDecimal.valueOf(199.0), null, true, true, sourceTransactionId, "monthly", 0.9);
+        given(emiService.createFromDetection(userId, "Netflix", BigDecimal.valueOf(199.0), sourceTransactionId, "monthly", 0.9))
+                .willReturn(createdEmi);
 
         Emi result = service.confirmRecurringPayment(userId, alertId);
 
@@ -172,7 +170,105 @@ class AlertsServiceImplTest {
         verify(alertRepository).markRead(userId, alertId);
     }
 
+    @Test
+    void confirmRecordsAPositiveRecurringCorrectionOnlyOnceForANewlyLinkedEmi() {
+        UUID alertId = UUID.randomUUID();
+        UUID sourceTransactionId = UUID.randomUUID();
+        Map<String, Object> payload = recurringPayload(sourceTransactionId);
+        Alert alert = new Alert(alertId, userId, AlertType.RECURRING_PAYMENT, AlertPriority.MEDIUM, Instant.now(), null, false, payload);
+        given(alertRepository.findById(userId, alertId)).willReturn(Optional.of(alert));
+        given(emiService.findBySourceTransaction(userId, sourceTransactionId)).willReturn(Optional.empty());
+        given(emiService.createFromDetection(any(), any(), any(), any(), any(), any())).willReturn(
+                new Emi(UUID.randomUUID(), userId, "Netflix", BigDecimal.valueOf(199.0), null, true, true, sourceTransactionId, "monthly", 0.9));
+
+        service.confirmRecurringPayment(userId, alertId);
+
+        verify(recurringCorrectionsRepository)
+                .insert(eq(userId), eq(sourceTransactionId), any(RecurringCandidateFeatures.class), eq(true));
+    }
+
+    @Test
+    void confirmDoesNotDoubleRecordACorrectionWhenTheEmiAlreadyExists() {
+        // Second confirm click on the same already-linked group (E6-S2-T2 idempotency) — a
+        // correction was already recorded the first time; recording it again would double-count
+        // this group in the next retrain.
+        UUID alertId = UUID.randomUUID();
+        UUID sourceTransactionId = UUID.randomUUID();
+        Map<String, Object> payload = recurringPayload(sourceTransactionId);
+        Alert alert = new Alert(alertId, userId, AlertType.RECURRING_PAYMENT, AlertPriority.MEDIUM, Instant.now(), null, false, payload);
+        given(alertRepository.findById(userId, alertId)).willReturn(Optional.of(alert));
+        Emi existing =
+                new Emi(UUID.randomUUID(), userId, "Netflix", BigDecimal.valueOf(199.0), null, true, true, sourceTransactionId, "monthly", 0.9);
+        given(emiService.findBySourceTransaction(userId, sourceTransactionId)).willReturn(Optional.of(existing));
+        given(emiService.createFromDetection(any(), any(), any(), any(), any(), any())).willReturn(existing);
+
+        service.confirmRecurringPayment(userId, alertId);
+
+        verify(recurringCorrectionsRepository, never()).insert(any(), any(), any(), anyBoolean());
+    }
+
+    @Test
+    void dismissingAnUnreadRecurringPaymentAlertRecordsANegativeCorrection() {
+        UUID alertId = UUID.randomUUID();
+        UUID sourceTransactionId = UUID.randomUUID();
+        Map<String, Object> payload = recurringPayload(sourceTransactionId);
+        Alert alert = new Alert(alertId, userId, AlertType.RECURRING_PAYMENT, AlertPriority.MEDIUM, Instant.now(), null, false, payload);
+        given(alertRepository.findById(userId, alertId)).willReturn(Optional.of(alert));
+
+        service.markRead(userId, alertId);
+
+        verify(recurringCorrectionsRepository)
+                .insert(eq(userId), eq(sourceTransactionId), any(RecurringCandidateFeatures.class), eq(false));
+    }
+
+    @Test
+    void markReadOnAnAlreadyReadRecurringPaymentAlertDoesNotDoubleRecordACorrection() {
+        UUID alertId = UUID.randomUUID();
+        UUID sourceTransactionId = UUID.randomUUID();
+        Map<String, Object> payload = recurringPayload(sourceTransactionId);
+        Alert alreadyRead = new Alert(alertId, userId, AlertType.RECURRING_PAYMENT, AlertPriority.MEDIUM, Instant.now(), null, true, payload);
+        given(alertRepository.findById(userId, alertId)).willReturn(Optional.of(alreadyRead));
+
+        service.markRead(userId, alertId);
+
+        verify(recurringCorrectionsRepository, never()).insert(any(), any(), any(), anyBoolean());
+    }
+
+    @Test
+    void markReadOnANonRecurringAlertNeverTouchesCorrections() {
+        UUID alertId = UUID.randomUUID();
+        given(alertRepository.findById(userId, alertId)).willReturn(Optional.of(sampleAlert(AlertType.CATEGORY_OVERSPEND, AlertPriority.HIGH)));
+
+        service.markRead(userId, alertId);
+
+        verify(recurringCorrectionsRepository, never()).insert(any(), any(), any(), anyBoolean());
+    }
+
     private Alert sampleAlert(AlertType type, AlertPriority priority) {
         return new Alert(UUID.randomUUID(), userId, type, priority, Instant.now(), null, false, Map.of());
+    }
+
+    // Payload values are Double/String here, not BigDecimal/UUID — mirroring what
+    // AlertRepository#fromJson actually hands back after a JSON round-trip.
+    private Map<String, Object> recurringPayload(UUID sourceTransactionId) {
+        return Map.ofEntries(
+                Map.entry("merchant_key", "netflix@okicici"),
+                Map.entry("merchant_label", "Netflix"),
+                Map.entry("representative_amount", 199.0),
+                Map.entry("representative_transaction_id", sourceTransactionId.toString()),
+                Map.entry("transaction_count", 3),
+                Map.entry("occurrence_count", 3),
+                Map.entry("interval_mean_days", 30.0),
+                Map.entry("interval_cv", 0.05),
+                Map.entry("amount_mean", 199.0),
+                Map.entry("amount_cv", 0.02),
+                Map.entry("span_days", 60.0),
+                Map.entry("days_since_last_occurrence", 2.0),
+                Map.entry("confidence", 0.9),
+                Map.entry("cadence", "monthly"));
+    }
+
+    private static boolean anyBoolean() {
+        return org.mockito.ArgumentMatchers.anyBoolean();
     }
 }

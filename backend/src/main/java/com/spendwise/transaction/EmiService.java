@@ -39,9 +39,11 @@ public interface EmiService {
      * {@code sourceTransactionId} (with {@code dueDay = null}; the user can set it afterwards via
      * {@link #update}). Idempotent: if an EMI already linked to this transaction exists, returns
      * it unchanged rather than violating {@code idx_emis_source_txn}'s uniqueness constraint —
-     * confirming the same detected group twice is a no-op, not an error.
+     * confirming the same detected group twice is a no-op, not an error. {@code cadence}/{@code
+     * confidenceScore} (ML strategy phase, 2026-07-11) come from the ML prediction that produced
+     * the alert; both nullable.
      */
-    Emi createFromDetection(UUID userId, String label, BigDecimal amount, UUID sourceTransactionId);
+    Emi createFromDetection(UUID userId, String label, BigDecimal amount, UUID sourceTransactionId, String cadence, Double confidenceScore);
 
     /** Idempotency check for {@link #createFromDetection}. */
     Optional<Emi> findBySourceTransaction(UUID userId, UUID sourceTransactionId);

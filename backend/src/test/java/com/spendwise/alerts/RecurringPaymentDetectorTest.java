@@ -11,31 +11,35 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
-/** Required tests for E6-S1-T1 (docs/testing.md Alerts unit tests — recurring-payment detection). */
+/**
+ * Required tests for candidate generation (docs/operations/testing.md Alerts unit tests —
+ * recurring-payment detection), updated for the ML strategy phase's loosened thresholds (2+
+ * transactions, ±40% amount tolerance, 400-day window — see RecurringPaymentDetector's Javadoc for
+ * why). The old strict thresholds (3+, ±10%, 60 days) now live only in
+ * ml/training/recurring_labels.py's bootstrap-label definition, not here.
+ */
 class RecurringPaymentDetectorTest {
 
     private final Instant now = Instant.now();
 
     @Test
-    void threeMatchingTransactionsWithinSixtyDaysAndTolerance_isFlagged() {
+    void twoMatchingTransactionsWithinLooseWindowAndTolerance_isFlaggedAsACandidate() {
         List<RecurringCandidateTransaction> txns = List.of(
-                candidate(daysAgo(50), "199.00", "netflix@okicici", "Netflix"),
-                candidate(daysAgo(25), "199.00", "netflix@okicici", "Netflix"),
-                candidate(daysAgo(0), "205.00", "netflix@okicici", "Netflix")); // within 10% of 199
+                candidate(daysAgo(90), "199.00", "netflix@okicici", "Netflix"),
+                candidate(daysAgo(0), "205.00", "netflix@okicici", "Netflix")); // within 40% of 199
 
         List<RecurringGroup> groups = RecurringPaymentDetector.detect(txns, Set.of());
 
         assertThat(groups).hasSize(1);
         assertThat(groups.get(0).merchantKey()).isEqualTo("netflix@okicici");
-        assertThat(groups.get(0).transactionIds()).hasSize(3);
+        assertThat(groups.get(0).transactionIds()).hasSize(2);
     }
 
     @Test
-    void onlyTwoMatchingTransactions_isNotFlagged() {
-        List<RecurringCandidateTransaction> txns = List.of(
-                candidate(daysAgo(50), "199.00", "netflix@okicici", "Netflix"),
-                candidate(daysAgo(0), "199.00", "netflix@okicici", "Netflix"));
+    void aSingleTransaction_isNeverACandidate() {
+        List<RecurringCandidateTransaction> txns = List.of(candidate(daysAgo(0), "199.00", "netflix@okicici", "Netflix"));
 
         List<RecurringGroup> groups = RecurringPaymentDetector.detect(txns, Set.of());
 
@@ -43,11 +47,9 @@ class RecurringPaymentDetectorTest {
     }
 
     @Test
-    void threeMatchingTransactionsSpanningMoreThanSixtyDays_isNotFlagged() {
+    void matchingTransactionsSpanningMoreThanFourHundredDays_isNotACandidate() {
         List<RecurringCandidateTransaction> txns = List.of(
-                candidate(daysAgo(70), "199.00", "netflix@okicici", "Netflix"),
-                candidate(daysAgo(35), "199.00", "netflix@okicici", "Netflix"),
-                candidate(daysAgo(0), "199.00", "netflix@okicici", "Netflix"));
+                candidate(daysAgo(450), "199.00", "netflix@okicici", "Netflix"), candidate(daysAgo(0), "199.00", "netflix@okicici", "Netflix"));
 
         List<RecurringGroup> groups = RecurringPaymentDetector.detect(txns, Set.of());
 
@@ -55,28 +57,42 @@ class RecurringPaymentDetectorTest {
     }
 
     @Test
-    void groupAlreadyLinkedToAnActiveEmi_isNotFlaggedAgain() {
+    void aQuarterlyPatternWellOutsideTheOldSixtyDayWindow_isNowACandidate() {
+        // This is exactly the case the loosening exists to surface — the old strict rule (60-day
+        // window) would never have flagged this at all.
+        List<RecurringCandidateTransaction> txns = List.of(
+                candidate(daysAgo(270), "1200.00", "insurer@okhdfc", "Insurer"),
+                candidate(daysAgo(180), "1200.00", "insurer@okhdfc", "Insurer"),
+                candidate(daysAgo(90), "1200.00", "insurer@okhdfc", "Insurer"),
+                candidate(daysAgo(0), "1200.00", "insurer@okhdfc", "Insurer"));
+
+        List<RecurringGroup> groups = RecurringPaymentDetector.detect(txns, Set.of());
+
+        assertThat(groups).hasSize(1);
+        assertThat(groups.get(0).transactionIds()).hasSize(4);
+    }
+
+    @Test
+    void groupAlreadyLinkedToAnActiveEmi_isNotFlaggedAgainOnceOnlyOneNonExcludedRemains() {
         RecurringCandidateTransaction linked = candidate(daysAgo(50), "199.00", "netflix@okicici", "Netflix");
-        List<RecurringCandidateTransaction> txns = List.of(
-                linked, candidate(daysAgo(25), "199.00", "netflix@okicici", "Netflix"), candidate(daysAgo(0), "199.00", "netflix@okicici", "Netflix"));
+        List<RecurringCandidateTransaction> txns = List.of(linked, candidate(daysAgo(0), "199.00", "netflix@okicici", "Netflix"));
 
         List<RecurringGroup> groups = RecurringPaymentDetector.detect(txns, Set.of(linked.transactionId()));
 
-        assertThat(groups).isEmpty();
+        assertThat(groups).isEmpty(); // only 1 non-excluded transaction remains, below MIN_GROUP_SIZE
     }
 
     @Test
-    void amountOutsideAnchoredTenPercentBand_startsANewCluster() {
-        // 100 -> 110 -> 121: pairwise each within 10% of its neighbour, but 121 is 21% above the
-        // cluster's anchor (100), so it must NOT join the first cluster (no pairwise chaining).
-        List<RecurringCandidateTransaction> txns = List.of(
-                candidate(daysAgo(40), "100.00", "merchant@upi", "Merchant"),
-                candidate(daysAgo(20), "110.00", "merchant@upi", "Merchant"),
-                candidate(daysAgo(0), "121.00", "merchant@upi", "Merchant"));
+    void amountOutsideAnchoredFortyPercentBand_startsANewCluster() {
+        // 100 -> 141: 141 is 41% above the anchor (100), just outside the ±40% band, so it must
+        // start a new cluster rather than joining the first — each 1-member cluster is then below
+        // MIN_GROUP_SIZE.
+        List<RecurringCandidateTransaction> txns =
+                List.of(candidate(daysAgo(40), "100.00", "merchant@upi", "Merchant"), candidate(daysAgo(0), "141.00", "merchant@upi", "Merchant"));
 
         List<RecurringGroup> groups = RecurringPaymentDetector.detect(txns, Set.of());
 
-        assertThat(groups).isEmpty(); // each cluster (100/110 vs. 121) has fewer than 3 members
+        assertThat(groups).isEmpty();
     }
 
     @Test
@@ -85,9 +101,7 @@ class RecurringPaymentDetectorTest {
         // group. A manually-entered EMI with no linked transaction must not fuzzy-suppress a
         // genuinely new detection, even if its label/amount would plausibly correlate.
         List<RecurringCandidateTransaction> txns = List.of(
-                candidate(daysAgo(50), "199.00", "netflix@okicici", "Netflix"),
-                candidate(daysAgo(25), "199.00", "netflix@okicici", "Netflix"),
-                candidate(daysAgo(0), "199.00", "netflix@okicici", "Netflix"));
+                candidate(daysAgo(50), "199.00", "netflix@okicici", "Netflix"), candidate(daysAgo(0), "199.00", "netflix@okicici", "Netflix"));
 
         // excludedTransactionIds is empty here — a manual EMI never contributes an id to it, per
         // EmiRepository#findAllActiveSourceTransactionIds only reading non-null source_transaction_id.
@@ -99,14 +113,41 @@ class RecurringPaymentDetectorTest {
     @Test
     void groupsFallBackToRecipientNameWhenUpiIdIsNull() {
         List<RecurringCandidateTransaction> txns = List.of(
-                candidate(daysAgo(50), "500.00", null, "Gym Membership"),
-                candidate(daysAgo(25), "500.00", null, "Gym Membership"),
-                candidate(daysAgo(0), "500.00", null, "Gym Membership"));
+                candidate(daysAgo(50), "500.00", null, "Gym Membership"), candidate(daysAgo(0), "500.00", null, "Gym Membership"));
 
         List<RecurringGroup> groups = RecurringPaymentDetector.detect(txns, Set.of());
 
         assertThat(groups).hasSize(1);
         assertThat(groups.get(0).merchantKey()).isEqualTo("Gym Membership");
+    }
+
+    @Test
+    void computedFeaturesMatchTheKnownWindowStatistics() {
+        List<RecurringCandidateTransaction> txns = List.of(
+                candidate(daysAgo(60), "1000.00", "gym@upi", "Gym"),
+                candidate(daysAgo(30), "1000.00", "gym@upi", "Gym"),
+                candidate(daysAgo(0), "1000.00", "gym@upi", "Gym"));
+
+        RecurringCandidateFeatures features = RecurringPaymentDetector.computeFeatures(txns, now);
+
+        assertThat(features.occurrenceCount()).isEqualTo(3);
+        assertThat(features.intervalMeanDays()).isCloseTo(30.0, within(0.5));
+        assertThat(features.intervalCv()).isCloseTo(0.0, within(0.01)); // identical 30-day gaps
+        assertThat(features.amountMean()).isCloseTo(1000.0, within(0.01));
+        assertThat(features.amountCv()).isCloseTo(0.0, within(0.01)); // identical amounts
+        assertThat(features.spanDays()).isCloseTo(60.0, within(0.5));
+        assertThat(features.daysSinceLastOccurrence()).isCloseTo(0.0, within(0.5));
+    }
+
+    @Test
+    void daysSinceLastOccurrenceReflectsHowStaleTheGroupIsRelativeToAsOf() {
+        List<RecurringCandidateTransaction> txns = List.of(
+                candidate(daysAgo(90), "500.00", "gym@upi", "Gym"), candidate(daysAgo(60), "500.00", "gym@upi", "Gym"));
+
+        Instant asOf = now.plus(10, ChronoUnit.DAYS); // 10 days after the "now" the fixture dates are relative to
+        RecurringCandidateFeatures features = RecurringPaymentDetector.computeFeatures(txns, asOf);
+
+        assertThat(features.daysSinceLastOccurrence()).isCloseTo(70.0, within(0.5)); // 60 days ago + 10 days forward
     }
 
     private Instant daysAgo(int days) {

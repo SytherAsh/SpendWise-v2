@@ -321,3 +321,66 @@ scope (`docs/roadmap.md`) does.
 **Consequence**: Epic 5 ships with exactly the scheduled evaluator the epic specified.
 Nothing event-driven was built. This ADR exists so the option isn't silently lost or
 re-litigated from scratch if a future epic's requirements change.
+
+---
+
+## ADR-012: Categorization Is the ML Gateway for Every Module, Not Just Itself
+
+**Status**: Accepted
+
+**Context**: The ML strategy phase's first extension beyond transaction categorization
+is a recurring-payment classifier (`ml/api/predict-recurring`, `ml/api/retrain-recurring`)
+that replaces E6-S1-T1's exact-match rule as the production gate for `recurring_payment`
+alerts. CLAUDE.md's invariant is "FastAPI is called only from the Categorization module,"
+enforced by `CategorizationBoundaryTest` (an ArchUnit rule: no class outside
+`com.spendwise.categorization` may depend on `MlClient`). The Alerts module needs a
+recurring-payment prediction for every candidate group `RecurringPaymentDetector`
+proposes — this is the "architecture questions... are open questions for this phase, not
+settled decisions" CLAUDE.md's Current Phase section flagged before any of this was built.
+
+**Options considered**:
+1. **Grant Alerts direct FastAPI access** — add a documented exception to the invariant,
+   analogous to the existing "Allowed module dependencies" addenda in
+   `docs/spec/architecture.md` (Ingest/User, Alerts/User). Alerts would call FastAPI
+   directly for `/predict-recurring`, bypassing Categorization entirely.
+2. **Categorization becomes the ML gateway for every capability, not just its own** —
+   Alerts calls `CategorizationService#predictRecurring` (a new method on the *existing*
+   service interface it's already permitted to depend on transitively), which internally
+   proxies to `MlClient#predictRecurring`. The invariant itself doesn't change — no new
+   class outside `com.spendwise.categorization` touches `MlClient` — Categorization's role
+   just widens from "the categorization module" to "the module that talks to FastAPI."
+3. **Run the recurring classifier inside Spring Boot, not FastAPI** — a small in-process
+   Java ML library (e.g. Smile, Tribuo), sidestepping the invariant question entirely.
+
+**Decision**: Option 2.
+
+**Rationale**:
+- **No new exception to police.** Option 1 would be the third dependency-table addendum
+  of its kind (after Ingest/User and Alerts/User), but those addenda grant read-only
+  access to plain data (`users.email`, device keys) — granting a second module direct
+  access to the *single internal-only ML service* multiplies the number of call paths
+  `api/security.py`'s `X-Internal-Key` check has to be trusted from from one to two, for
+  no benefit Option 2 doesn't already provide.
+- **`CategorizationBoundaryTest` keeps working unmodified.** `MlClient` still has exactly
+  one caller-module. Nothing about the ArchUnit rule's own definition needed to change —
+  only `CategorizationService`'s interface grew a method, which is exactly the kind of
+  change cross-module service interfaces are meant to absorb.
+- **Ruled out Option 3 for the same reason ADR-004 ruled out on-device inference**: the
+  team's ML tooling, training pipeline, and retraining cadence all already live in
+  Python/scikit-learn (`ml/training/`). Splitting a second model into a different language
+  and runtime doubles the operational surface for no accuracy or latency benefit at this
+  scale (~20–30 users), and forfeits the shared `HierarchicalCategoryModel`-style
+  patterns and adaptive-retraining precedent (ADR-003) the categorization model already
+  established.
+- **Precedent already existed, just not exercised.** `CategorizationService` already
+  serves Admin (`triggerRetrain`, `getAccuracyMetrics`) in addition to Ingest
+  (`categorize`) — it was already a gateway for more than one caller before this change;
+  `predictRecurring` is the same pattern for a third caller and a second underlying
+  capability.
+
+**Consequence**: `docs/spec/architecture.md`'s "Allowed module dependencies" table gets a
+new addendum (Alerts → Categorization, read-only/proxy-only — Alerts never writes through
+Categorization) rather than a new FastAPI-access exception. Any future ML capability
+(alerts/overspend anomaly detection, a trained recommendations model) should default to
+the same shape — a new `CategorizationService` method — unless a specific reason emerges
+to reopen this ADR.

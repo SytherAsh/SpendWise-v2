@@ -4,8 +4,10 @@ import com.spendwise.transaction.RecurringCandidateTransaction;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -15,23 +17,35 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * E6-S1-T1 — pure logic, no Spring/DB dependency, so it's unit-testable against synthetic
- * fixtures independent of Epic 5's alert pipeline (`docs/testing.md` Alerts unit tests —
- * recurring-payment detection). Operates on one user's candidate transactions at a time; {@link
- * AlertEvaluatorJob} groups the cross-user bulk read by {@code userId} before calling this.
+ * Candidate generation for recurring-payment detection — pure logic, no Spring/DB dependency, so
+ * it's unit-testable against synthetic fixtures independent of Epic 5's alert pipeline
+ * (`docs/operations/testing.md` Alerts unit tests). Operates on one user's candidate transactions
+ * at a time; {@link AlertEvaluatorJob} groups the cross-user bulk read by {@code userId} before
+ * calling this.
+ *
+ * <p><b>Loosened for the ML strategy phase (2026-07-11):</b> this was E6-S1-T1's exact detection
+ * rule (3+ transactions, ±10% amount tolerance, 60-day window) — that rule is now the bootstrap
+ * label definition {@code ml/training/recurring_labels.py} uses to train the classifier, not the
+ * production gate. Widened here to 2+ transactions, ±40% amount tolerance, a 400-day window
+ * (mirroring {@code ml/training/recurring_features.py}'s {@code LOOSE_*} constants exactly, so the
+ * Python-trained model's input distribution matches what this class actually produces), so a
+ * genuinely-recurring-but-irregular pattern — a quarterly premium, a bill that drifts by more than
+ * 10% — becomes a candidate the ML model ({@link
+ * com.spendwise.categorization.CategorizationService#predictRecurring}) can judge, instead of
+ * being silently rejected before any model ever sees it. This class only proposes candidates and
+ * their statistics now; {@link AlertEvaluatorJob} owns the actual recurring/not-recurring decision.
  *
  * <p><b>Grouping key:</b> {@code upi_id} when non-blank, else {@code recipient_name}
- * (`docs/requirements.md` "Recurring payment detection rule"). Transactions with both blank
+ * (`docs/spec/requirements.md` "Recurring payment detection rule"). Transactions with both blank
  * cannot be grouped and are ignored.
  *
- * <p><b>Amount tolerance ("within ±10% of each other"):</b> anchored to the group's smallest
- * amount, not pairwise-chained — a cluster's members must all satisfy {@code amount <= clusterMin
- * * 1.10}. Pairwise chaining (100 → 110 → 121) would let the effective band drift past 10% across
- * a long chain, which the requirement doesn't intend.
+ * <p><b>Amount tolerance:</b> anchored to the group's smallest amount, not pairwise-chained — a
+ * cluster's members must all satisfy {@code amount <= clusterMin * 1.40}. Pairwise chaining would
+ * let the effective band drift arbitrarily far across a long chain.
  *
- * <p><b>Rolling 60-day window:</b> for each amount cluster (sorted by date), every possible
- * window start is tried; a window qualifies if it contains 3+ non-excluded transactions within 60
- * days of its earliest member. The first qualifying window per cluster is reported.
+ * <p><b>Rolling window:</b> for each amount cluster (sorted by date), every possible window start
+ * is tried; a window qualifies if it contains 2+ non-excluded transactions within 400 days of its
+ * earliest member. The first qualifying window per cluster is reported.
  *
  * <p><b>{@code emis} exclusion — deliberately the most conservative rule available:</b> a
  * transaction is excluded only if its id is an active {@code emis} row's {@code
@@ -39,18 +53,22 @@ import java.util.UUID;
  * manually-entered EMIs (which have no {@code source_transaction_id} to match against) — a fuzzy
  * match risks a false-positive exclusion that silently hides a legitimate alert from the user,
  * which is worse than an occasional redundant alert for a charge they already track manually.
- * When confidence is insufficient to link a group to an existing EMI with certainty, this
- * detector does not attempt to classify it as already-tracked.
  */
 public final class RecurringPaymentDetector {
 
-    private static final BigDecimal TOLERANCE_MULTIPLIER = BigDecimal.valueOf(110, 2); // 1.10
-    private static final long WINDOW_DAYS = 60;
-    private static final int MIN_GROUP_SIZE = 3;
+    private static final BigDecimal TOLERANCE_MULTIPLIER = BigDecimal.valueOf(140, 2); // 1.40
+    private static final long WINDOW_DAYS = 400;
+    private static final int MIN_GROUP_SIZE = 2;
 
     private RecurringPaymentDetector() {}
 
     public static List<RecurringGroup> detect(List<RecurringCandidateTransaction> candidates, Set<UUID> excludedTransactionIds) {
+        return detect(candidates, excludedTransactionIds, Instant.now());
+    }
+
+    /** Overload taking an explicit "now" so days_since_last_occurrence is deterministic in tests. */
+    static List<RecurringGroup> detect(
+            List<RecurringCandidateTransaction> candidates, Set<UUID> excludedTransactionIds, Instant asOf) {
         Map<String, List<RecurringCandidateTransaction>> byMerchant = new LinkedHashMap<>();
         for (RecurringCandidateTransaction candidate : candidates) {
             String key = merchantKey(candidate);
@@ -66,7 +84,7 @@ public final class RecurringPaymentDetector {
                 continue;
             }
             for (List<RecurringCandidateTransaction> cluster : anchoredAmountClusters(entry.getValue())) {
-                qualifyingWindow(cluster, excludedTransactionIds).ifPresent(groups::add);
+                qualifyingWindow(cluster, excludedTransactionIds, asOf).ifPresent(groups::add);
             }
         }
         return groups;
@@ -112,11 +130,11 @@ public final class RecurringPaymentDetector {
 
     /**
      * Finds the first date-sorted window (of the cluster, trying every possible start) that
-     * contains 3+ non-excluded transactions within {@value #WINDOW_DAYS} days of its earliest
+     * contains 2+ non-excluded transactions within {@value #WINDOW_DAYS} days of its earliest
      * member.
      */
     private static Optional<RecurringGroup> qualifyingWindow(
-            List<RecurringCandidateTransaction> cluster, Set<UUID> excludedTransactionIds) {
+            List<RecurringCandidateTransaction> cluster, Set<UUID> excludedTransactionIds, Instant asOf) {
         List<RecurringCandidateTransaction> sortedByDate = new ArrayList<>(cluster);
         sortedByDate.sort(Comparator.comparing(RecurringCandidateTransaction::transactionDate));
 
@@ -140,9 +158,49 @@ public final class RecurringPaymentDetector {
                         merchantLabel(representative),
                         representative.amount(),
                         representative.transactionId(),
-                        nonExcluded.stream().map(RecurringCandidateTransaction::transactionId).toList()));
+                        nonExcluded.stream().map(RecurringCandidateTransaction::transactionId).toList(),
+                        computeFeatures(nonExcluded, asOf)));
             }
         }
         return Optional.empty();
+    }
+
+    /**
+     * Java mirror of {@code ml/training/recurring_features.py}'s {@code compute_features()} —
+     * same statistics, same sample-standard-deviation-based coefficient of variation (Python's
+     * {@code statistics.stdev}), so the classifier sees the same feature distribution regardless
+     * of which side computed it.
+     */
+    static RecurringCandidateFeatures computeFeatures(List<RecurringCandidateTransaction> window, Instant asOf) {
+        List<RecurringCandidateTransaction> sortedByDate = new ArrayList<>(window);
+        sortedByDate.sort(Comparator.comparing(RecurringCandidateTransaction::transactionDate));
+
+        double[] intervals = new double[sortedByDate.size() - 1];
+        for (int i = 1; i < sortedByDate.size(); i++) {
+            intervals[i - 1] = ChronoUnit.DAYS.between(sortedByDate.get(i - 1).transactionDate(), sortedByDate.get(i).transactionDate());
+        }
+        double intervalMean = intervals.length == 0 ? 0.0 : Arrays.stream(intervals).average().orElse(0.0);
+        double intervalCv = coefficientOfVariation(intervals, intervalMean);
+
+        double[] amounts = sortedByDate.stream().mapToDouble(t -> t.amount().abs().doubleValue()).toArray();
+        double amountMean = Arrays.stream(amounts).average().orElse(0.0);
+        double amountCv = coefficientOfVariation(amounts, amountMean);
+
+        long spanDays =
+                ChronoUnit.DAYS.between(sortedByDate.get(0).transactionDate(), sortedByDate.get(sortedByDate.size() - 1).transactionDate());
+        long daysSinceLast = ChronoUnit.DAYS.between(sortedByDate.get(sortedByDate.size() - 1).transactionDate(), asOf);
+
+        return new RecurringCandidateFeatures(
+                sortedByDate.size(), intervalMean, intervalCv, amountMean, amountCv, (double) spanDays, (double) daysSinceLast);
+    }
+
+    /** Sample standard deviation (n-1 denominator, matching Python's statistics.stdev) over mean. */
+    private static double coefficientOfVariation(double[] values, double mean) {
+        if (values.length < 2 || mean == 0.0) {
+            return 0.0;
+        }
+        double sumSquaredDiff = Arrays.stream(values).map(v -> (v - mean) * (v - mean)).sum();
+        double variance = sumSquaredDiff / (values.length - 1);
+        return Math.sqrt(variance) / mean;
     }
 }

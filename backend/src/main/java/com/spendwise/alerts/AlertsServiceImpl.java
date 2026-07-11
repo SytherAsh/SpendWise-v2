@@ -22,10 +22,13 @@ public class AlertsServiceImpl implements AlertsService {
 
     private final AlertRepository alertRepository;
     private final EmiService emiService;
+    private final RecurringCorrectionsRepository recurringCorrectionsRepository;
 
-    public AlertsServiceImpl(AlertRepository alertRepository, EmiService emiService) {
+    public AlertsServiceImpl(
+            AlertRepository alertRepository, EmiService emiService, RecurringCorrectionsRepository recurringCorrectionsRepository) {
         this.alertRepository = alertRepository;
         this.emiService = emiService;
+        this.recurringCorrectionsRepository = recurringCorrectionsRepository;
     }
 
     @Override
@@ -73,7 +76,14 @@ public class AlertsServiceImpl implements AlertsService {
     @Override
     @Transactional
     public void markRead(UUID userId, UUID alertId) {
-        alertRepository.findById(userId, alertId).orElseThrow(AlertNotFoundException::new);
+        Alert alert = alertRepository.findById(userId, alertId).orElseThrow(AlertNotFoundException::new);
+        // Dismiss path for a recurring_payment alert (E6-S2-T2 — no dedicated dismiss endpoint,
+        // this IS dismiss). Only write a correction the first time: markRead is otherwise called
+        // repeatedly (any alert type, already-read alerts included) without this side effect, and
+        // a second markRead on the same alert must not double-write recurring_corrections.
+        if (alert.type() == AlertType.RECURRING_PAYMENT && !alert.isRead()) {
+            recordRecurringCorrection(userId, alert.payload(), false);
+        }
         alertRepository.markRead(userId, alertId);
     }
 
@@ -91,9 +101,32 @@ public class AlertsServiceImpl implements AlertsService {
         // via toString() rather than casting.
         BigDecimal amount = new BigDecimal(payload.get("representative_amount").toString());
         UUID sourceTransactionId = UUID.fromString((String) payload.get("representative_transaction_id"));
+        String cadence = (String) payload.get("cadence");
+        Double confidence = payload.get("confidence") == null ? null : ((Number) payload.get("confidence")).doubleValue();
 
-        Emi emi = emiService.createFromDetection(userId, label, amount, sourceTransactionId);
+        // Idempotent confirm (E6-S2-T2 DoD: confirming the same group twice is a no-op) — only
+        // record a correction the first time an EMI is actually created from this alert, not on
+        // the second confirm click that returns the already-created EMI unchanged.
+        boolean alreadyLinked = emiService.findBySourceTransaction(userId, sourceTransactionId).isPresent();
+        if (!alreadyLinked) {
+            recordRecurringCorrection(userId, payload, true);
+        }
+
+        Emi emi = emiService.createFromDetection(userId, label, amount, sourceTransactionId, cadence, confidence);
         alertRepository.markRead(userId, alertId);
         return emi;
+    }
+
+    private void recordRecurringCorrection(UUID userId, Map<String, Object> payload, boolean wasRecurring) {
+        UUID sourceTransactionId = UUID.fromString((String) payload.get("representative_transaction_id"));
+        RecurringCandidateFeatures features = new RecurringCandidateFeatures(
+                ((Number) payload.get("occurrence_count")).intValue(),
+                ((Number) payload.get("interval_mean_days")).doubleValue(),
+                ((Number) payload.get("interval_cv")).doubleValue(),
+                ((Number) payload.get("amount_mean")).doubleValue(),
+                ((Number) payload.get("amount_cv")).doubleValue(),
+                ((Number) payload.get("span_days")).doubleValue(),
+                ((Number) payload.get("days_since_last_occurrence")).doubleValue());
+        recurringCorrectionsRepository.insert(userId, sourceTransactionId, features, wasRecurring);
     }
 }

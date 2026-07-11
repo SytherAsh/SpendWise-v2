@@ -3,6 +3,10 @@ package com.spendwise.categorization;
 import com.spendwise.categorization.dto.MlEvaluationResponse;
 import com.spendwise.categorization.dto.MlPredictionRequest;
 import com.spendwise.categorization.dto.MlPredictionResponse;
+import com.spendwise.categorization.dto.MlRecurringPredictionRequest;
+import com.spendwise.categorization.dto.MlRecurringPredictionResponse;
+import com.spendwise.categorization.dto.MlRecurringRetrainRequest;
+import com.spendwise.categorization.dto.MlRecurringRetrainResponse;
 import com.spendwise.categorization.dto.MlRetrainRequest;
 import com.spendwise.categorization.dto.MlRetrainResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -66,5 +70,34 @@ public class MlClient {
     /** @throws org.springframework.web.client.RestClientException on network failure or non-2xx response */
     public MlEvaluationResponse evaluate() {
         return restClient.get().uri("/evaluate").header("X-Internal-Key", internalKey).retrieve().body(MlEvaluationResponse.class);
+    }
+
+    /**
+     * Recurring-payment classifier (ML strategy phase, 2026-07-11) — same internal-only contract
+     * as {@link #predict}, called from {@link CategorizationServiceImpl#predictRecurring}, which is
+     * in turn the only path {@code Alerts} may reach this service through (CategorizationService is
+     * the ML gateway; see docs/spec/decisions.md).
+     *
+     * @throws org.springframework.web.client.RestClientException on network failure or non-2xx response
+     */
+    public MlRecurringPredictionResponse predictRecurring(MlRecurringPredictionRequest request) {
+        return restClient
+                .post()
+                .uri("/predict-recurring")
+                .header("X-Internal-Key", internalKey)
+                .body(request)
+                .retrieve()
+                .body(MlRecurringPredictionResponse.class);
+    }
+
+    /** @throws org.springframework.web.client.RestClientException on network failure or non-2xx response */
+    public MlRecurringRetrainResponse retrainRecurring(MlRecurringRetrainRequest request) {
+        return restClient
+                .post()
+                .uri("/retrain-recurring")
+                .header("X-Internal-Key", internalKey)
+                .body(request)
+                .retrieve()
+                .body(MlRecurringRetrainResponse.class);
     }
 }

@@ -74,7 +74,7 @@ SpendWise is built as a **modular monolith** for the MVP. The codebase is organi
 | **Ingest** | Transaction (persist), Categorization (trigger), User (device API key validation only), Auth (reuses the user-JWT filter/service for session validation only) | Any other module |
 | **Categorization** | Transaction (update category) | Any module except Transaction |
 | **Budget** | Transaction (read-only — spend data for progress/suggestions) | Any other module |
-| **Alerts** | Transaction (read spend; read EMIs for recurring-payment detection; **write** — create an EMI from a confirmed recurring-payment alert, E6-S2-T2), Budget (read limits), User (read-only: `email`, `fcm_token`, `alert_channels` preference — dispatch target lookup) | Recommendations, Chatbot, Ingest |
+| **Alerts** | Transaction (read spend; read EMIs for recurring-payment detection; **write** — create an EMI from a confirmed recurring-payment alert, E6-S2-T2), Budget (read limits), User (read-only: `email`, `fcm_token`, `alert_channels` preference — dispatch target lookup), Categorization (predict-only — recurring-payment confidence/cadence for a candidate group; never triggers a retrain, never writes through it) | Recommendations, Chatbot, Ingest |
 | **Recommendations** | Analytics (read aggregations) | Alerts, Chatbot, Ingest, Categorization |
 | **Chatbot** | Transaction (read history), Analytics (read summaries) | Any module that writes data |
 | **Analytics** | Reads from all modules *(read-only)* | *(must not call any write methods on any module)* |
@@ -121,6 +121,16 @@ SpendWise is built as a **modular monolith** for the MVP. The codebase is organi
 > `DemoUserRegistry`'s own class-level Javadoc for the same reasoning in code. Unlike the two
 > addenda above, this one has not been separately confirmed with the project owner as a dependency-
 > table amendment; flag for explicit sign-off if the demo feature's scope changes.
+
+> **Alerts' Categorization dependency (added during the ML strategy phase, 2026-07-11):**
+> `AlertEvaluatorJob` calls `CategorizationService#predictRecurring` for every candidate group
+> `RecurringPaymentDetector` proposes, replacing E6-S1-T1's exact-match rule as the production
+> gate for `recurring_payment` alerts — see ADR-012 in `docs/spec/decisions.md` for the full
+> reasoning (why this widens Categorization's role instead of granting Alerts its own FastAPI
+> access, or an exception to "FastAPI is called only from the Categorization module").
+> Predict-only: Alerts never calls `triggerRetrain`, and `CategorizationService#predictRecurring`
+> itself never writes to the database — it's a pure proxy to FastAPI `/predict-recurring`. No
+> cycle: Categorization never calls back into Alerts.
 
 Direction rule: data flows inward through the stack (Ingest → Transaction → Analytics). No module calls back up the ingestion chain.
 
@@ -255,7 +265,7 @@ Dashboard and budget suggestions reflect imported data
 
 | Job | Owner | Schedule | What it does |
 | --- | --- | --- | --- |
-| Alert evaluator | Alerts | Every 30 minutes | Checks mid-month budget thresholds and category overspend for all users; also runs recurring-payment detection (E6-S2-T1) — reuses this same cadence since detection isn't time-critical (`docs/spec/decisions.md` ADR-011's scheduled-over-event-driven reasoning applies here too) |
+| Alert evaluator | Alerts | Every 30 minutes | Checks mid-month budget thresholds and category overspend for all users; also runs recurring-payment detection — proposes loosened candidates (`RecurringPaymentDetector`), then gates each on `CategorizationService#predictRecurring` (V11, ADR-012) — reuses this same cadence since detection isn't time-critical (`docs/spec/decisions.md` ADR-011's scheduled-over-event-driven reasoning applies here too) |
 | Recommendation generator | Recommendations | Every 6 hours | Reads spending aggregations from Analytics; generates recommendations where a threshold has been crossed since the last generation for that user and category, determined by comparing transaction and budget timestamps against the time of its own last run. Idempotent — suppresses duplicates by checking `generated_at` on the most recent record per user per category. |
 | ML retraining | Categorization | Weekly (configurable) | Sends `ml_corrections` data to FastAPI /retrain |
 | Categorization retry | Categorization | Every 30 minutes | Re-triggers ML categorization for transactions ingested but not yet categorized (e.g., FastAPI unavailable during ingest) |

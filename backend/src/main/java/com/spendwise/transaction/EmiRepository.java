@@ -28,7 +28,9 @@ public class EmiRepository {
             (Integer) rs.getObject("due_day"),
             rs.getBoolean("detected_from_sms"),
             rs.getBoolean("is_active"),
-            rs.getString("source_transaction_id") == null ? null : UUID.fromString(rs.getString("source_transaction_id")));
+            rs.getString("source_transaction_id") == null ? null : UUID.fromString(rs.getString("source_transaction_id")),
+            rs.getString("cadence"),
+            (Double) rs.getObject("confidence_score"));
 
     private final JdbcTemplate jdbcTemplate;
     private final RlsSession rlsSession;
@@ -52,7 +54,7 @@ public class EmiRepository {
                 label,
                 amount,
                 dueDay);
-        return new Emi(id, userId, label, amount, dueDay, false, true, null);
+        return new Emi(id, userId, label, amount, dueDay, false, true, null, null, null);
     }
 
     /** Default list per docs/api.md "GET /emis" — active EMIs only. */
@@ -89,19 +91,25 @@ public class EmiRepository {
     /**
      * Confirm flow (E6-S2-T2) — {@code due_day} is always {@code NULL} rather than inferred from
      * the source transaction's date; the user can set it afterwards via {@code PUT /emis/:id}.
+     * {@code cadence}/{@code confidenceScore} (ML strategy phase, 2026-07-11) carry over the ML
+     * prediction that produced the alert being confirmed — both nullable, since a pre-ML alert
+     * confirmed after this migration lands would have neither.
      */
-    public Emi insertFromDetection(UUID userId, String label, BigDecimal amount, UUID sourceTransactionId) {
+    public Emi insertFromDetection(
+            UUID userId, String label, BigDecimal amount, UUID sourceTransactionId, String cadence, Double confidenceScore) {
         rlsSession.setCurrentUser(userId);
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO emis (id, user_id, label, amount, due_day, detected_from_sms, is_active, source_transaction_id) "
-                        + "VALUES (?, ?, ?, ?, NULL, TRUE, TRUE, ?)",
+                "INSERT INTO emis (id, user_id, label, amount, due_day, detected_from_sms, is_active, source_transaction_id, cadence, confidence_score) "
+                        + "VALUES (?, ?, ?, ?, NULL, TRUE, TRUE, ?, ?, ?)",
                 id,
                 userId,
                 label,
                 amount,
-                sourceTransactionId);
-        return new Emi(id, userId, label, amount, null, true, true, sourceTransactionId);
+                sourceTransactionId,
+                cadence,
+                confidenceScore);
+        return new Emi(id, userId, label, amount, null, true, true, sourceTransactionId, cadence, confidenceScore);
     }
 
     /** Never hard-deletes — updates label/amount/due_day only (E3-S3-T2 DoD). */
