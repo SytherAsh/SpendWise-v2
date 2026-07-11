@@ -13,14 +13,12 @@ TEST_KEY = "test-internal-key"
 
 
 class FakeModel:
-    """Stands in for the trained pipeline — predicts category_id 7 (Food / Dine
-    Out) with high confidence, independent of the real committed artifact."""
+    """Stands in for the trained HierarchicalCategoryModel — predicts
+    category_id 7 (Food / Dine Out) with high confidence, independent of the
+    real committed artifact."""
 
-    def predict(self, features):
-        return [7]
-
-    def predict_proba(self, features):
-        return [[0.005] * 11 + [0.945]]
+    def predict_with_confidence(self, features):
+        return [7], [0.945]
 
 
 @pytest.fixture

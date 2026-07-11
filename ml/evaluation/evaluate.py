@@ -3,11 +3,18 @@
     cd ml
     python evaluation/evaluate.py --data data/spendwise_labeled.xlsx
 
-Must be re-run after every retraining cycle (docs/testing.md §2). Fits a
-fresh model on an internal 80/20 held-out split rather than scoring the
+Must be re-run after every retraining cycle (docs/operations/testing.md §2).
+Fits a fresh model on an internal 80/20 held-out split rather than scoring the
 committed production artifact (which is trained on 100% of the data for
 maximum real-world coverage per E4-S2-T2) — this keeps the reported accuracy
 an honest, non-leaked estimate instead of train-set performance.
+
+Splits the *rows* 80/20 first, then trains the full hierarchical model
+(training/train.py's train_model(), Stage 1 + Stage 2 together) on the train
+rows and scores it end-to-end on the held-out test rows — so `accuracy` here
+is the honest, whole-pipeline number directly comparable to pre-hierarchy
+reports (e.g. evaluation_20260705T170803Z.json's 0.917), not a per-stage
+number that would overstate how the two stages perform chained together.
 """
 
 import argparse
@@ -23,9 +30,8 @@ from sklearn.model_selection import train_test_split
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from api.categories import CATEGORIES, category_id_for_name, category_name_for_id  # noqa: E402
-from training.model_pipeline import build_pipeline  # noqa: E402
 from training.preprocessing import build_feature_frame  # noqa: E402
-from training.train import load_labeled_dataset  # noqa: E402
+from training.train import load_labeled_dataset, train_model  # noqa: E402
 
 DEFAULT_DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "spendwise_labeled.xlsx"
 DEFAULT_REPORTS_DIR = Path(__file__).resolve().parent / "reports"
@@ -38,25 +44,27 @@ def run_evaluation(
     reports_dir: Path = DEFAULT_REPORTS_DIR,
 ) -> dict:
     df = load_labeled_dataset(data_path)
-    records = df.to_dict(orient="records")
-    features = build_feature_frame(records)
     labels = df["category"].astype(str).str.strip().map(category_id_for_name)
 
     try:
-        x_train, x_test, y_train, y_test = train_test_split(
-            features, labels, test_size=0.2, random_state=42, stratify=labels
+        train_idx, test_idx = train_test_split(
+            df.index.to_numpy(), test_size=0.2, random_state=42, stratify=labels
         )
     except ValueError:
         # A class with a single example can't be stratified — fall back to a
         # plain random split rather than crashing the evaluation run.
-        x_train, x_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
+        train_idx, test_idx = train_test_split(df.index.to_numpy(), test_size=0.2, random_state=42)
 
-    pipeline = build_pipeline()
-    pipeline.fit(x_train, y_train)
+    train_df = df.loc[train_idx].reset_index(drop=True)
+    test_df = df.loc[test_idx].reset_index(drop=True)
 
-    y_pred = pipeline.predict(x_test)
-    y_proba = pipeline.predict_proba(x_test)
-    confidences = y_proba.max(axis=1)
+    model, _ = train_model(train_df)
+
+    x_test = build_feature_frame(test_df.to_dict(orient="records"))
+    y_test = test_df["category"].astype(str).str.strip().map(category_id_for_name)
+
+    y_pred = model.predict(x_test)
+    _, confidences = model.predict_with_confidence(x_test)
 
     accuracy = float((y_pred == y_test.to_numpy()).mean())
 

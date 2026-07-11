@@ -1,13 +1,20 @@
 """Raw transaction dict -> feature vector (E4-S2-T1).
 
 Extracts and normalizes recipient_name, upi_id, bank, transaction_mode, amount,
-and note per docs/testing.md Section 2 ("Preprocessing pipeline" / "Feature
-extraction"). Nulls are handled gracefully — per docs/database.md's "Notes from
-Real Data", upi_id/bank/note/transaction_mode are all commonly null in real SMS
-and bank-statement data, so every text field degrades to "" rather than raising.
+and note per docs/operations/testing.md Section 2 ("Preprocessing pipeline" /
+"Feature extraction"). Nulls are handled gracefully — per docs/spec/database.md's
+"Notes from Real Data", upi_id/bank/note/transaction_mode are all commonly null
+in real SMS and bank-statement data, so every text field degrades to "" rather
+than raising.
+
+Also joins the counterparty_type/counterparty_confidence features (categorization
+strengthening, 2026-07-11) via training/counterparty.py — see that module's
+docstring for what these represent and why.
 """
 
 import pandas as pd
+
+from training.counterparty import lookup_counterparty
 
 _NULL_TOKENS = {"nan", "none", "n/a", "null"}
 
@@ -45,6 +52,7 @@ def extract_features(transaction: dict) -> dict:
     amount = _clean_amount(transaction.get("amount"))
 
     text = " ".join(part for part in (recipient_name, upi_id, note) if part)
+    counterparty_type, counterparty_confidence = lookup_counterparty(recipient_name, upi_id)
 
     return {
         "recipient_name": recipient_name,
@@ -54,10 +62,25 @@ def extract_features(transaction: dict) -> dict:
         "note": note,
         "amount": amount,
         "text": text,
+        "counterparty_type": counterparty_type,
+        "counterparty_confidence": counterparty_confidence,
     }
 
 
 def build_feature_frame(transactions: list[dict]) -> pd.DataFrame:
     """Batch version of extract_features for training/evaluation."""
     rows = [extract_features(t) for t in transactions]
-    return pd.DataFrame(rows, columns=["recipient_name", "upi_id", "bank", "transaction_mode", "note", "amount", "text"])
+    return pd.DataFrame(
+        rows,
+        columns=[
+            "recipient_name",
+            "upi_id",
+            "bank",
+            "transaction_mode",
+            "note",
+            "amount",
+            "text",
+            "counterparty_type",
+            "counterparty_confidence",
+        ],
+    )

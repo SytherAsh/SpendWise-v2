@@ -84,4 +84,38 @@ def test_build_feature_frame_shape() -> None:
     df = build_feature_frame(transactions)
 
     assert len(df) == 2
-    assert list(df.columns) == ["recipient_name", "upi_id", "bank", "transaction_mode", "note", "amount", "text"]
+    assert list(df.columns) == [
+        "recipient_name",
+        "upi_id",
+        "bank",
+        "transaction_mode",
+        "note",
+        "amount",
+        "text",
+        "counterparty_type",
+        "counterparty_confidence",
+    ]
+
+
+def test_counterparty_lookup_matches_known_recipient() -> None:
+    """PHONE_TRANSFER is a high-confidence "family" row in
+    ml/labeling/knowledge_base/counterparty_knowledge.csv — verifies the join
+    actually fires, not just that the columns exist."""
+    features = extract_features({"recipient_name": "PHONE_TRANSFER", "amount": 1500.0})
+
+    assert features["counterparty_type"] == "family"
+    assert features["counterparty_confidence"] == "high"
+
+
+def test_counterparty_lookup_falls_back_to_unknown_for_unmatched_recipient() -> None:
+    features = extract_features({"recipient_name": "Some Merchant Never Seen Before Ltd", "amount": -99.0})
+
+    assert features["counterparty_type"] == "unknown"
+    assert features["counterparty_confidence"] == "none"
+
+
+def test_counterparty_lookup_handles_missing_recipient_gracefully() -> None:
+    features = extract_features({"amount": 10.0})
+
+    assert features["counterparty_type"] == "unknown"
+    assert features["counterparty_confidence"] == "none"
