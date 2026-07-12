@@ -95,6 +95,29 @@ export function DashboardView() {
 
   const visibleRecs = (recommendations.data ?? []).filter((r) => !dismissed.has(r.id));
 
+  // Unlike recommendations' dismiss (which removes the item from the list client-side), a
+  // confirmed/dismissed alert just needs isRead to flip — refetching is enough to make its
+  // action buttons disappear (AlertsSection only renders them for !isRead), so no local
+  // optimistic-removal state is needed here.
+  async function confirmAlert(id: string) {
+    try {
+      await apiClient.post(`/alerts/${id}/confirm`);
+      alerts.refresh();
+      emis.refresh(); // confirming creates an EMI
+    } catch {
+      // Leave the alert as-is so the Confirm button stays and the user can retry.
+    }
+  }
+
+  async function dismissAlert(id: string) {
+    try {
+      await apiClient.put(`/alerts/${id}/read`);
+      alerts.refresh();
+    } catch {
+      // Leave the alert as-is so the Dismiss button stays and the user can retry.
+    }
+  }
+
   // Hero metrics derived from the summary + trend already being fetched.
   const totalSpend = summary.data?.totalSpend ?? 0;
   const totalIncome = summary.data?.totalIncome ?? 0;
@@ -171,7 +194,11 @@ export function DashboardView() {
         </div>
       <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
         <UpcomingEmisSection state={{ data: emis.data, error: emis.error, isLoading: emis.isLoading }} />
-        <AlertsSection state={{ data: alerts.data?.data, error: alerts.error, isLoading: alerts.isLoading }} />
+        <AlertsSection
+          state={{ data: alerts.data?.data, error: alerts.error, isLoading: alerts.isLoading }}
+          onConfirm={confirmAlert}
+          onDismiss={dismissAlert}
+        />
         <RecommendationsSection
           state={{ data: recommendations.data ? visibleRecs : undefined, error: recommendations.error, isLoading: recommendations.isLoading }}
           onDismiss={dismiss}

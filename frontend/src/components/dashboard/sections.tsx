@@ -118,6 +118,35 @@ function humanize(type: string): string {
   return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/** Human-readable summary of what an alert is actually about, from its payload
+ * (AlertEvaluatorJob's payload shape per alert type — docs/spec/database.md `alerts.payload`). */
+function alertDetail(a: Alert): string | null {
+  const p = a.payload;
+  switch (a.type) {
+    case "recurring_payment": {
+      const merchant = typeof p.merchant_label === "string" ? p.merchant_label : null;
+      const amount = typeof p.representative_amount === "number" ? formatCurrency(p.representative_amount) : null;
+      // Only present on alerts created after the ML strategy phase (2026-07-11) — older alerts
+      // predate this payload field, same as the recurring_corrections backfill gap.
+      const cadence = typeof p.cadence === "string" ? p.cadence : null;
+      return [merchant, amount, cadence].filter((part): part is string => part !== null).join(" · ") || null;
+    }
+    case "mid_month_budget": {
+      const spent = typeof p.total_spent === "number" ? formatCurrency(p.total_spent) : null;
+      const budget = typeof p.total_budget === "number" ? formatCurrency(p.total_budget) : null;
+      return spent && budget ? `${spent} of ${budget} spent` : null;
+    }
+    case "category_overspend":
+    case "category_approaching_limit": {
+      const spent = typeof p.amount_spent === "number" ? formatCurrency(p.amount_spent) : null;
+      const limit = typeof p.monthly_limit === "number" ? formatCurrency(p.monthly_limit) : null;
+      return spent && limit ? `${spent} of ${limit} limit` : null;
+    }
+    default:
+      return typeof p.message === "string" ? p.message : null;
+  }
+}
+
 /** Card shell with a header, loading skeleton, error and empty states. */
 function SectionCard<T>({
   title,
@@ -195,7 +224,17 @@ const ALERT_TONE: Record<string, { icon: typeof AlertTriangle; wrap: string; bad
   },
 };
 
-export function AlertsSection({ state }: { state: SectionState<Alert[]> }) {
+export function AlertsSection({
+  state,
+  onConfirm,
+  onDismiss,
+}: {
+  state: SectionState<Alert[]>;
+  /** Only called for `recurring_payment` alerts — POST /alerts/:id/confirm (creates an EMI). */
+  onConfirm: (id: string) => void;
+  /** Any alert type — PUT /alerts/:id/read (also the dismiss path for recurring_payment, E6-S2-T2). */
+  onDismiss: (id: string) => void;
+}) {
   return (
     <SectionCard
       title="Alerts"
@@ -210,18 +249,38 @@ export function AlertsSection({ state }: { state: SectionState<Alert[]> }) {
           {alerts.slice(0, 5).map((a) => {
             const tone = ALERT_TONE[a.priority] ?? ALERT_TONE.low;
             const Icon = tone.icon;
+            const detail = alertDetail(a);
             return (
               <li key={a.id} className={cn("flex items-start gap-3 rounded-[var(--radius-sm)] border p-3", tone.wrap)}>
                 <Icon className={cn("mt-0.5 size-4 shrink-0", tone.accent)} aria-hidden />
                 <div className="min-w-0 flex-1 text-sm">
                   <span className="font-medium text-foreground">{humanize(a.type)}</span>
-                  {typeof a.payload?.message === "string" && (
-                    <span className="text-foreground-muted"> — {a.payload.message}</span>
-                  )}
+                  {detail && <span className="text-foreground-muted"> — {detail}</span>}
                 </div>
                 <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium capitalize", tone.badge)}>
                   {a.priority}
                 </span>
+                {!a.isRead && (
+                  <div className="flex shrink-0 items-center gap-1">
+                    {a.type === "recurring_payment" && (
+                      <button
+                        type="button"
+                        onClick={() => onConfirm(a.id)}
+                        className="rounded-[var(--radius-sm)] px-1.5 py-0.5 text-xs font-medium text-brand-700 transition-colors hover:bg-surface-muted dark:text-brand-300"
+                      >
+                        Confirm
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onDismiss(a.id)}
+                      aria-label="Dismiss alert"
+                      className="rounded p-0.5 text-foreground-subtle transition-colors hover:text-foreground"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                )}
               </li>
             );
           })}

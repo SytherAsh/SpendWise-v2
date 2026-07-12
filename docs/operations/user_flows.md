@@ -144,9 +144,11 @@ User opens Settings → Appearance
 ### Recurring Payment Detection
 
 ```text
-System detects 3+ transactions from the same merchant (UPI ID or recipient name) within a rolling 60-day window, with amounts within ±10% of each other, not already tracked as an EMI
-→ Alert: "Recurring payment detected: ₹199 to Netflix every month"
-→ User can confirm it as a subscription (saved to emis table) or dismiss
+System proposes candidates: 2+ transactions from the same merchant (UPI ID or recipient name) within a rolling 400-day window, with amounts within ±40% of each other, not already tracked as an EMI (RecurringPaymentDetector — loosened V11, ML strategy phase)
+→ Each candidate is scored by the recurring-payment classifier (CategorizationService#predictRecurring); only candidates the model judges recurring produce an alert
+→ Alert: "Recurring Payment — Netflix · ₹199 · monthly" (merchant, amount, and cadence from the alert payload)
+→ User can confirm it as a subscription (saved to emis table, with the model's cadence/confidence carried over) or dismiss
+→ Either action is recorded to recurring_corrections as a labeled example for the classifier's next retrain (ADR-003 adaptive supervised learning)
 → Future recurring alerts reference this confirmed subscription
 ```
 

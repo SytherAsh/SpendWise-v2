@@ -117,7 +117,17 @@ public class AlertsServiceImpl implements AlertsService {
         return emi;
     }
 
+    /**
+     * No-ops (rather than throwing) for an alert whose payload predates the ML strategy phase —
+     * {@code occurrence_count} and its siblings didn't exist in {@code AlertEvaluatorJob}'s payload
+     * before that change, so any {@code recurring_payment} alert still open from before this
+     * deploy has none of these keys. Confirm/dismiss must still succeed for those; there's just no
+     * feature snapshot to record a correction from.
+     */
     private void recordRecurringCorrection(UUID userId, Map<String, Object> payload, boolean wasRecurring) {
+        if (!payload.containsKey("occurrence_count")) {
+            return;
+        }
         UUID sourceTransactionId = UUID.fromString((String) payload.get("representative_transaction_id"));
         RecurringCandidateFeatures features = new RecurringCandidateFeatures(
                 ((Number) payload.get("occurrence_count")).intValue(),

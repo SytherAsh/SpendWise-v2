@@ -244,6 +244,47 @@ class AlertsServiceImplTest {
         verify(recurringCorrectionsRepository, never()).insert(any(), any(), any(), anyBoolean());
     }
 
+    @Test
+    void confirmingAPreMlPhaseAlertSucceedsWithoutRecordingACorrection() {
+        // Payload shape from before this session's AlertEvaluatorJob change -- no occurrence_count
+        // or its siblings, no cadence/confidence. Must not throw a NullPointerException.
+        UUID alertId = UUID.randomUUID();
+        UUID sourceTransactionId = UUID.randomUUID();
+        Map<String, Object> legacyPayload = Map.of(
+                "merchant_key", "netflix@okicici",
+                "merchant_label", "Netflix",
+                "representative_amount", 199.0,
+                "representative_transaction_id", sourceTransactionId.toString(),
+                "transaction_count", 3);
+        Alert alert = new Alert(alertId, userId, AlertType.RECURRING_PAYMENT, AlertPriority.MEDIUM, Instant.now(), null, false, legacyPayload);
+        given(alertRepository.findById(userId, alertId)).willReturn(Optional.of(alert));
+        given(emiService.findBySourceTransaction(userId, sourceTransactionId)).willReturn(Optional.empty());
+        given(emiService.createFromDetection(userId, "Netflix", BigDecimal.valueOf(199.0), sourceTransactionId, null, null))
+                .willReturn(new Emi(UUID.randomUUID(), userId, "Netflix", BigDecimal.valueOf(199.0), null, true, true, sourceTransactionId, null, null));
+
+        service.confirmRecurringPayment(userId, alertId);
+
+        verify(recurringCorrectionsRepository, never()).insert(any(), any(), any(), anyBoolean());
+    }
+
+    @Test
+    void dismissingAPreMlPhaseAlertSucceedsWithoutRecordingACorrection() {
+        UUID alertId = UUID.randomUUID();
+        Map<String, Object> legacyPayload = Map.of(
+                "merchant_key", "netflix@okicici",
+                "merchant_label", "Netflix",
+                "representative_amount", 199.0,
+                "representative_transaction_id", UUID.randomUUID().toString(),
+                "transaction_count", 3);
+        Alert alert = new Alert(alertId, userId, AlertType.RECURRING_PAYMENT, AlertPriority.MEDIUM, Instant.now(), null, false, legacyPayload);
+        given(alertRepository.findById(userId, alertId)).willReturn(Optional.of(alert));
+
+        service.markRead(userId, alertId);
+
+        verify(recurringCorrectionsRepository, never()).insert(any(), any(), any(), anyBoolean());
+        verify(alertRepository).markRead(userId, alertId);
+    }
+
     private Alert sampleAlert(AlertType type, AlertPriority priority) {
         return new Alert(UUID.randomUUID(), userId, type, priority, Instant.now(), null, false, Map.of());
     }

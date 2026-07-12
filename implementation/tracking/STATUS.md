@@ -493,6 +493,21 @@ run confirms `RecurringPaymentEvaluatorIntegrationTest` and the new
 `AlertControllerIntegrationTest` confirm/dismiss cases all pass against real Testcontainers
 Postgres. This epic is now fully verified, not just unit-verified.
 
+**Superseded (2026-07-11, ML strategy phase):** E6-S1's strict detection rule (3+, ±10%,
+60-day window) is **no longer the production gate** — this is not a revert of the above, it's
+a phase transition this epic's own scope predates. `RecurringPaymentDetector` now proposes
+loosened candidates (2+, ±40%, 400-day window) that `CategorizationService#predictRecurring`
+(a trained classifier) scores; only candidates the model judges recurring produce an alert.
+The strict rule survives only as the classifier's bootstrap-label definition
+(`ml/training/recurring_labels.py`). Full reasoning in ADR-012 (`docs/spec/decisions.md`);
+schema in `docs/spec/database.md` (`emis.cadence`/`confidence_score`,
+`recurring_corrections`); not itself a new Epic 6 story — tracked as ML-strategy-phase work,
+not a backlog task. Also: this same testing pass found and fixed a real bug — confirming or
+dismissing an alert created *before* this change (payload missing the new ML fields) threw a
+`NullPointerException` in `AlertsServiceImpl#recordRecurringCorrection`; fixed to no-op the
+correction write (confirm/dismiss itself still succeeds) when a payload predates this shape,
+with two new tests covering it.
+
 ## Epic 7 — [Analytics & Export](../epics/epic-07-analytics-and-export.md)
 
 - [x] E7-S1-T1 — `GET /analytics/summary`
@@ -827,6 +842,20 @@ Firebase Auth has never been exercised against a real project — see Epic 5's c
 The Working Milestone's live browser demo (login → dashboard → kill-backend stale
 fallback) is implemented and unit-verified but not yet manually smoke-tested against a
 running backend; that remains a pre-launch step (Epic 12).
+
+**Amended (2026-07-11, ML strategy phase):** the web Dashboard's Alerts card was
+display-only at E10-S2-T1 close — no confirm/dismiss actions, unlike Android's E9-S2 spec
+(`epic-09`), which explicitly built "alerts panel with dismiss + recurring-payment
+confirm-as-subscription." Not a regression; E10-S2-T1's own scope never required it. Closed
+during live end-to-end testing of the recurring-payment ML work (see Epic 6 close-out
+addendum below): `AlertsSection`/`DashboardView` (`frontend/src/components/dashboard/`) now
+call `POST /alerts/:id/confirm` and `PUT /alerts/:id/read` for unread alerts (Confirm shown
+only for `recurring_payment`, matching the backend's own type check), and a new
+`alertDetail()` helper surfaces merchant/amount/cadence (or the budget-alert equivalents)
+from `payload` — previously every alert rendered as bare "Recurring Payment"/"Mid Month
+Budget"/etc. with no distinguishing detail, via a dead `payload.message` check that never
+matched any real payload shape. The notification bell (`NotificationsBell.tsx`) still has
+neither improvement — flagged, not yet done.
 
 ## Epic 11 — [Admin Portal](../epics/epic-11-admin-portal.md)
 
