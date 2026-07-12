@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
@@ -25,13 +26,17 @@ class CategorizationRetryJobTest {
     private final CategorizationService categorizationService = mock(CategorizationService.class);
     private final CategorizationRetryJob job = new CategorizationRetryJob(transactionService, categorizationService);
 
+    CategorizationRetryJobTest() {
+        given(categorizationService.lowConfidenceThreshold()).willReturn(0.5);
+    }
+
     @Test
     void reCategorizesEveryUncategorizedTransactionFound() {
         UUID userA = UUID.randomUUID();
         UUID userB = UUID.randomUUID();
         UUID txnA = UUID.randomUUID();
         UUID txnB = UUID.randomUUID();
-        given(transactionService.findAllUncategorized(anyInt()))
+        given(transactionService.findAllUncategorized(anyInt(), anyDouble()))
                 .willReturn(List.of(new UncategorizedTransactionRef(userA, txnA), new UncategorizedTransactionRef(userB, txnB)));
 
         job.run();
@@ -42,14 +47,14 @@ class CategorizationRetryJobTest {
 
     @Test
     void emptyBacklogCategorizesNothing() {
-        given(transactionService.findAllUncategorized(anyInt())).willReturn(List.of());
+        given(transactionService.findAllUncategorized(anyInt(), anyDouble())).willReturn(List.of());
 
         assertThatCode(job::run).doesNotThrowAnyException();
     }
 
     @Test
     void lookupFailureDoesNotThrow() {
-        given(transactionService.findAllUncategorized(anyInt())).willThrow(new RuntimeException("spendwise_jobs connection lost"));
+        given(transactionService.findAllUncategorized(anyInt(), anyDouble())).willThrow(new RuntimeException("spendwise_jobs connection lost"));
 
         assertThatCode(job::run).doesNotThrowAnyException();
     }
@@ -60,7 +65,7 @@ class CategorizationRetryJobTest {
         UUID userB = UUID.randomUUID();
         UUID txnA = UUID.randomUUID();
         UUID txnB = UUID.randomUUID();
-        given(transactionService.findAllUncategorized(anyInt()))
+        given(transactionService.findAllUncategorized(anyInt(), anyDouble()))
                 .willReturn(List.of(new UncategorizedTransactionRef(userA, txnA), new UncategorizedTransactionRef(userB, txnB)));
         // categorize() itself never throws per its own contract (E4-S3-T1), but this job's loop
         // must still tolerate it if it somehow did.

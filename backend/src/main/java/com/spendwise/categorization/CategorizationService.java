@@ -20,13 +20,25 @@ import java.util.UUID;
 public interface CategorizationService {
 
     /**
-     * Calls FastAPI {@code /predict} for the given transaction and writes a confident result to
+     * Calls FastAPI {@code /predict} for the given transaction and writes the result to
      * {@code transaction_categories} with {@code assigned_by = 'ml'} (docs/architecture.md
-     * "Categorization may call: Transaction (update category)"). Never throws — a failed call or
-     * a confidence below the configured threshold leaves the transaction uncategorized so
-     * E4-S3-T3's retry job picks it up later, rather than crashing the ingest flow (E4-S3-T1 DoD).
+     * "Categorization may call: Transaction (update category)"). Never throws — a failed call
+     * leaves the transaction uncategorized so E4-S3-T3's retry job picks it up later, rather than
+     * crashing the ingest flow (E4-S3-T1 DoD). A confidence below the configured threshold is
+     * written as the Miscellaneous fallback category instead (docs/spec/requirements.md: "One-off
+     * unmatched transaction → defaults to Miscellaneous") — the retry job still re-attempts these
+     * rows (see {@link #lowConfidenceThreshold}) so a later retrain can still upgrade them to a
+     * better category.
      */
     void categorize(UUID userId, UUID transactionId);
+
+    /**
+     * The confidence threshold below which {@link #categorize} falls back to the Miscellaneous
+     * category. Exposed so {@code CategorizationRetryJob} can identify which already-assigned
+     * transactions are fallback assignments still eligible for a retry, without duplicating this
+     * module's configuration.
+     */
+    double lowConfidenceThreshold();
 
     /**
      * Reads every {@code ml_corrections} row across all users (cross-user; see

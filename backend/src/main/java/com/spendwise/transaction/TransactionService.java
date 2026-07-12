@@ -69,8 +69,9 @@ public interface TransactionService {
     void correctCategory(UUID userId, UUID transactionId, int categoryId);
 
     /**
-     * Writes an ML-assigned category (E4-S3-T1) — called only by the Categorization module
-     * after a confident {@code /predict} response (docs/architecture.md "Categorization may
+     * Writes an ML-assigned category (E4-S3-T1) — called only by the Categorization module, either
+     * after a confident {@code /predict} response or (ML strategy phase, 2026-07-12) as the
+     * Miscellaneous fallback for a low-confidence one (docs/architecture.md "Categorization may
      * call: Transaction (update category)"). Never overwrites a user's own correction. No-op if
      * the transaction doesn't exist or isn't owned by {@code userId} (E4-S3-T1 DoD: the
      * Categorization module never crashes the ingest flow on a bad write).
@@ -78,11 +79,14 @@ public interface TransactionService {
     void assignMlCategory(UUID userId, UUID transactionId, int categoryId, double confidence);
 
     /**
-     * Cross-user (E4-S3-T3) — every transaction with no {@code transaction_categories} row yet,
-     * across all users, oldest-first. Backs the categorization retry job; bypasses RLS via the
-     * {@code spendwise_jobs} role (see {@code com.spendwise.common.db.JobsDataSourceConfig}).
+     * Cross-user (E4-S3-T3) — every retry-eligible transaction across all users, oldest-first:
+     * transactions with no {@code transaction_categories} row yet, plus (ML strategy phase,
+     * 2026-07-12) ML-assigned rows still below {@code lowConfidenceThreshold} (the Miscellaneous
+     * fallback), which stay eligible for an upgrade after a later retrain. Backs the
+     * categorization retry job; bypasses RLS via the {@code spendwise_jobs} role (see {@code
+     * com.spendwise.common.db.JobsDataSourceConfig}).
      */
-    List<UncategorizedTransactionRef> findAllUncategorized(int limit);
+    List<UncategorizedTransactionRef> findAllUncategorized(int limit, double lowConfidenceThreshold);
 
     /**
      * Cross-user (E4-S3-T4) — every {@code ml_corrections} row across all users, joined with its

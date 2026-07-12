@@ -57,11 +57,12 @@
      `--chart-line`/`--chart-line-strong` above. */
   --color-positive: var(--color-brand-700);
 
-  /* Category palette — 12 fixed categories, keyed by name (see src/lib/categories.ts).
+  /* Category palette — 13 fixed categories, keyed by name (see src/lib/categories.ts).
      dataviz-validated: an 8–12 categorical set is legal ONLY with the secondary
      encoding the UI always ships (icon + label chips, ranked list beside every
-     donut, direct slice labels, table view). Category greens deliberately differ
-     from the interactive brand emerald. */
+     donut, direct slice labels, table view); the 13th (Bills) reuses a keyword-matched
+     hue rather than growing the floor-band palette itself. Category greens deliberately
+     differ from the interactive brand emerald. */
   --color-cat-shopping: #2a78d6; /* blue */
   --color-cat-food: #eb6834; /* orange */
   --color-cat-groceries: #16a34a; /* green */

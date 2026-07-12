@@ -94,9 +94,16 @@ app:
     base-url: ${FASTAPI_ML_URL:http://localhost:8000}
     internal-key: ${ML_INTERNAL_KEY:local-dev-only-ml-internal-key-do-not-use-in-prod}
     # Not specified in docs — a /predict response below this confidence is
-    # treated the same as a failed call (E4-S3-T1 DoD): left uncategorized for
-    # E4-S3-T3's retry job rather than written to transaction_categories.
+    # written as the fallback-category-id below (assigned_by='ml', real
+    # confidence stored) rather than left null, per docs/spec/requirements.md
+    # "One-off unmatched transaction -> defaults to Miscellaneous". Still
+    # retried by E4-S3-T3's retry job (see CategorizationServiceImpl) so a
+    # later retrain can upgrade it to a better category.
     low-confidence-threshold: ${ML_LOW_CONFIDENCE_THRESHOLD:0.5}
+    # categories.id for "Miscellaneous" (V2__transactions_and_categories.sql) — the
+    # documented default for one-off unmatched transactions. Configurable rather than
+    # hardcoded in CategorizationServiceImpl in case the seeded id ever changes.
+    fallback-category-id: ${ML_FALLBACK_CATEGORY_ID:6}
     # "Weekly (configurable)" per docs/architecture.md's Background Jobs table —
     # default fires Sunday 03:00 server time (cron: sec min hour day month weekday).
     retrain-cron: ${ML_RETRAIN_CRON:0 0 3 * * SUN}

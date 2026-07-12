@@ -1,6 +1,6 @@
 # Category Guidelines
 
-The 12 categories are frozen in `docs/requirements.md` — do not add, rename,
+The 13 categories are frozen in `docs/requirements.md` — do not add, rename,
 or split categories here without updating that doc first. This file exists
 to make labeling *consistent* across 475+ recipients and however many future
 datasets, by writing down the boundary calls once instead of re-deciding them
@@ -43,6 +43,7 @@ extension of it.
 | 10 | **Transfers** | Person-to-person UPI transfers, family transfers, wallet top-ups, self-transfers between own accounts, bank transfers with no goods/services attached. | — |
 | 11 | **Medical** | Clinics, diagnostics labs, pharmacies, medical-shop purchases (even when the note says something unrelated, like buying snacks at a pharmacy counter). | — |
 | 12 | **Fees & Debt** | Loan/EMI/NBFC repayments, coaching/tuition/school fees, other debt-service or fee payments. | — |
+| 13 | **Bills** | Recurring household utility bills: electricity, gas, water, and maintenance/society charges. | Mobile/DTH recharges and OTT/streaming charges stay in **Subscriptions** — Bills is specifically utility/housing charges, not every recurring payment. |
 
 Categories 11–12 were added 2026-07-02, after `Medical` and `Fees & Debt`
 purchases kept surfacing during labeling with no home among the original 10
@@ -52,6 +53,17 @@ Miscellaneous). See `docs/requirements.md` for the canonical list and
 schema change. Rows labeled before this addition (e.g. `DILIP KU`,
 `Mayank M`, `PRADHAN` medical-shop-with-snacks entries) were retroactively
 moved from Miscellaneous to Medical — see `tracking/LABELING_STATUS.md`.
+
+Category 13 (`Bills`) was added 2026-07-12, ML strategy phase, ahead of any
+labeled examples in the finalized dataset — same situation `Sports & Fitness`
+was already in (see `ml/labeling/tracking/EPIC_4_HANDOFF.md`). Until user
+corrections supply Bills examples for a future retraining cycle, the
+classifier cannot predict this category; it's reachable only via manual
+category selection in the product. See
+`backend/.../db/migration/V12__add_bills_category.sql` for the schema change.
+Do not retroactively relabel existing Miscellaneous/Subscriptions rows into
+Bills without a documented reason — there's no labeled evidence yet that any
+row in `ml/data/spendwise_labeled.xlsx` belongs here.
 
 ## Open question — not yet resolved, do not invent an answer
 

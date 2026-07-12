@@ -130,11 +130,11 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public List<UncategorizedTransactionRef> findAllUncategorized(int limit) {
+    public List<UncategorizedTransactionRef> findAllUncategorized(int limit, double lowConfidenceThreshold) {
         // No @Transactional / RlsSession here — this reads via the separate spendwise_jobs
         // DataSource (BYPASSRLS), which the primary DataSource's transaction manager doesn't
         // span, and a single SELECT needs no explicit transaction anyway.
-        return transactionRepository.findAllUncategorized(limit);
+        return transactionRepository.findAllUncategorized(limit, lowConfidenceThreshold);
     }
 
     @Override

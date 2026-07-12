@@ -38,7 +38,7 @@ interface Tile {
  * (the "Load more" list below it is unaffected, since TransactionsBrowser paginates separately). */
 const RECEIVED_TILE_LIMIT = 500;
 
-const TILE_COUNT_ESTIMATE = 14; // 12 fixed categories + Uncategorized + Received — used only to size the loading skeleton
+const TILE_COUNT_ESTIMATE = 15; // 13 fixed categories + Uncategorized + Received — used only to size the loading skeleton
 
 /**
  * "Where did my money go" summary strip for the Transactions page — every category (plus

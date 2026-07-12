@@ -14,6 +14,7 @@ CATEGORIES = [
     "Transfers",
     "Medical",
     "Fees & Debt",
+    "Bills",
 ]
 
 # Canonical transaction schema every dataset gets normalized to — matches the

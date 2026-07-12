@@ -26,14 +26,17 @@ public class CategorizationServiceImpl implements CategorizationService {
     private final MlClient mlClient;
     private final TransactionService transactionService;
     private final double lowConfidenceThreshold;
+    private final int fallbackCategoryId;
 
     public CategorizationServiceImpl(
             MlClient mlClient,
             TransactionService transactionService,
-            @Value("${app.ml.low-confidence-threshold}") double lowConfidenceThreshold) {
+            @Value("${app.ml.low-confidence-threshold}") double lowConfidenceThreshold,
+            @Value("${app.ml.fallback-category-id}") int fallbackCategoryId) {
         this.mlClient = mlClient;
         this.transactionService = transactionService;
         this.lowConfidenceThreshold = lowConfidenceThreshold;
+        this.fallbackCategoryId = fallbackCategoryId;
     }
 
     @Override
@@ -44,9 +47,11 @@ public class CategorizationServiceImpl implements CategorizationService {
 
             if (response.confidence() < lowConfidenceThreshold) {
                 log.info(
-                        "Low-confidence prediction ({}) for transaction {} — leaving uncategorized for retry",
+                        "Low-confidence prediction ({}) for transaction {} — assigning Miscellaneous fallback, "
+                                + "eligible for retry until a later retrain improves confidence",
                         response.confidence(),
                         transactionId);
+                transactionService.assignMlCategory(userId, transactionId, fallbackCategoryId, response.confidence());
                 return;
             }
 
@@ -57,6 +62,11 @@ public class CategorizationServiceImpl implements CategorizationService {
             // is left uncategorized; E4-S3-T3's retry job re-attempts it later.
             log.warn("Categorization failed for transaction {}: {}", transactionId, e.getMessage());
         }
+    }
+
+    @Override
+    public double lowConfidenceThreshold() {
+        return lowConfidenceThreshold;
     }
 
     @Override

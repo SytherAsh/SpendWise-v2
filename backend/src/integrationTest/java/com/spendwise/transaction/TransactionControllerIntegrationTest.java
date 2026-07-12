@@ -152,14 +152,14 @@ class TransactionControllerIntegrationTest {
     }
 
     @Test
-    void getCategoriesReturnsAllTwelveSeededCategories() {
+    void getCategoriesReturnsAllThirteenSeededCategories() {
         HttpHeaders headers = authHeadersViaOtp();
 
         ResponseEntity<List> response = restTemplate.exchange(
                 baseUrl() + "/categories", HttpMethod.GET, new HttpEntity<>(headers), List.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).hasSize(12);
+        assertThat(response.getBody()).hasSize(13);
     }
 
     @Test

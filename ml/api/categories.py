@@ -1,8 +1,12 @@
 """Canonical category schema for the ML service — must match docs/requirements.md
-and docs/database.md's `categories` seed data exactly (12 categories; ids 1-10
-seeded in V2, 11-12 added in V7). This is the full label *schema*, not a claim
-that every category has training examples — see ml/labeling/tracking/EPIC_4_HANDOFF.md
-(Sports & Fitness has zero examples in the current labeled dataset).
+and docs/database.md's `categories` seed data exactly (13 categories; ids 1-10
+seeded in V2, 11-12 added in V7, 13 added in V12). This is the full label
+*schema*, not a claim that every category has training examples — see
+ml/labeling/tracking/EPIC_4_HANDOFF.md (Sports & Fitness has zero examples in
+the current labeled dataset) and ml/labeling/CATEGORY_GUIDELINES.md (Bills is
+the same situation as of V12 — added to the schema ahead of having any labeled
+examples, since neither the classifier nor the retry-based auto-assignment can
+predict it until user corrections accumulate).
 
 Kept independent of ml/labeling/scripts/categories.py: that module is a one-off
 data-prep tool for building the training set, not a runtime dependency of the
@@ -22,6 +26,7 @@ CATEGORIES: list[str] = [
     "Transfers",
     "Medical",
     "Fees & Debt",
+    "Bills",
 ]
 
 NAME_TO_ID: dict[str, int] = {name: idx + 1 for idx, name in enumerate(CATEGORIES)}

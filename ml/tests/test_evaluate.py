@@ -12,7 +12,7 @@ from evaluation.evaluate import DEFAULT_DATA_PATH, run_evaluation
 TEST_KEY = "test-internal-key"
 
 # Small synthetic dataset (enough rows per class for an 80/20 stratified
-# split) so the fast tests don't have to fit against the full 1,810-row
+# split) so the fast tests don't have to fit against the full 2,086-row
 # real dataset.
 _SYNTHETIC_ROWS = []
 for i in range(10):
@@ -38,10 +38,10 @@ def test_run_evaluation_produces_report_file_with_required_sections(synthetic_da
 
     assert "accuracy" in report
     assert "per_category" in report
-    assert len(report["per_category"]) == 12
+    assert len(report["per_category"]) == 13
     assert "confusion_matrix" in report
-    assert len(report["confusion_matrix"]) == 12
-    assert len(report["confusion_matrix"][0]) == 12
+    assert len(report["confusion_matrix"]) == 13
+    assert len(report["confusion_matrix"][0]) == 13
     assert "confidence_distribution" in report
     assert {"mean", "median", "min", "max"} <= set(report["confidence_distribution"].keys())
     assert 0.0 <= report["accuracy"] <= 1.0

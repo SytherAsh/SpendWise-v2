@@ -116,16 +116,17 @@ CREATE TABLE categories (
     id   SERIAL PRIMARY KEY,
     name VARCHAR NOT NULL,   -- Shopping, Entertainment, Sports & Fitness, Groceries, Travel,
                              -- Miscellaneous, Food / Dine Out, Cosmetics, Subscriptions, Transfers
-                             -- (ids 1-10, seeded in V2); Medical, Fees & Debt (ids 11-12, seeded in V7)
+                             -- (ids 1-10, seeded in V2); Medical, Fees & Debt (ids 11-12, seeded in V7);
+                             -- Bills (id 13, seeded in V12)
     icon VARCHAR,            -- icon identifier for UI
     CONSTRAINT uq_categories_name UNIQUE (name)  -- prevents duplicate seed entries on re-deploy or repeated migrations
 );
 ```
 
-Seed data (12 categories; 1-10 seeded in V2, 11-12 added later in V7 once
+Seed data (13 categories; 1-10 seeded in V2, 11-12 added later in V7 once
 labeling ML training data surfaced medical/fee transactions with no home
-among the original 10 — see `docs/spec/requirements.md` and
-`ml/labeling/CATEGORY_GUIDELINES.md`):
+among the original 10, 13 added in V12 for utility bills — see
+`docs/spec/requirements.md` and `ml/labeling/CATEGORY_GUIDELINES.md`):
 
 | id | name | icon |
 | --- | --- | --- |
@@ -141,6 +142,7 @@ among the original 10 — see `docs/spec/requirements.md` and
 | 10 | Transfers | swap_horiz |
 | 11 | Medical | local_hospital |
 | 12 | Fees & Debt | request_quote |
+| 13 | Bills | receipt_long |
 
 ### `transaction_categories`
 
@@ -397,17 +399,18 @@ Before inserting a transaction, check:
 
 ## Notes from Real Data (EDA on labeled SBI bank statement + SMS data)
 
-Finalized labeled dataset: `ml/data/spendwise_labeled.xlsx` (1,810 rows, produced from
-the 1,920-row `spendwise_4yr_sbi_statement` raw export via the pipeline in
-`ml/labeling/` — see `ml/labeling/tracking/LABELING_STATUS.md` and
-`ml/labeling/tracking/EPIC_4_HANDOFF.md` for full provenance, the 110 rows/59 recipient
-groups intentionally excluded, and the per-category distribution — Transfers is ~50% of
-rows and Sports & Fitness has zero examples, both relevant to model training).
+Finalized labeled dataset: `ml/data/spendwise_labeled.xlsx` (2,086 rows, replaced
+2026-07-12 with a heavier-cleaned relabel — see `ml/labeling/` for provenance and
+per-category distribution: Transfers is ~48% of rows, Sports & Fitness and Bills both
+have zero examples, both relevant to model training). Also carries `balance`,
+`recipient_canonical`, `transfer_type`, and `label_source` columns beyond the canonical
+training schema — not consumed by `training/preprocessing.py` today, kept for future work
+(canonical-recipient matching, income/salary detection) rather than dropped.
 
-- 1,810 transactions spanning April 2023 – June 2026
-- 1,417 debit / 393 credit (`dr_cr_indicator`)
-- ~30% of transactions are ₹0–50 (small everyday payments)
+- 2,086 transactions spanning November 2022 – July 2026
+- 1,654 debit / 432 credit (`dr_cr_indicator`)
+- ~29% of transactions are ₹0–50 (small everyday payments)
 - `balance`, `bank`, `upi_id` are nullable — verified against real data
-- `note` is sparse (56% null) — treated as optional enrichment
+- `note` is sparse (53% null) — treated as optional enrichment
 - `transaction_mode` has ~2% nulls in real data
 - `source` column distinguishes SMS-ingested / bank-statement-uploaded / manually entered records

@@ -33,12 +33,12 @@ const EASE = [0.2, 0.8, 0.2, 1] as const;
 
 const CATEGORIES = [
   "Shopping", "Food / Dine Out", "Groceries", "Travel", "Entertainment", "Subscriptions",
-  "Sports & Fitness", "Cosmetics", "Medical", "Fees & Debt", "Transfers", "Miscellaneous",
+  "Sports & Fitness", "Cosmetics", "Medical", "Fees & Debt", "Bills", "Transfers", "Miscellaneous",
 ];
 
 const FEATURES = [
   { icon: BarChart3, title: "One unified dashboard", body: "Every UPI and bank transaction across Paytm, GPay, PhonePe and SBI, aggregated into a single clear view." },
-  { icon: Sparkles, title: "Smart categorization", body: "Transactions are auto-sorted into 12 categories by an ML model that learns from your corrections." },
+  { icon: Sparkles, title: "Smart categorization", body: "Transactions are auto-sorted into 13 categories by an ML model that learns from your corrections." },
   { icon: Target, title: "Budgets & progress", body: "Set monthly limits per category and watch progress — with suggestions drawn from your own history." },
   { icon: Bell, title: "Timely alerts", body: "Three-tier alerts warn you before you overspend, not after the damage is done." },
   { icon: MessageSquare, title: "Ask the assistant", body: "A built-in assistant answers questions about your spending, grounded in your real data." },

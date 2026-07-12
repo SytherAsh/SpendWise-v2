@@ -1,6 +1,8 @@
 package com.spendwise.alerts;
 
 import com.spendwise.auth.FirebaseAuthTestConfig;
+import com.sun.net.httpserver.HttpServer;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,10 +16,15 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -35,6 +42,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * directly, mirroring {@code CategorizationJobsIntegrationTest} and {@code
  * AlertControllerIntegrationTest}'s "autowire the collaborator directly" approach. Requires
  * Docker — run via {@code ./gradlew integrationTest}.
+ *
+ * <p>Uses the same embedded {@link HttpServer} stub-in-place-of-FastAPI pattern as {@code
+ * CategorizationJobsIntegrationTest} (ML strategy phase, 2026-07-12 fix) — {@link
+ * AlertEvaluatorJob} gates every candidate group through {@code CategorizationService#
+ * predictRecurring}, which calls the real FastAPI {@code /predict-recurring} endpoint; without a
+ * stub this test silently produced zero alerts whenever no live FastAPI process happened to be
+ * running on {@code app.ml.base-url}'s default, rather than actually exercising the gating logic.
  */
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -44,6 +58,39 @@ class RecurringPaymentEvaluatorIntegrationTest {
     @Container
     @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16");
+
+    private static final HttpServer STUB_ML_SERVICE;
+
+    static {
+        try {
+            STUB_ML_SERVICE = HttpServer.create(new InetSocketAddress(0), 0);
+            STUB_ML_SERVICE.createContext(
+                    "/predict-recurring",
+                    exchange -> respondJson(exchange, "{\"is_recurring\":true,\"confidence\":0.92,\"cadence\":\"monthly\"}"));
+            STUB_ML_SERVICE.start();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @DynamicPropertySource
+    static void mlServiceProperties(DynamicPropertyRegistry registry) {
+        registry.add("app.ml.base-url", () -> "http://localhost:" + STUB_ML_SERVICE.getAddress().getPort());
+        registry.add("app.ml.internal-key", () -> "integration-test-key");
+    }
+
+    @AfterAll
+    static void stopStubMlService() {
+        STUB_ML_SERVICE.stop(0);
+    }
+
+    private static void respondJson(com.sun.net.httpserver.HttpExchange exchange, String body) throws IOException {
+        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().add("Content-Type", "application/json");
+        exchange.sendResponseHeaders(200, bytes.length);
+        exchange.getResponseBody().write(bytes);
+        exchange.close();
+    }
 
     @BeforeAll
     static void createJobsRole() throws Exception {

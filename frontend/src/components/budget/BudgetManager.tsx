@@ -27,7 +27,7 @@ interface BudgetSuggestion {
 
 const SLIDER_STEP = 100;
 const FALLBACK_MAX = 10000;
-const TILE_COUNT_ESTIMATE = 12; // the 12 fixed categories — used only to size the loading skeleton
+const TILE_COUNT_ESTIMATE = 13; // the 13 fixed categories — used only to size the loading skeleton
 
 function roundUpToStep(n: number): number {
   return Math.ceil(n / SLIDER_STEP) * SLIDER_STEP;

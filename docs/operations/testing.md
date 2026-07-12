@@ -61,7 +61,7 @@ cd backend
 
 ### Model Evaluation Script
 
-Runs against `ml/data/spendwise_labeled.xlsx` (1,810 labeled transactions from a 4-year SBI bank statement plus manual/interview labeling — see `ml/labeling/`). Must be re-run after every retraining cycle.
+Runs against `ml/data/spendwise_labeled.xlsx` (2,086 labeled transactions from a 4-year SBI bank statement plus manual/interview labeling — see `ml/labeling/`). Must be re-run after every retraining cycle.
 
 ```bash
 cd ml

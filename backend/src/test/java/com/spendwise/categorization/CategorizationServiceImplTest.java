@@ -31,8 +31,10 @@ import static org.mockito.Mockito.when;
 
 /**
  * Required tests for E4-S3-T1 (docs/testing.md "Categorization: calling ML service, handling
- * low-confidence responses"): success path writes the transaction_categories row; a failed or
- * low-confidence call does not throw uncaught and leaves the transaction uncategorized.
+ * low-confidence responses"): success path writes the transaction_categories row; a failed call
+ * does not throw uncaught and leaves the transaction uncategorized; a low-confidence call does
+ * not throw uncaught and writes the Miscellaneous fallback category instead (ML strategy phase,
+ * 2026-07-12 — see docs/spec/requirements.md).
  */
 class CategorizationServiceImplTest {
 
@@ -41,7 +43,10 @@ class CategorizationServiceImplTest {
     private final UUID userId = UUID.randomUUID();
     private final UUID transactionId = UUID.randomUUID();
 
-    private final CategorizationServiceImpl service = new CategorizationServiceImpl(mlClient, transactionService, 0.5);
+    private static final int FALLBACK_CATEGORY_ID = 6; // Miscellaneous
+
+    private final CategorizationServiceImpl service =
+            new CategorizationServiceImpl(mlClient, transactionService, 0.5, FALLBACK_CATEGORY_ID);
 
     @Test
     void successfulPredictWritesTransactionCategoriesRow() {
@@ -68,13 +73,18 @@ class CategorizationServiceImplTest {
     }
 
     @Test
-    void lowConfidencePredictionLeavesTransactionUncategorized() {
+    void lowConfidencePredictionAssignsMiscellaneousFallback() {
         given(transactionService.getById(userId, transactionId)).willReturn(transaction());
-        given(mlClient.predict(any(MlPredictionRequest.class))).willReturn(new MlPredictionResponse(6, "Miscellaneous", 0.2));
+        given(mlClient.predict(any(MlPredictionRequest.class))).willReturn(new MlPredictionResponse(7, "Food / Dine Out", 0.2));
 
         service.categorize(userId, transactionId);
 
-        verify(transactionService, never()).assignMlCategory(any(), any(), anyInt(), anyDouble());
+        verify(transactionService).assignMlCategory(userId, transactionId, FALLBACK_CATEGORY_ID, 0.2);
+    }
+
+    @Test
+    void lowConfidenceThresholdReturnsConfiguredValue() {
+        assertThat(service.lowConfidenceThreshold()).isEqualTo(0.5);
     }
 
     @Test

@@ -12,7 +12,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * E4-S3-T3 — re-triggers ML categorization for transactions ingested while FastAPI was
- * unavailable (or that scored below the confidence threshold), per docs/architecture.md's
+ * unavailable, or currently sitting on the Miscellaneous low-confidence fallback (ML strategy
+ * phase, 2026-07-12 — see {@link CategorizationService#categorize}), per docs/architecture.md's
  * Background Jobs table ("Categorization retry — every 30 minutes"). Cross-user by nature —
  * {@link TransactionService#findAllUncategorized} reads via the {@code spendwise_jobs} role (see
  * {@code com.spendwise.common.db.JobsDataSourceConfig} and STATUS.md's Epic 4 close-out).
@@ -48,7 +49,7 @@ public class CategorizationRetryJob {
     void run() {
         List<UncategorizedTransactionRef> uncategorized;
         try {
-            uncategorized = transactionService.findAllUncategorized(BATCH_LIMIT);
+            uncategorized = transactionService.findAllUncategorized(BATCH_LIMIT, categorizationService.lowConfidenceThreshold());
         } catch (RuntimeException e) {
             // The next scheduled run retries — a transient failure here (e.g. spendwise_jobs
             // connection issue) must not crash the scheduler thread.

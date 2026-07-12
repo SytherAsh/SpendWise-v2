@@ -2,7 +2,7 @@
 
 ## Functional Requirements
 
-### Transaction Categories (12 predefined)
+### Transaction Categories (13 predefined)
 
 1. Shopping
 2. Entertainment
@@ -16,6 +16,7 @@
 10. Transfers *(person-to-person UPI transfers, bank transfers, wallet top-ups, and other money movement that does not belong to a spending category)*
 11. Medical *(clinics, diagnostics labs, pharmacies)*
 12. Fees & Debt *(loan/EMI repayments, coaching/tuition fees, and other debt-service or fee payments)*
+13. Bills *(recurring household utility bills: electricity, gas, water, maintenance/society charges — added V12, ML strategy phase; no labeled training examples yet, same situation Sports & Fitness started in)*
 
 ### Categorization
 

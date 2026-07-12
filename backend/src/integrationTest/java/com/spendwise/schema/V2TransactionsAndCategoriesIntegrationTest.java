@@ -11,11 +11,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Required tests for E0-S2-T3: seed data matches the 12-category table (10
- * seeded in V2, Medical and Fees & Debt added in V7), the DR/CR consistency
- * check, and the transaction dedup unique index. See
+ * Required tests for E0-S2-T3: seed data matches the 13-category table (10
+ * seeded in V2, Medical and Fees & Debt added in V7, Bills added in V12), the
+ * DR/CR consistency check, and the transaction dedup unique index. See
  * db/migration/V2__transactions_and_categories.sql,
- * db/migration/V7__add_medical_and_fees_categories.sql, and docs/database.md.
+ * db/migration/V7__add_medical_and_fees_categories.sql,
+ * db/migration/V12__add_bills_category.sql, and docs/database.md.
  */
 class V2TransactionsAndCategoriesIntegrationTest extends AbstractSchemaIntegrationTest {
 
@@ -24,12 +25,13 @@ class V2TransactionsAndCategoriesIntegrationTest extends AbstractSchemaIntegrati
         List<Map<String, Object>> rows =
                 jdbcTemplate.queryForList("SELECT id, name, icon FROM categories ORDER BY id");
 
-        assertThat(rows).hasSize(12);
+        assertThat(rows).hasSize(13);
         assertThat(rows.get(0)).containsEntry("name", "Shopping").containsEntry("icon", "shopping_bag");
         assertThat(rows.get(6)).containsEntry("name", "Food / Dine Out").containsEntry("icon", "restaurant");
         assertThat(rows.get(9)).containsEntry("name", "Transfers").containsEntry("icon", "swap_horiz");
         assertThat(rows.get(10)).containsEntry("name", "Medical").containsEntry("icon", "local_hospital");
         assertThat(rows.get(11)).containsEntry("name", "Fees & Debt").containsEntry("icon", "request_quote");
+        assertThat(rows.get(12)).containsEntry("name", "Bills").containsEntry("icon", "receipt_long");
     }
 
     @Test

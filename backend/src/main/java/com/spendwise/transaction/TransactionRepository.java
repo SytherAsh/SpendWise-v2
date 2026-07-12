@@ -72,14 +72,23 @@ public class TransactionRepository {
      * a full row — the retry job immediately re-scopes to one user at a time via {@link
      * com.spendwise.categorization.CategorizationService#categorize}, which uses the normal
      * RLS-scoped path to do the actual write.
+     *
+     * <p>Retry-eligible means either: (a) truly uncategorized — no {@code transaction_categories}
+     * row at all (e.g. a transient FastAPI failure never persisted anything), or (b) an ML-assigned
+     * fallback (Miscellaneous, {@code confidence_score < lowConfidenceThreshold}) — still eligible
+     * for a better category once a later retrain improves the model (ML strategy phase,
+     * 2026-07-12). {@code assigned_by = 'user'} rows (manual corrections) are never included —
+     * those are never auto-overwritten.
      */
-    public List<UncategorizedTransactionRef> findAllUncategorized(int limit) {
+    public List<UncategorizedTransactionRef> findAllUncategorized(int limit, double lowConfidenceThreshold) {
         return jobsJdbcTemplate.query(
                 "SELECT t.id, t.user_id FROM transactions t "
                         + "LEFT JOIN transaction_categories tc ON tc.transaction_id = t.id "
                         + "WHERE tc.transaction_id IS NULL "
+                        + "OR (tc.assigned_by = 'ml' AND tc.confidence_score < ?) "
                         + "ORDER BY t.parsed_at ASC LIMIT ?",
                 (rs, rowNum) -> new UncategorizedTransactionRef(UUID.fromString(rs.getString("user_id")), UUID.fromString(rs.getString("id"))),
+                lowConfidenceThreshold,
                 limit);
     }
 

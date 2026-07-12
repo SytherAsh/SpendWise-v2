@@ -6,6 +6,7 @@ import {
   MoreHorizontal,
   Plane,
   Receipt,
+  ReceiptText,
   Repeat,
   ShoppingBag,
   ShoppingCart,
@@ -16,13 +17,15 @@ import {
 } from "lucide-react";
 
 /**
- * Category color system for the 12 fixed spending categories.
+ * Category color system for the 13 fixed spending categories.
  *
  * The palette was validated with the dataviz skill. A 12-hue categorical set sits in
  * the "floor" band for colorblind separation, which is legal ONLY when color is backed
  * by secondary encoding — so category color is ALWAYS shipped alongside the category's
  * icon + text label (chips, the ranked list beside donuts, direct slice labels, table
- * views). Never rely on hue alone to identify a category.
+ * views). Never rely on hue alone to identify a category. Bills (added V12) reuses the
+ * red hue via its own NAME_COLORS keyword entry rather than growing the floor-band
+ * palette past 12 slots — see that list below.
  *
  * Colors are keyed by a normalized form of the category name so they stay stable
  * regardless of the backend's numeric id ordering; an id-based slot is the fallback
@@ -56,6 +59,7 @@ const NAME_COLORS: Array<[RegExp, string]> = [
   [/sport|fitness|gym/, "#84a800"],
   [/cosmetic|beauty|salon/, "#e0559d"],
   [/medical|health|pharma|doctor/, "#1baf7a"],
+  [/^bills?$|utility|utilities|electricity|maintenance/, "#c2410c"],
   [/fee|debt|loan|emi|interest/, "#e34948"],
   [/transfer|sent|received|upi/, "#eda100"],
   [/misc|other/, "#8b8b82"],
@@ -103,6 +107,7 @@ const MATERIAL_ICON_TO_LUCIDE: Record<string, LucideIcon> = {
   swap_horiz: ArrowLeftRight,
   local_hospital: Stethoscope,
   request_quote: Receipt,
+  receipt_long: ReceiptText,
 };
 
 /** Resolves a category's `icon` field to a renderable component; falls back to a generic icon. */
