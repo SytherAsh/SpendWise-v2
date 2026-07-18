@@ -52,7 +52,7 @@ const STEPS = [
 ];
 
 const STATS = [
-  { v: "12", label: "Spending categories" },
+  { v: "13", label: "Spending categories" },
   { v: "4", label: "Sources unified" },
   { v: "0", label: "Raw SMS off device" },
   { v: "<15m", label: "To your first view" },
