@@ -6,17 +6,31 @@ Utility scripts for SpendWise development and data management.
 
 ### `import_bank_statement.py`
 
-Parses the SBI bank statement Excel file (`SpendWise2k26.xlsx`) and imports transactions into Supabase for a given user.
+Imports a transaction dataset (`.xlsx` or `.csv`, in the canonical labeled schema — see
+`ml/labeling`) into `transactions` for a given user, via a direct `psycopg2` connection (works
+against Docker or Supabase; requires `pip install psycopg2-binary`). By default the file's
+`category` column (if any) is ignored, so every imported row lands uncategorized and is picked up
+by the backend's `CategorizationRetryJob` (every 30 minutes) for real model inference — pass
+`--apply-file-categories` to instead write the file's labels directly and skip the model, or
+`--categorize-now` to call the ML service's `/predict` immediately per row (requires the ML
+service running and reachable) instead of waiting on that 30-minute job.
+
+Connection parameters are never hardcoded — pass `--host`/`--port`/`--dbname`/`--user`/`--password`,
+or leave them unset to fall back to the standard `PGHOST`/`PGPORT`/`PGDATABASE`/`PGUSER`/`PGPASSWORD`
+environment variables, exactly like `psql`.
 
 ```bash
 python scripts/import_bank_statement.py \
-  --file path/to/SpendWise2k26.xlsx \
-  --user-id <uuid>
+  --file path/to/statement.xlsx \
+  --user-id <uuid> \
+  --host db.<project-ref>.supabase.co --port 5432 --dbname postgres \
+  --user spendwise_jobs --password <spendwise_jobs password>
 ```
 
 Used during:
+
 - Initial ML model training data preparation
-- Seeding historical data for personal account
+- Seeding historical data for a real user's account
 
 ### `seed_categories.sql`
 
