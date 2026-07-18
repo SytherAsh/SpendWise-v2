@@ -10,6 +10,16 @@ import java.util.UUID;
  * UserCategorySpend}'s bulk-read shape (see {@link TransactionService#findAllForRecurringDetection}).
  * {@code upiId}/{@code recipientName} are the merchant-identity fields E6-S1-T1's detector groups
  * on; rows where both are null are excluded at the query level since neither grouping key exists.
+ * {@code recipientCanonical} (ML strategy phase, 2026-07-13) is the deduplicated payee name from
+ * {@code RecipientCanonicalizationJob}, preferred over the raw {@code recipientName} for grouping
+ * so spelling variants of one payee cluster together; null until that job has run for the user, in
+ * which case the detector falls back to the raw fields.
  */
 public record RecurringCandidateTransaction(
-        UUID userId, UUID transactionId, Instant transactionDate, BigDecimal amount, String upiId, String recipientName) {}
+        UUID userId,
+        UUID transactionId,
+        Instant transactionDate,
+        BigDecimal amount,
+        String upiId,
+        String recipientName,
+        String recipientCanonical) {}

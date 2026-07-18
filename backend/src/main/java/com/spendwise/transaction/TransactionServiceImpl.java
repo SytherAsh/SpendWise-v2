@@ -171,6 +171,21 @@ public class TransactionServiceImpl implements TransactionService {
         return transactionRepository.findAllForRecurringDetection(since);
     }
 
+    @Override
+    public List<RecipientIdentity> findAllRecipientIdentities() {
+        // No @Transactional / RlsSession here — reads via the spendwise_jobs DataSource (BYPASSRLS),
+        // same reasoning as findAllForRecurringDetection above.
+        return transactionRepository.findAllRecipientIdentities();
+    }
+
+    @Override
+    public int updateCanonicalForIdentity(UUID userId, String recipientName, String upiId, String canonical) {
+        // No @Transactional / RlsSession here — writes via the spendwise_jobs DataSource (BYPASSRLS),
+        // scoped explicitly to userId in the WHERE clause. A single UPDATE needs no explicit
+        // transaction, same as findAllForRecurringDetection's read reasoning.
+        return transactionRepository.updateCanonicalForIdentity(userId, recipientName, upiId, canonical);
+    }
+
     private static NewTransactionData withSource(NewTransactionData data, TransactionSource source) {
         return new NewTransactionData(
                 data.transactionDate(),

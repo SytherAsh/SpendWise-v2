@@ -107,6 +107,12 @@ app:
     # "Weekly (configurable)" per docs/architecture.md's Background Jobs table —
     # default fires Sunday 03:00 server time (cron: sec min hour day month weekday).
     retrain-cron: ${ML_RETRAIN_CRON:0 0 3 * * SUN}
+    # Recipient-name canonicalization (ML strategy phase) — same weekly cadence as the
+    # retrain, offset to 04:00 Sunday so the two ML batch jobs don't contend for the
+    # single free-tier FastAPI worker. Clustering runs across each user's full recipient
+    # history, so it's a whole-history batch job, not per-transaction (see
+    # RecipientCanonicalizationJob).
+    canonicalization-cron: ${ML_CANONICALIZATION_CRON:0 0 4 * * SUN}
   llm:
     # CLAUDE.md: "No vendor has been selected. Do not hardcode any LLM SDK into business
     # logic." Only "stub" exists today (LlmConfig) — a real provider is a future addition,

@@ -145,8 +145,23 @@ Separate Python process, called by the Spring Boot Categorization module via int
 | `POST /predict` | Accepts transaction features, returns predicted category + confidence score |
 | `POST /retrain` | Triggers a batch retraining cycle using `ml_corrections` data |
 | `GET /evaluate` | Runs accuracy evaluation against labeled dataset, returns metrics |
+| `POST /predict-recurring` | Accepts one candidate group's statistics, returns recurring/not + confidence + cadence (ML strategy phase) |
+| `POST /retrain-recurring` | Retrains the recurring-payment classifier from bootstrap labels + confirm/dismiss corrections |
+| `GET /evaluate-recurring` | Accuracy evaluation for the recurring-payment classifier |
+| `POST /normalize-recipients` | Accepts one user's full recipient set, returns a canonical (deduplicated) name per entry (ML strategy phase) |
 
 > **Internal access only.** The FastAPI service must not be publicly reachable. Enforce via same-platform internal networking where available, or a shared secret header (`X-Internal-Key`) validated on every request, with the secret injected via `ML_INTERNAL_KEY`. Spring Boot sets this header on all outbound ML calls.
+
+> **Recipient-name canonicalization (added during the ML strategy phase, 2026-07-13):**
+> `RecipientCanonicalizationJob` (in the Categorization module) calls
+> `CategorizationService#normalizeRecipients`, a pure proxy to FastAPI `/normalize-recipients`,
+> to populate each transaction's `recipient_canonical` column. This is Categorization's third ML
+> capability behind the same gateway (categorization, recurring-payment prediction,
+> canonicalization) — a further widening of the module's role, not a new exception to "FastAPI is
+> called only from the Categorization module." Unlike `/predict` (one call per transaction), this
+> is a whole-history batch operation: the clustering compares every recipient name in a user's
+> history against every other, so it runs on a weekly schedule per user. See ADR-013 in
+> `docs/spec/decisions.md`.
 
 ## Android App Modules
 
@@ -268,7 +283,8 @@ Dashboard and budget suggestions reflect imported data
 | Alert evaluator | Alerts | Every 30 minutes | Checks mid-month budget thresholds and category overspend for all users; also runs recurring-payment detection — proposes loosened candidates (`RecurringPaymentDetector`), then gates each on `CategorizationService#predictRecurring` (V11, ADR-012) — reuses this same cadence since detection isn't time-critical (`docs/spec/decisions.md` ADR-011's scheduled-over-event-driven reasoning applies here too) |
 | Recommendation generator | Recommendations | Every 6 hours | Reads spending aggregations from Analytics; generates recommendations where a threshold has been crossed since the last generation for that user and category, determined by comparing transaction and budget timestamps against the time of its own last run. Idempotent — suppresses duplicates by checking `generated_at` on the most recent record per user per category. |
 | ML retraining | Categorization | Weekly (configurable) | Sends `ml_corrections` data to FastAPI /retrain |
-| Categorization retry | Categorization | Every 30 minutes | Re-triggers ML categorization for transactions ingested but not yet categorized (e.g., FastAPI unavailable during ingest) |
+| Categorization retry | Categorization | Every 30 minutes | Re-triggers ML categorization for transactions ingested but not yet categorized (e.g., FastAPI unavailable during ingest), and re-attempts low-confidence Miscellaneous-fallback rows so a later retrain can upgrade them |
+| Recipient canonicalization | Categorization | Weekly (configurable) | Per user, sends the full recipient set to FastAPI `/normalize-recipients` and writes the deduplicated name to each transaction's `recipient_canonical` (V13, ADR-013). Whole-history batch, so scheduled rather than per-ingest; offset from ML retraining to avoid FastAPI contention |
 
 ## Counterparty Metadata Enrichment (built 2026-07-09, UI/UX polish phase)
 

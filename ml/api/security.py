@@ -28,6 +28,7 @@ PROTECTED_PATHS = {
     "/predict-recurring",
     "/retrain-recurring",
     "/evaluate-recurring",
+    "/normalize-recipients",
 }
 
 

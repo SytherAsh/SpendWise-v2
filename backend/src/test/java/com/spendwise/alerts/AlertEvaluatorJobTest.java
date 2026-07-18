@@ -222,8 +222,8 @@ class AlertEvaluatorJobTest {
         Instant now = Instant.now();
         BigDecimal amount = BigDecimal.valueOf(199);
         List<RecurringCandidateTransaction> candidates = List.of(
-                new RecurringCandidateTransaction(userId, UUID.randomUUID(), now.minus(50, ChronoUnit.DAYS), amount, "netflix@okicici", "Netflix"),
-                new RecurringCandidateTransaction(userId, UUID.randomUUID(), now, amount, "netflix@okicici", "Netflix"));
+                new RecurringCandidateTransaction(userId, UUID.randomUUID(), now.minus(50, ChronoUnit.DAYS), amount, "netflix@okicici", "Netflix", null),
+                new RecurringCandidateTransaction(userId, UUID.randomUUID(), now, amount, "netflix@okicici", "Netflix", null));
         given(transactionService.findAllForRecurringDetection(any())).willReturn(candidates);
         given(emiService.findAllActiveSourceTransactionIds()).willReturn(Set.of(candidates.get(0).transactionId()));
 
@@ -245,8 +245,8 @@ class AlertEvaluatorJobTest {
         Instant now = Instant.now();
         BigDecimal amount = BigDecimal.valueOf(199);
         return List.of(
-                new RecurringCandidateTransaction(userId, UUID.randomUUID(), now.minus(50, ChronoUnit.DAYS), amount, "netflix@okicici", "Netflix"),
-                new RecurringCandidateTransaction(userId, UUID.randomUUID(), now.minus(25, ChronoUnit.DAYS), amount, "netflix@okicici", "Netflix"),
-                new RecurringCandidateTransaction(userId, UUID.randomUUID(), now, amount, "netflix@okicici", "Netflix"));
+                new RecurringCandidateTransaction(userId, UUID.randomUUID(), now.minus(50, ChronoUnit.DAYS), amount, "netflix@okicici", "Netflix", null),
+                new RecurringCandidateTransaction(userId, UUID.randomUUID(), now.minus(25, ChronoUnit.DAYS), amount, "netflix@okicici", "Netflix", null),
+                new RecurringCandidateTransaction(userId, UUID.randomUUID(), now, amount, "netflix@okicici", "Netflix", null));
     }
 }

@@ -118,6 +118,32 @@ class RecurringConfidenceDistribution(BaseModel):
     max: float
 
 
+class NormalizeEntry(BaseModel):
+    """One (transaction-group) entry to canonicalize -- `key` is caller-defined
+    (the Spring Boot side sends a synthetic key per unique (recipient_name,
+    upi_id) pair it owns, not necessarily a transaction id) and is echoed back
+    unchanged in the response so the caller can map results without needing
+    the canonical values themselves to be unique identifiers."""
+
+    key: str
+    recipient_name: str | None = None
+    upi_id: str | None = None
+
+
+class NormalizeRecipientsRequest(BaseModel):
+    """All entries must belong to one user -- the clustering algorithm compares
+    every entry against every other, so mixing users' recipient names in one
+    call would leak one user's payee spellings into another's canonical
+    assignment. The caller (Categorization module, per the FastAPI gateway
+    invariant) is responsible for calling this once per user."""
+
+    entries: list[NormalizeEntry] = []
+
+
+class NormalizeRecipientsResponse(BaseModel):
+    canonical_names: dict[str, str]
+
+
 class RecurringEvaluationResponse(BaseModel):
     generated_at: str
     n_candidate_groups: int

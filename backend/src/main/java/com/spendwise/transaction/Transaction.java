@@ -11,6 +11,11 @@ import java.util.UUID;
  * E3-S1-T3). {@code categoryId}/{@code confidenceScore}/{@code assignedBy} are nullable: no row
  * in {@code transaction_categories} exists until ML categorization (Epic 4) or a user correction
  * (E3-S2-T4) assigns one — transactions ingested in Epic 3 land uncategorized.
+ *
+ * <p>{@code recipientCanonical} (ML strategy phase, 2026-07-13) is the deduplicated payee name
+ * assigned by {@code RecipientCanonicalizationJob}; null until that batch job has run for the user,
+ * so every read site falls back to {@code recipientName} when it is null. The raw
+ * {@code recipientName} is never mutated.
  */
 public record Transaction(
         UUID id,
@@ -31,4 +36,5 @@ public record Transaction(
         Instant parsedAt,
         Integer categoryId,
         Float confidenceScore,
-        String assignedBy) {}
+        String assignedBy,
+        String recipientCanonical) {}

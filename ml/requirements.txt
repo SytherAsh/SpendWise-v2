@@ -10,6 +10,10 @@ scikit-learn==1.9.0
 numpy==2.4.6
 joblib==1.5.3
 
+# Recipient-name canonicalization (ML strategy phase)
+rapidfuzz==3.14.5
+scipy==1.17.1
+
 # Test tooling
 pytest==9.1.1
 httpx==0.28.1

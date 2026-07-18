@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from api import model_store, recurring_model_store
 from api.evaluate import router as evaluate_router
 from api.evaluate_recurring import router as evaluate_recurring_router
+from api.normalize_recipients import router as normalize_recipients_router
 from api.predict import router as predict_router
 from api.predict_recurring import router as predict_recurring_router
 from api.retrain import router as retrain_router
@@ -43,6 +44,7 @@ app.include_router(evaluate_router)
 app.include_router(predict_recurring_router)
 app.include_router(retrain_recurring_router)
 app.include_router(evaluate_recurring_router)
+app.include_router(normalize_recipients_router)
 
 
 @app.get("/health")

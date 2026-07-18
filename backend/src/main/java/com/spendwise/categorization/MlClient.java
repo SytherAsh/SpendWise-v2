@@ -1,6 +1,8 @@
 package com.spendwise.categorization;
 
 import com.spendwise.categorization.dto.MlEvaluationResponse;
+import com.spendwise.categorization.dto.MlNormalizeRecipientsRequest;
+import com.spendwise.categorization.dto.MlNormalizeRecipientsResponse;
 import com.spendwise.categorization.dto.MlPredictionRequest;
 import com.spendwise.categorization.dto.MlPredictionResponse;
 import com.spendwise.categorization.dto.MlRecurringPredictionRequest;
@@ -99,5 +101,24 @@ public class MlClient {
                 .body(request)
                 .retrieve()
                 .body(MlRecurringRetrainResponse.class);
+    }
+
+    /**
+     * Recipient-name canonicalization (ML strategy phase, 2026-07-13) — same internal-only
+     * contract as {@link #predict}, called from {@link CategorizationServiceImpl#normalizeRecipients}
+     * (in turn the only path {@code RecipientCanonicalizationJob} reaches this service through).
+     * Unlike {@link #predict}, one call carries a whole user's recipient set rather than a single
+     * transaction; the clustering runs across all of it at once.
+     *
+     * @throws org.springframework.web.client.RestClientException on network failure or non-2xx response
+     */
+    public MlNormalizeRecipientsResponse normalizeRecipients(MlNormalizeRecipientsRequest request) {
+        return restClient
+                .post()
+                .uri("/normalize-recipients")
+                .header("X-Internal-Key", internalKey)
+                .body(request)
+                .retrieve()
+                .body(MlNormalizeRecipientsResponse.class);
     }
 }

@@ -52,7 +52,8 @@ class TransactionResponseTest {
                 Instant.parse("2025-06-15T14:33:00Z"),
                 7,
                 0.92f,
-                "ml");
+                "ml",
+                "SWIGGY");
 
         TransactionResponse response = TransactionResponse.from(transaction);
 
@@ -61,5 +62,6 @@ class TransactionResponseTest {
         assertThat(response.source()).isEqualTo("sms");
         assertThat(response.categoryId()).isEqualTo(7);
         assertThat(response.assignedBy()).isEqualTo("ml");
+        assertThat(response.recipientCanonical()).isEqualTo("SWIGGY");
     }
 }

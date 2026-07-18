@@ -128,6 +128,7 @@ class IngestServiceTest {
                 Instant.parse("2025-06-15T14:33:00Z"),
                 null,
                 null,
+                null,
                 null);
     }
 

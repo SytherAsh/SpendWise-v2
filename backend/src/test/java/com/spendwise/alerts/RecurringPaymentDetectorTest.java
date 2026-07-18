@@ -38,6 +38,35 @@ class RecurringPaymentDetectorTest {
     }
 
     @Test
+    void nameSpellingVariantsSharingACanonicalName_areGroupedTogether() {
+        // Two spellings of one payee with no UPI id — without canonicalization they'd splinter
+        // into two single-transaction groups and neither would qualify. The shared canonical name
+        // collapses them into one qualifying group (ML strategy phase, 2026-07-13).
+        List<RecurringCandidateTransaction> txns = List.of(
+                candidateWithCanonical(daysAgo(60), "500.00", "SWIGGY", "SWIGGY"),
+                candidateWithCanonical(daysAgo(0), "500.00", "Swiggy Bangalore", "SWIGGY"));
+
+        List<RecurringGroup> groups = RecurringPaymentDetector.detect(txns, Set.of());
+
+        assertThat(groups).hasSize(1);
+        assertThat(groups.get(0).merchantKey()).isEqualTo("SWIGGY");
+        assertThat(groups.get(0).transactionIds()).hasSize(2);
+    }
+
+    @Test
+    void withoutACanonicalName_rawNameSpellingVariants_doNotGroup() {
+        // Same two payments as above but with no canonical name assigned yet (job hasn't run) —
+        // the raw-name fallback keeps them apart, confirming canonicalization is what merges them.
+        List<RecurringCandidateTransaction> txns = List.of(
+                candidateWithCanonical(daysAgo(60), "500.00", "SWIGGY", null),
+                candidateWithCanonical(daysAgo(0), "500.00", "Swiggy Bangalore", null));
+
+        List<RecurringGroup> groups = RecurringPaymentDetector.detect(txns, Set.of());
+
+        assertThat(groups).isEmpty();
+    }
+
+    @Test
     void aSingleTransaction_isNeverACandidate() {
         List<RecurringCandidateTransaction> txns = List.of(candidate(daysAgo(0), "199.00", "netflix@okicici", "Netflix"));
 
@@ -155,6 +184,13 @@ class RecurringPaymentDetectorTest {
     }
 
     private RecurringCandidateTransaction candidate(Instant date, String amount, String upiId, String recipientName) {
-        return new RecurringCandidateTransaction(UUID.randomUUID(), UUID.randomUUID(), date, new BigDecimal(amount), upiId, recipientName);
+        return new RecurringCandidateTransaction(
+                UUID.randomUUID(), UUID.randomUUID(), date, new BigDecimal(amount), upiId, recipientName, null);
+    }
+
+    private RecurringCandidateTransaction candidateWithCanonical(
+            Instant date, String amount, String recipientName, String recipientCanonical) {
+        return new RecurringCandidateTransaction(
+                UUID.randomUUID(), UUID.randomUUID(), date, new BigDecimal(amount), null, recipientName, recipientCanonical);
     }
 }

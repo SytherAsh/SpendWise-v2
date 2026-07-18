@@ -1,6 +1,8 @@
 package com.spendwise.categorization;
 
 import com.spendwise.categorization.dto.MlEvaluationResponse;
+import com.spendwise.categorization.dto.MlNormalizeRecipientsRequest;
+import com.spendwise.categorization.dto.MlNormalizeRecipientsResponse;
 import com.spendwise.categorization.dto.MlRecurringPredictionRequest;
 import com.spendwise.categorization.dto.MlRecurringPredictionResponse;
 
@@ -15,7 +17,9 @@ import java.util.UUID;
  * module reaching into {@link MlClient} directly. Categorization acting as the ML gateway for a
  * second capability (not just transaction categorization) is a deliberate widening of this
  * module's role rather than a new exception to the "only Categorization calls FastAPI" invariant
- * — see docs/spec/decisions.md.
+ * — see docs/spec/decisions.md. The same reasoning covers {@link #normalizeRecipients} (ML
+ * strategy phase, 2026-07-13): recipient-name canonicalization is a third ML capability routed
+ * through this gateway, consumed by {@code RecipientCanonicalizationJob}.
  */
 public interface CategorizationService {
 
@@ -72,4 +76,17 @@ public interface CategorizationService {
      * @throws org.springframework.web.client.RestClientException on network failure or non-2xx response
      */
     MlRecurringPredictionResponse predictRecurring(MlRecurringPredictionRequest request);
+
+    /**
+     * Calls FastAPI {@code /normalize-recipients} for one user's full recipient set and returns the
+     * canonical-name map — like {@link #predictRecurring}, a pure ML passthrough that never writes
+     * to the database itself; {@code RecipientCanonicalizationJob} (the only caller) owns reading
+     * the identities and writing the results back via {@link
+     * com.spendwise.transaction.TransactionService#updateCanonicalForIdentity}. Propagates on
+     * failure rather than swallowing it, since the job wraps each user in its own try/catch — same
+     * contract as {@link #predictRecurring}.
+     *
+     * @throws org.springframework.web.client.RestClientException on network failure or non-2xx response
+     */
+    MlNormalizeRecipientsResponse normalizeRecipients(MlNormalizeRecipientsRequest request);
 }

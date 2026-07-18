@@ -93,6 +93,7 @@ export interface RecentTransaction {
   transactionDate: string;
   amount: number;
   recipientName: string | null;
+  recipientCanonical: string | null;
   upiId: string | null;
   bank: string | null;
 }
@@ -290,9 +291,10 @@ export function AlertsSection({
   );
 }
 
-/** Payee label matching the fallback used in lib/contacts.ts / TransactionsBrowser. */
+/** Payee label matching the fallback used in lib/contacts.ts / TransactionsBrowser. Prefers the
+ * canonical (deduplicated) recipient name once the canonicalization job has assigned one. */
 function payeeLabel(t: RecentTransaction): string {
-  return t.recipientName ?? t.upiId ?? t.bank ?? "Unknown";
+  return t.recipientCanonical ?? t.recipientName ?? t.upiId ?? t.bank ?? "Unknown";
 }
 
 export function TopSpendsSection({ state }: { state: SectionState<RecentTransaction[]> }) {
@@ -585,7 +587,7 @@ export function RecentActivitySection({ state }: { state: SectionState<RecentTra
                   <ArrowRightLeft className="size-4" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-foreground">{t.recipientName ?? t.upiId ?? t.bank ?? "Unknown"}</p>
+                  <p className="truncate font-medium text-foreground">{payeeLabel(t)}</p>
                   <p className="text-xs text-foreground-subtle">{formatDate(t.transactionDate)}</p>
                 </div>
                 <span className={cn("mono shrink-0", isCredit ? "text-[var(--color-positive)]" : "text-[var(--color-danger)]")}>

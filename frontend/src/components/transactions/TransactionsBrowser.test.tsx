@@ -45,6 +45,7 @@ function txn(id: string, categoryId: number | null, recipient: string) {
     transactionDate: "2026-06-15T10:00:00Z",
     amount: -350,
     recipientName: recipient,
+    recipientCanonical: null,
     upiId: null,
     bank: "SBI",
     note: null,

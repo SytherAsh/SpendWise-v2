@@ -384,3 +384,64 @@ Categorization) rather than a new FastAPI-access exception. Any future ML capabi
 (alerts/overspend anomaly detection, a trained recommendations model) should default to
 the same shape — a new `CategorizationService` method — unless a specific reason emerges
 to reopen this ADR.
+
+## ADR-013: Recipient-Name Canonicalization Is a Batch Job Behind the Categorization Gateway
+
+**Status**: Accepted
+
+**Context**: Raw `recipient_name` from SMS/bank-statement parsing renders a single real
+payee several ways across transactions — case differences ("SWIGGY" vs "Swiggy"), split or
+truncated names, and shared-then-diverging strings. This fragments two things: recurring-
+payment detection (`RecurringPaymentDetector` grouped on the raw `upi_id`/`recipient_name`,
+so spelling variants splinter into separate merchant keys and each falls below the
+occurrence threshold on its own), and any payee-level UI/analytics aggregation. A validated
+two-tier normalization algorithm (exact UPI-ID grouping → rapidfuzz `token_sort_ratio` +
+scipy complete-linkage hierarchical clustering, with a first-name-conflict guard and a
+truncation-prefix merge pass) already existed in the offline labeling pipeline that produced
+the `Recipient_Canonical` column of the training dataset, but nothing equivalent ran in the
+live product.
+
+**Options considered**:
+1. **Reimplement the clustering in Java, run it per-transaction at ingest.** Keeps
+   everything in the JVM, no network hop.
+2. **Port the algorithm near-verbatim into the FastAPI service, expose it as a new endpoint,
+   and call it from a weekly per-user batch job through the Categorization gateway** (the
+   ADR-012 pattern) — `CategorizationService#normalizeRecipients` → `MlClient` →
+   `POST /normalize-recipients`, driven by `RecipientCanonicalizationJob`, writing the
+   result to a new nullable `transactions.recipient_canonical` column.
+3. **Do nothing; keep matching on raw names.**
+
+**Decision**: Option 2.
+
+**Rationale**:
+- **Per-transaction is the wrong shape for this algorithm.** Canonicalization is inherently
+  a whole-set operation — the cluster a name belongs to is only defined relative to a user's
+  entire recipient history, and hierarchical clustering compares every name against every
+  other. There is no meaningful "canonical name for one transaction in isolation," so an
+  ingest-time hook (Option 1's implied trigger) can't produce a stable result. A scheduled
+  batch that recomputes over the full history — the same adaptive-batch precedent as the
+  categorization retrain (ADR-003) — is the natural fit.
+- **Algorithmic fidelity.** The thresholds (UPI-similarity 55 vs fuzzy 90), complete-vs-
+  single linkage, and the first-name-conflict short-circuit are precision-sensitive and were
+  validated against real data offline. Re-deriving them in a Java reimplementation (Option 1)
+  risks silent drift from the version that produced the training labels; a near-verbatim
+  Python port keeps the live result identical to the offline one and reuses the existing
+  `rapidfuzz`/`scipy` stack rather than adding Java fuzzy-clustering dependencies.
+- **No new invariant exception.** Exactly as in ADR-012, this rides the Categorization ML
+  gateway — `MlClient` gains a caller-method, not a caller-module, so
+  `CategorizationBoundaryTest` is untouched. This is the "any future ML capability should
+  default to the same shape" consequence ADR-012 anticipated, now exercised for a third
+  capability.
+- **Additive and reversible.** `recipient_canonical` is nullable and never mutates the raw
+  `recipient_name`; every read site (`RecurringPaymentDetector`, the frontend payee labels
+  and analytics grouping) falls back to the raw name when it is null, so nothing depends on
+  the job having run and the column can be dropped without data loss.
+
+**Consequence**: A new nullable column (`V13__add_canonical_recipient_name.sql`), a new
+FastAPI endpoint (`POST /normalize-recipients`, added to `api/security.py`'s protected
+paths), a new weekly `RecipientCanonicalizationJob` in the Background Jobs table, and a
+third `CategorizationService` gateway method. Recurring detection and payee-level display/
+analytics prefer the canonical name when present. The salary/recurring-credit and the
+persistent recipient→category override-rule work discussed in the same phase are deliberately
+**not** included here and remain open. Retraining/refresh cadence matches the weekly
+categorization retrain; there is no online/incremental update (consistent with ADR-003).

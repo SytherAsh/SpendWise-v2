@@ -108,9 +108,9 @@ describe("CategoryDeepDive", () => {
         { id: "r2", categoryId: 2, text: "Unrelated category tip", priority: "low" },
       ],
       transactions: [
-        { id: "t1", transactionDate: "2026-06-10T00:00:00Z", amount: -300, recipientName: "BigMart", upiId: null, note: null },
-        { id: "t2", transactionDate: "2026-06-12T00:00:00Z", amount: -200, recipientName: "BigMart", upiId: null, note: null },
-        { id: "t3", transactionDate: "2026-06-05T00:00:00Z", amount: -300, recipientName: "Zomato", upiId: null, note: null },
+        { id: "t1", transactionDate: "2026-06-10T00:00:00Z", amount: -300, recipientName: "BIGMART", recipientCanonical: "BigMart", upiId: null, note: null },
+        { id: "t2", transactionDate: "2026-06-12T00:00:00Z", amount: -200, recipientName: "Big Mart Store", recipientCanonical: "BigMart", upiId: null, note: null },
+        { id: "t3", transactionDate: "2026-06-05T00:00:00Z", amount: -300, recipientName: "Zomato", recipientCanonical: null, upiId: null, note: null },
       ],
     });
 
@@ -123,7 +123,9 @@ describe("CategoryDeepDive", () => {
     expect(screen.getByText(/▲ 100% vs previous period/)).toBeInTheDocument();
 
     // BigMart's two transactions (₹300 + ₹200) collapse into one row summing to ₹500 — not
-    // two separate rows, which is what the Transactions page is for.
+    // two separate rows, which is what the Transactions page is for. The two rows carry different
+    // raw names ("BIGMART", "Big Mart Store") but share a canonical name ("BigMart"), so this also
+    // verifies grouping keys on recipientCanonical, not the raw spelling.
     const bigMartRow = screen.getByText("BigMart").closest("li")!;
     expect(within(bigMartRow).getByText("2 txns")).toBeInTheDocument();
     expect(within(bigMartRow).getByText("₹500")).toBeInTheDocument();
@@ -164,7 +166,7 @@ describe("CategoryDeepDive", () => {
     mockEndpoints({
       now: [{ categoryId: null, categoryName: "Uncategorized", totalSpend: 300, totalIncome: 0, transactionCount: 1 }],
       prev: [],
-      transactions: [{ id: "t4", transactionDate: "2026-06-05T00:00:00Z", amount: -300, recipientName: null, upiId: "someone@upi", note: null }],
+      transactions: [{ id: "t4", transactionDate: "2026-06-05T00:00:00Z", amount: -300, recipientName: null, recipientCanonical: null, upiId: "someone@upi", note: null }],
     });
 
     render(<CategoryDeepDive categoryId="uncategorized" onClose={vi.fn()} />);

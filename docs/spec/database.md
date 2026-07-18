@@ -96,6 +96,8 @@ CREATE TABLE transactions (
     bank             VARCHAR,                    -- recipient bank code: HDFC, SBIN, PYTM (nullable — 189 nulls)
     upi_id           VARCHAR,                    -- nullable (absent for IMPS/NEFT — 189 nulls)
     note             TEXT,                       -- nullable (995/1810 null in real data)
+    recipient_canonical VARCHAR,                 -- deduplicated payee name (added V13, ML strategy phase); nullable until
+                                                 -- RecipientCanonicalizationJob runs; raw recipient_name never mutated. See ADR-013.
     sms_raw_text     TEXT,                       -- stored for debugging; never exposed via user API
     source           transaction_source NOT NULL,
     parsed_at        TIMESTAMP NOT NULL DEFAULT NOW(),

@@ -1,6 +1,9 @@
 package com.spendwise.categorization;
 
 import com.spendwise.categorization.dto.MlEvaluationResponse;
+import com.spendwise.categorization.dto.MlNormalizeEntry;
+import com.spendwise.categorization.dto.MlNormalizeRecipientsRequest;
+import com.spendwise.categorization.dto.MlNormalizeRecipientsResponse;
 import com.spendwise.categorization.dto.MlPredictionRequest;
 import com.spendwise.categorization.dto.MlPredictionResponse;
 import com.spendwise.categorization.dto.MlRecurringPredictionRequest;
@@ -169,6 +172,27 @@ class CategorizationServiceImplTest {
         assertThatThrownBy(() -> service.predictRecurring(request)).isInstanceOf(RuntimeException.class);
     }
 
+    @Test
+    void normalizeRecipientsReturnsMlClientResponseUnchanged() {
+        MlNormalizeRecipientsRequest request =
+                new MlNormalizeRecipientsRequest(List.of(new MlNormalizeEntry("0", "SWIGGY", "swiggy@ok")));
+        MlNormalizeRecipientsResponse response = new MlNormalizeRecipientsResponse(java.util.Map.of("0", "SWIGGY"));
+        given(mlClient.normalizeRecipients(request)).willReturn(response);
+
+        MlNormalizeRecipientsResponse result = service.normalizeRecipients(request);
+
+        assertThat(result).isEqualTo(response);
+    }
+
+    @Test
+    void normalizeRecipientsPropagatesMlClientFailure() {
+        MlNormalizeRecipientsRequest request =
+                new MlNormalizeRecipientsRequest(List.of(new MlNormalizeEntry("0", "SWIGGY", "swiggy@ok")));
+        when(mlClient.normalizeRecipients(request)).thenThrow(new RuntimeException("FastAPI unreachable"));
+
+        assertThatThrownBy(() -> service.normalizeRecipients(request)).isInstanceOf(RuntimeException.class);
+    }
+
     private Transaction transaction() {
         return new Transaction(
                 transactionId,
@@ -187,6 +211,7 @@ class CategorizationServiceImplTest {
                 null,
                 TransactionSource.SMS,
                 Instant.parse("2026-06-15T14:33:00Z"),
+                null,
                 null,
                 null,
                 null);

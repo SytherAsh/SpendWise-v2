@@ -35,9 +35,13 @@ import java.util.UUID;
  * being silently rejected before any model ever sees it. This class only proposes candidates and
  * their statistics now; {@link AlertEvaluatorJob} owns the actual recurring/not-recurring decision.
  *
- * <p><b>Grouping key:</b> {@code upi_id} when non-blank, else {@code recipient_name}
- * (`docs/spec/requirements.md` "Recurring payment detection rule"). Transactions with both blank
- * cannot be grouped and are ignored.
+ * <p><b>Grouping key:</b> {@code upi_id} when non-blank, else {@code recipient_canonical} when the
+ * canonicalization job has assigned one (ML strategy phase, 2026-07-13), else the raw {@code
+ * recipient_name} (`docs/spec/requirements.md` "Recurring payment detection rule"). Preferring the
+ * canonical name over the raw one collapses spelling variants of a single payee ("SWIGGY" vs
+ * "Swiggy Bangalore") into one group, so a genuinely recurring charge that was splintered across
+ * name variants — and thus fell below the occurrence threshold on each variant individually — is
+ * now detected. Transactions with no usable key at all cannot be grouped and are ignored.
  *
  * <p><b>Amount tolerance:</b> anchored to the group's smallest amount, not pairwise-chained — a
  * cluster's members must all satisfy {@code amount <= clusterMin * 1.40}. Pairwise chaining would
@@ -94,16 +98,25 @@ public final class RecurringPaymentDetector {
         if (candidate.upiId() != null && !candidate.upiId().isBlank()) {
             return candidate.upiId();
         }
-        if (candidate.recipientName() != null && !candidate.recipientName().isBlank()) {
-            return candidate.recipientName();
-        }
-        return null;
+        String name = canonicalOrRawName(candidate);
+        return name != null && !name.isBlank() ? name : null;
     }
 
     private static String merchantLabel(RecurringCandidateTransaction candidate) {
-        return candidate.recipientName() != null && !candidate.recipientName().isBlank()
-                ? candidate.recipientName()
-                : candidate.upiId();
+        String name = canonicalOrRawName(candidate);
+        return name != null && !name.isBlank() ? name : candidate.upiId();
+    }
+
+    /**
+     * Canonical (deduplicated) recipient name when the canonicalization job has assigned one,
+     * else the raw name — so grouping and the user-facing label both benefit from canonicalization
+     * once it has run, and degrade gracefully to the raw name before it has.
+     */
+    private static String canonicalOrRawName(RecurringCandidateTransaction candidate) {
+        if (candidate.recipientCanonical() != null && !candidate.recipientCanonical().isBlank()) {
+            return candidate.recipientCanonical();
+        }
+        return candidate.recipientName();
     }
 
     /** Sequential clustering on amount-ascending order — each cluster anchored to its own minimum. */

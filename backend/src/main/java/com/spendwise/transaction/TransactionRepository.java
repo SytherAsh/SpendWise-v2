@@ -31,7 +31,7 @@ public class TransactionRepository {
     private static final String SELECT_COLUMNS =
             "t.id, t.user_id, t.transaction_date, t.debit, t.credit, t.amount, t.balance, "
                     + "t.transaction_mode, t.dr_cr_indicator, t.transaction_id, t.recipient_name, t.bank, t.upi_id, "
-                    + "t.note, t.source, t.parsed_at, tc.category_id, tc.confidence_score, tc.assigned_by";
+                    + "t.note, t.source, t.parsed_at, t.recipient_canonical, tc.category_id, tc.confidence_score, tc.assigned_by";
 
     private static final RowMapper<Transaction> ROW_MAPPER = (rs, rowNum) -> new Transaction(
             UUID.fromString(rs.getString("id")),
@@ -52,7 +52,8 @@ public class TransactionRepository {
             rs.getTimestamp("parsed_at").toInstant(),
             (Integer) rs.getObject("category_id"),
             rs.getObject("confidence_score") == null ? null : rs.getFloat("confidence_score"),
-            rs.getString("assigned_by"));
+            rs.getString("assigned_by"),
+            rs.getString("recipient_canonical"));
 
     private final JdbcTemplate jdbcTemplate;
     private final RlsSession rlsSession;
@@ -153,7 +154,8 @@ public class TransactionRepository {
                 parsedAt,
                 null,
                 null,
-                null);
+                null,
+                null); // recipient_canonical — assigned later by RecipientCanonicalizationJob
     }
 
     public Optional<Transaction> findById(UUID userId, UUID id) {
@@ -328,7 +330,7 @@ public class TransactionRepository {
      */
     public List<RecurringCandidateTransaction> findAllForRecurringDetection(Instant since) {
         return jobsJdbcTemplate.query(
-                "SELECT id, user_id, transaction_date, debit, upi_id, recipient_name FROM transactions "
+                "SELECT id, user_id, transaction_date, debit, upi_id, recipient_name, recipient_canonical FROM transactions "
                         + "WHERE transaction_date >= ? AND debit > 0 AND (upi_id IS NOT NULL OR recipient_name IS NOT NULL)",
                 (rs, rowNum) -> new RecurringCandidateTransaction(
                         UUID.fromString(rs.getString("user_id")),
@@ -336,7 +338,44 @@ public class TransactionRepository {
                         rs.getTimestamp("transaction_date").toInstant(),
                         rs.getBigDecimal("debit"),
                         rs.getString("upi_id"),
-                        rs.getString("recipient_name")),
+                        rs.getString("recipient_name"),
+                        rs.getString("recipient_canonical")),
                 Timestamp.from(since));
+    }
+
+    /**
+     * Cross-user (ML strategy phase, 2026-07-13) — every distinct (user_id, recipient_name, upi_id)
+     * identity across all users, in one bulk read via the {@code spendwise_jobs} role. Backs
+     * {@code RecipientCanonicalizationJob}, which groups these by user and sends each user's set to
+     * FastAPI {@code /normalize-recipients}. Only rows with a non-null {@code recipient_name} or
+     * {@code upi_id} are returned (nothing to canonicalize otherwise). Distinct so the clustering
+     * runs on the deduplicated identity set, not once per transaction.
+     */
+    public List<RecipientIdentity> findAllRecipientIdentities() {
+        return jobsJdbcTemplate.query(
+                "SELECT DISTINCT user_id, recipient_name, upi_id FROM transactions "
+                        + "WHERE recipient_name IS NOT NULL OR upi_id IS NOT NULL",
+                (rs, rowNum) -> new RecipientIdentity(
+                        UUID.fromString(rs.getString("user_id")),
+                        rs.getString("recipient_name"),
+                        rs.getString("upi_id")));
+    }
+
+    /**
+     * Cross-user bulk write (ML strategy phase, 2026-07-13) — sets {@code recipient_canonical} on
+     * every transaction matching one (user_id, recipient_name, upi_id) identity, via the {@code
+     * spendwise_jobs} role. NULL-safe matching ({@code IS NOT DISTINCT FROM}) because both
+     * recipient_name and upi_id are nullable and a plain {@code = ?} never matches NULL — the
+     * identity read above deliberately preserves the NULL components, so the write must match them
+     * back exactly. Never touches the raw {@code recipient_name} column.
+     */
+    public int updateCanonicalForIdentity(UUID userId, String recipientName, String upiId, String canonical) {
+        return jobsJdbcTemplate.update(
+                "UPDATE transactions SET recipient_canonical = ? "
+                        + "WHERE user_id = ? AND recipient_name IS NOT DISTINCT FROM ? AND upi_id IS NOT DISTINCT FROM ?",
+                canonical,
+                userId,
+                recipientName,
+                upiId);
     }
 }

@@ -142,7 +142,8 @@ class ChatbotServiceImplTest {
                 Instant.now(),
                 7,
                 0.9f,
-                "ml");
+                "ml",
+                null);
         given(transactionService.list(eq(userId), anyInt(), isNull(), isNull(), eq(false), any(), any(), isNull()))
                 .willReturn(new TransactionPage(List.of(transaction), null, false));
         return currentSummary;

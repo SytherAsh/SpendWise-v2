@@ -119,4 +119,20 @@ public interface TransactionService {
      * bypasses RLS via the {@code spendwise_jobs} role, same pattern as {@link #findAllUncategorized}.
      */
     List<RecurringCandidateTransaction> findAllForRecurringDetection(Instant since);
+
+    /**
+     * Cross-user (ML strategy phase, 2026-07-13) — every distinct (user, recipient_name, upi_id)
+     * identity across all users. Backs {@code RecipientCanonicalizationJob}, which groups these by
+     * user and canonicalizes each user's set via the Categorization ML gateway; bypasses RLS via
+     * the {@code spendwise_jobs} role, same pattern as {@link #findAllForRecurringDetection}.
+     */
+    List<RecipientIdentity> findAllRecipientIdentities();
+
+    /**
+     * Cross-user bulk write (ML strategy phase, 2026-07-13) — sets {@code recipient_canonical} on
+     * every transaction matching the given (user, recipient_name, upi_id) identity. Called only by
+     * {@code RecipientCanonicalizationJob} after the ML service returns a canonical name; bypasses
+     * RLS via the {@code spendwise_jobs} role. Returns the number of rows updated.
+     */
+    int updateCanonicalForIdentity(UUID userId, String recipientName, String upiId, String canonical);
 }

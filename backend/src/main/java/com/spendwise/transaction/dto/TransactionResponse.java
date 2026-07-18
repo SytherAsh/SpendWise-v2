@@ -30,7 +30,8 @@ public record TransactionResponse(
         Instant parsedAt,
         Integer categoryId,
         Float confidenceScore,
-        String assignedBy) {
+        String assignedBy,
+        String recipientCanonical) {
 
     public static TransactionResponse from(Transaction transaction) {
         return new TransactionResponse(
@@ -51,6 +52,7 @@ public record TransactionResponse(
                 transaction.parsedAt(),
                 transaction.categoryId(),
                 transaction.confidenceScore(),
-                transaction.assignedBy());
+                transaction.assignedBy(),
+                transaction.recipientCanonical());
     }
 }

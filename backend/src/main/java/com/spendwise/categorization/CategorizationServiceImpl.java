@@ -1,6 +1,8 @@
 package com.spendwise.categorization;
 
 import com.spendwise.categorization.dto.MlEvaluationResponse;
+import com.spendwise.categorization.dto.MlNormalizeRecipientsRequest;
+import com.spendwise.categorization.dto.MlNormalizeRecipientsResponse;
 import com.spendwise.categorization.dto.MlPredictionRequest;
 import com.spendwise.categorization.dto.MlPredictionResponse;
 import com.spendwise.categorization.dto.MlRecurringPredictionRequest;
@@ -84,6 +86,11 @@ public class CategorizationServiceImpl implements CategorizationService {
     @Override
     public MlRecurringPredictionResponse predictRecurring(MlRecurringPredictionRequest request) {
         return mlClient.predictRecurring(request);
+    }
+
+    @Override
+    public MlNormalizeRecipientsResponse normalizeRecipients(MlNormalizeRecipientsRequest request) {
+        return mlClient.normalizeRecipients(request);
     }
 
     private static MlPredictionRequest toPredictionRequest(Transaction transaction) {

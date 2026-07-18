@@ -22,10 +22,16 @@ interface Transaction {
   transactionDate: string;
   amount: number;
   recipientName: string | null;
+  recipientCanonical: string | null;
   upiId: string | null;
   bank: string | null;
   note: string | null;
   categoryId: number | null;
+}
+
+/** Deduplicated payee name once the canonicalization job has run, else the raw one. */
+function payeeName(t: Pick<Transaction, "recipientCanonical" | "recipientName">): string | null {
+  return t.recipientCanonical ?? t.recipientName;
 }
 
 interface TransactionListResponse {
@@ -173,11 +179,14 @@ export function TransactionsBrowser({
     setCorrectionError(null);
     try {
       await putCategory(t.id, categoryId);
-      // Offer to apply the same category to this payee's other transactions in the list.
-      const payee = t.recipientName;
+      // Offer to apply the same category to this payee's other transactions in the list. Match on
+      // the canonical (deduplicated) payee name when available, so spelling variants of one payee
+      // are treated as the same payee here too; falls back to the raw name before canonicalization
+      // has run.
+      const payee = payeeName(t);
       if (payee) {
         const matches = items.filter(
-          (o) => o.id !== t.id && o.recipientName === payee && (overrides[o.id] ?? o.categoryId) !== categoryId,
+          (o) => o.id !== t.id && payeeName(o) === payee && (overrides[o.id] ?? o.categoryId) !== categoryId,
         );
         setBulk(matches.length > 0 ? { payee, categoryId, ids: matches.map((m) => m.id) } : null);
       }
@@ -347,8 +356,8 @@ function TransactionRow({
     <tr className="border-b border-border last:border-0 hover:bg-surface-muted/60">
       <td className="whitespace-nowrap px-4 py-3 text-foreground-muted">{formatDate(t.transactionDate)}</td>
       <td className="px-4 py-3">
-        <span className="font-medium text-foreground">{t.recipientName ?? t.upiId ?? t.bank ?? "—"}</span>
-        {(t.upiId || t.bank) && t.recipientName && (
+        <span className="font-medium text-foreground">{payeeName(t) ?? t.upiId ?? t.bank ?? "—"}</span>
+        {(t.upiId || t.bank) && payeeName(t) && (
           <span className="block text-xs text-foreground-subtle">{t.upiId ?? t.bank}</span>
         )}
       </td>

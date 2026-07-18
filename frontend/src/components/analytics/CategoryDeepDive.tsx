@@ -39,6 +39,7 @@ interface Transaction {
   transactionDate: string;
   amount: number;
   recipientName: string | null;
+  recipientCanonical: string | null;
   upiId: string | null;
   note: string | null;
 }
@@ -64,11 +65,11 @@ function computeShareBuckets(categoryBuckets: TrendBucket[] | undefined, overall
   });
 }
 
-/** Same person/merchant across several transactions reads as one row (total spend, txn count) — not a repeated line per transaction; that per-transaction detail already lives on the Transactions page. */
+/** Same person/merchant across several transactions reads as one row (total spend, txn count) — not a repeated line per transaction; that per-transaction detail already lives on the Transactions page. Groups on the canonical (deduplicated) recipient name once assigned, so spelling variants of one payee collapse into a single row rather than fragmenting the analysis. */
 function groupByCounterparty(transactions: Transaction[]): MerchantGroup[] {
   const groups = new Map<string, MerchantGroup>();
   for (const t of transactions) {
-    const label = t.recipientName ?? t.upiId ?? t.note ?? "Other";
+    const label = t.recipientCanonical ?? t.recipientName ?? t.upiId ?? t.note ?? "Other";
     const existing = groups.get(label);
     const amount = Math.abs(Number(t.amount));
     if (existing) {
