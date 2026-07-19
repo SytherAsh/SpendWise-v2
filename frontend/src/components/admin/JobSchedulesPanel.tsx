@@ -56,16 +56,21 @@ export function JobSchedulesPanel() {
 
 function JobScheduleRow({ job, onSaved }: { job: JobSchedule; onSaved: () => void }) {
   const [scheduleType, setScheduleType] = useState<JobSchedule["scheduleType"]>(job.scheduleType);
-  const [intervalValue, setIntervalValue] = useState(job.intervalValue ?? 30);
+  // Held as a string so the field can be cleared and retyped — a numeric state forced every empty
+  // keystroke back to a value (previously Math.max(1, Number("")) === 1), so clearing then typing
+  // "45" produced "145". Parsed and clamped to a valid integer only where a number is needed.
+  const [intervalValue, setIntervalValue] = useState(String(job.intervalValue ?? 30));
   const [intervalUnit, setIntervalUnit] = useState<NonNullable<JobSchedule["intervalUnit"]>>(job.intervalUnit ?? "MINUTES");
   const [dayOfWeek, setDayOfWeek] = useState(job.dayOfWeek ?? "SUN");
   const [hourOfDay, setHourOfDay] = useState(job.hourOfDay ?? 4);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  const intervalNumber = Math.max(1, Math.floor(Number(intervalValue) || 1));
+
   const dirty =
     scheduleType !== job.scheduleType
-    || (scheduleType === "INTERVAL" && (intervalValue !== job.intervalValue || intervalUnit !== job.intervalUnit))
+    || (scheduleType === "INTERVAL" && (intervalNumber !== job.intervalValue || intervalUnit !== job.intervalUnit))
     || (scheduleType === "WEEKLY" && (dayOfWeek !== job.dayOfWeek || hourOfDay !== job.hourOfDay));
 
   async function onSave() {
@@ -74,7 +79,7 @@ function JobScheduleRow({ job, onSaved }: { job: JobSchedule; onSaved: () => voi
     try {
       const body =
         scheduleType === "INTERVAL"
-          ? { scheduleType, intervalValue, intervalUnit }
+          ? { scheduleType, intervalValue: intervalNumber, intervalUnit }
           : { scheduleType, dayOfWeek, hourOfDay };
       await adminApiClient.put(`/admin/job-schedules/${job.jobKey}`, body);
       setMessage("Saved — takes effect immediately.");
@@ -110,7 +115,7 @@ function JobScheduleRow({ job, onSaved }: { job: JobSchedule; onSaved: () => voi
               type="number"
               min={1}
               value={intervalValue}
-              onChange={(e) => setIntervalValue(Math.max(1, Number(e.target.value)))}
+              onChange={(e) => setIntervalValue(e.target.value)}
               className="w-20 rounded-md border border-black/15 px-2 py-1.5 dark:border-white/15 dark:bg-neutral-800"
             />
             <select
