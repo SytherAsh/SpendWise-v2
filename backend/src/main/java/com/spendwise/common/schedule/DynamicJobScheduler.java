@@ -1,6 +1,8 @@
 package com.spendwise.common.schedule;
 
 import com.spendwise.common.job.ManuallyTriggerableJob;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -32,6 +34,8 @@ import java.util.concurrent.ScheduledFuture;
 @Component
 public class DynamicJobScheduler {
 
+    private static final Logger log = LoggerFactory.getLogger(DynamicJobScheduler.class);
+
     private final TaskScheduler taskScheduler;
     private final JobScheduleRepository jobScheduleRepository;
     private final Map<String, ManuallyTriggerableJob> jobsByKey;
@@ -58,10 +62,27 @@ public class DynamicJobScheduler {
     }
 
     /** Registers all five jobs once the context is fully up — not a bean-creation-time {@code
-     * @PostConstruct}, so every other bean (and the datasource) is guaranteed ready first. */
+     * @PostConstruct}, so every other bean (and the datasource) is guaranteed ready first.
+     *
+     * <p>Each job is scheduled independently and a failure is logged and skipped, never propagated:
+     * {@link JobScheduleTrigger}'s first computation reads {@code job_schedules} through the {@code
+     * spendwise_jobs} jobs pool, and application startup must not hard-depend on that pool being
+     * reachable — the invariant {@code JobsDataSourceConfig} documents (and that {@code
+     * initializationFailTimeout(-1)} exists to preserve). A read failure here — a transient prod DB
+     * blip, or a bare Testcontainers image without the {@code spendwise_jobs} role — leaves that one
+     * job unscheduled until a restart or an admin {@link #reschedule}, the same graceful-degradation
+     * posture every background job in this app already follows, rather than aborting the whole
+     * context load. */
     @EventListener(ApplicationReadyEvent.class)
     public void scheduleAll() {
-        jobsByKey.keySet().forEach(this::scheduleJob);
+        jobsByKey.keySet().forEach(jobKey -> {
+            try {
+                scheduleJob(jobKey);
+            } catch (RuntimeException e) {
+                log.warn("Could not schedule job '{}' at startup ({}); leaving it unscheduled until "
+                        + "a restart or an admin reschedule", jobKey, e.getMessage());
+            }
+        });
     }
 
     private void scheduleJob(String jobKey) {

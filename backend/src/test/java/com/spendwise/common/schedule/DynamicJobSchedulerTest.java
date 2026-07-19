@@ -7,6 +7,7 @@ import org.springframework.scheduling.Trigger;
 
 import java.util.concurrent.ScheduledFuture;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -73,5 +74,19 @@ class DynamicJobSchedulerTest {
     @Test
     void rescheduleWithAnUnknownJobKeyThrows() {
         assertThatThrownBy(() -> scheduler.reschedule("not_a_real_job")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /** A trigger's first computation reads job_schedules via the spendwise_jobs pool; if that pool
+     * is unreachable at startup (missing role in a bare test container, or a transient prod DB
+     * blip), scheduleAll() must not propagate — application startup can't hard-depend on the jobs
+     * pool (JobsDataSourceConfig's documented invariant). Each job is still attempted; the failing
+     * ones are just skipped. */
+    @Test
+    void scheduleAllSwallowsAJobsPoolFailureSoStartupStillCompletes() {
+        given(taskScheduler.schedule(any(Runnable.class), any(Trigger.class)))
+                .willThrow(new RuntimeException("Failed to obtain JDBC Connection"));
+
+        assertThatCode(scheduler::scheduleAll).doesNotThrowAnyException();
+        verify(taskScheduler, times(5)).schedule(any(Runnable.class), any(Trigger.class));
     }
 }
