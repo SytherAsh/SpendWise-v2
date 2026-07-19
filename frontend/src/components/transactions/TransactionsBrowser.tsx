@@ -890,20 +890,41 @@ function TransactionDetailDialog({
   onClose: () => void;
   categoryName: (id: number) => string;
 }) {
+  // The Dialog shell stays mounted while `transaction` is null so Radix can play its close
+  // animation; the fetching body below is keyed by transaction id so each opened transaction gets
+  // a fresh mount (loading→fetch→detail) rather than the effect resetting state synchronously,
+  // which the react-hooks `set-state-in-effect` rule flags. Behaviour is unchanged: the previous
+  // effect also cleared `detail` to null when the dialog closed, so the body was already empty
+  // during the close animation.
+  return (
+    <Dialog open={transaction != null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Transaction details</DialogTitle>
+          {transaction && <DialogDescription>{formatDate(transaction.transactionDate)}</DialogDescription>}
+        </DialogHeader>
+        {transaction && <TransactionDetailBody key={transaction.id} transaction={transaction} categoryName={categoryName} />}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Fetches and renders one transaction's full detail. Mounted only while the dialog is open and
+ * keyed by transaction id (see {@link TransactionDetailDialog}), so its fetch effect runs exactly
+ * once per opened transaction with fresh initial state — no synchronous state reset in the effect. */
+function TransactionDetailBody({
+  transaction,
+  categoryName,
+}: {
+  transaction: Transaction;
+  categoryName: (id: number) => string;
+}) {
   const [detail, setDetail] = useState<TransactionDetail | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!transaction) {
-      setDetail(null);
-      setError(null);
-      return;
-    }
     let cancelled = false;
-    setDetail(null);
-    setLoading(true);
-    setError(null);
     apiClient
       .get<TransactionDetail>(`/transactions/${transaction.id}`)
       .then((data) => {
@@ -918,43 +939,30 @@ function TransactionDetailDialog({
     return () => {
       cancelled = true;
     };
-  }, [transaction]);
+  }, [transaction.id]);
 
-  const payee = detail ? (detail.recipientCanonical ?? detail.recipientName) : null;
+  if (loading) return <Spinner />;
+  if (error) return <ErrorState message={error} />;
+  if (!detail) return null;
+
+  const payee = detail.recipientCanonical ?? detail.recipientName;
 
   return (
-    <Dialog open={transaction != null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Transaction details</DialogTitle>
-          {transaction && <DialogDescription>{formatDate(transaction.transactionDate)}</DialogDescription>}
-        </DialogHeader>
-        {loading ? (
-          <Spinner />
-        ) : error ? (
-          <ErrorState message={error} />
-        ) : detail ? (
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-            <DetailField label="Payee" value={payee ?? "—"} />
-            <DetailField label="Amount" value={formatCurrency(detail.amount, true)} />
-            <DetailField label="UPI ID" value={detail.upiId ?? "—"} />
-            <DetailField label="Bank" value={detail.bank ?? "—"} />
-            <DetailField label="Balance after" value={detail.balance != null ? formatCurrency(detail.balance, true) : "—"} />
-            <DetailField label="Mode" value={detail.transactionMode ?? "—"} />
-            <DetailField label="Type" value={detail.drCrIndicator === "CR" ? "Credit" : "Debit"} />
-            <DetailField label="Bank reference" value={detail.transactionId} />
-            <DetailField label="Source" value={sourceLabel(detail.source)} />
-            <DetailField label="Recorded" value={formatDate(detail.parsedAt)} />
-            <DetailField
-              label="Category"
-              value={detail.categoryId != null ? categoryName(detail.categoryId) : "Uncategorized"}
-            />
-            <DetailField label="Categorized by" value={categorizationLabel(detail)} />
-            {detail.note && <DetailField label="Note" value={detail.note} full />}
-          </dl>
-        ) : null}
-      </DialogContent>
-    </Dialog>
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+      <DetailField label="Payee" value={payee ?? "—"} />
+      <DetailField label="Amount" value={formatCurrency(detail.amount, true)} />
+      <DetailField label="UPI ID" value={detail.upiId ?? "—"} />
+      <DetailField label="Bank" value={detail.bank ?? "—"} />
+      <DetailField label="Balance after" value={detail.balance != null ? formatCurrency(detail.balance, true) : "—"} />
+      <DetailField label="Mode" value={detail.transactionMode ?? "—"} />
+      <DetailField label="Type" value={detail.drCrIndicator === "CR" ? "Credit" : "Debit"} />
+      <DetailField label="Bank reference" value={detail.transactionId} />
+      <DetailField label="Source" value={sourceLabel(detail.source)} />
+      <DetailField label="Recorded" value={formatDate(detail.parsedAt)} />
+      <DetailField label="Category" value={detail.categoryId != null ? categoryName(detail.categoryId) : "Uncategorized"} />
+      <DetailField label="Categorized by" value={categorizationLabel(detail)} />
+      {detail.note && <DetailField label="Note" value={detail.note} full />}
+    </dl>
   );
 }
 
