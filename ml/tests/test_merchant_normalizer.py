@@ -6,6 +6,8 @@ from training.merchant_normalizer import (
     find_ambiguous_fuzzy_pairs,
     find_prefix_ambiguities,
     find_prefix_variants,
+    find_short_prefix_pairs,
+    find_upi_handle_pairs,
     merge_prefix_chains,
 )
 
@@ -209,3 +211,56 @@ def test_canonicalize_with_ambiguities_surfaces_real_sameer_case() -> None:
 
 def test_canonicalize_with_ambiguities_empty_entries() -> None:
     assert canonicalize_with_ambiguities([]) == {"canonical_names": {}, "ambiguous_groups": []}
+
+
+# --- Phase A enriched detectors (ADR-019) -------------------------------------------
+
+
+def test_find_upi_handle_pairs_matches_handle_to_spelled_first_token() -> None:
+    """A name-derived UPI handle ("AASHAYJ2" = first name + surname initial + digit)
+    is neither a literal prefix of nor a high token-similarity match to the spelled
+    name, but its leading run IS the spelled name's first token."""
+    pairs = find_upi_handle_pairs(["AASHAY MAKRAND JADHAV", "AASHAYJ2"])
+
+    assert pairs == [{"anchor": "AASHAY MAKRAND JADHAV", "candidate": "AASHAYJ2", "score": 90, "reason": "upi_handle_variant"}]
+
+
+def test_find_upi_handle_pairs_ignores_unrelated_handle() -> None:
+    assert find_upi_handle_pairs(["AASHAY MAKRAND JADHAV", "RANDOMSTORE9"]) == []
+
+
+def test_find_short_prefix_pairs_surfaces_sub_min_len_truncations() -> None:
+    """Bare truncated first names too short for the min_len=6 prefix tier."""
+    candidates = {
+        (p["candidate"], p["anchor"]) for p in find_short_prefix_pairs(["ALP", "ALPHA VIJAY RANE", "YASH", "YASH SAMEER SAWANT"])
+    }
+
+    assert ("ALP", "ALPHA VIJAY RANE") in candidates
+    assert ("YASH", "YASH SAMEER SAWANT") in candidates
+
+
+def test_find_short_prefix_pairs_excludes_len6_plus_handled_by_prefix_tier() -> None:
+    """6+ char prefixes are the merge_prefix_chains tier's job -- this detector fills
+    only the sub-6 gap, so the two never overlap."""
+    assert find_short_prefix_pairs(["SAMEER", "SAMEER SAWANT"]) == []
+
+
+def test_canonicalize_with_ambiguities_surfaces_handle_and_short_prefix() -> None:
+    """End-to-end: the exact real-data misses this phase targets flow through to
+    ambiguous_groups without being auto-merged into canonical_names."""
+    entries = [
+        {"key": "h1", "recipient_name": "AASHAY MAKRAND JADHAV", "upi_id": None},
+        {"key": "h2", "recipient_name": "AASHAYJ2", "upi_id": None},
+        {"key": "p1", "recipient_name": "ALPHA VIJAY RANE", "upi_id": None},
+        {"key": "p2", "recipient_name": "ALP", "upi_id": None},
+    ]
+
+    result = canonicalize_with_ambiguities(entries)
+
+    # Never auto-merged -- these stay distinct canonical names.
+    assert result["canonical_names"]["h1"] != result["canonical_names"]["h2"]
+    assert result["canonical_names"]["p1"] != result["canonical_names"]["p2"]
+
+    reasons_by_candidate = {c["key"]: c["reason"] for g in result["ambiguous_groups"] for c in g["candidates"]}
+    assert reasons_by_candidate.get("h2") == "upi_handle_variant"
+    assert reasons_by_candidate.get("p2") == "short_prefix"

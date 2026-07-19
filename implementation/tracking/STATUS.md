@@ -186,6 +186,18 @@ tracked as ML-strategy-phase work extending E3-S2-T4's existing endpoint pattern
 task. Full reasoning in ADR-014/015; schema in `docs/spec/database.md`; endpoints in
 `docs/spec/api.md`.
 
+**Enriched merge detectors — Phase A** (ADR-019, 2026-07-19): the clustering pass now surfaces two
+generalizable same-payee families the fuzzy/prefix tiers missed on real data — name-derived UPI
+handles (`AASHAYJ2` → `AASHAY MAKRAND JADHAV`, new `upi_handle_variant` reason) and sub-6-char
+truncations (`ALP` → `ALPHA VIJAY RANE`, new `short_prefix` reason) — as review-only candidates in
+the same `ambiguous_groups` output (no auto-merge change, no schema/DTO/migration change,
+`canonical_names` unchanged). Pure additions in `ml/training/merchant_normalizer.py`
+(`find_upi_handle_pairs`, `find_short_prefix_pairs`, `_squash`). This is Phase A of ADR-019's two-
+phase plan; **Phase B** (a pairwise same/different classifier trained on the queue's resolved
+`CONFIRMED_SAME`/`CONFIRMED_DIFFERENT` decisions, replacing the hand-tuned thresholds) is deferred
+until the queue accumulates real labels — Phase A is what generates them. UPI local-part similarity
+was deliberately deferred to Phase B (unguarded it floods the queue via shared gateway handles).
+
 ## Epic 4 — [ML Categorization Service](../epics/epic-04-ml-categorization.md)
 
 - [x] E4-S1-T1 — `X-Internal-Key` middleware

@@ -829,3 +829,104 @@ and their `ML_RETRAIN_CRON`/`ML_CANONICALIZATION_CRON` env vars are removed as d
 Admin's existing manual "run now" triggers (`ManuallyTriggerableJob`, ADR from earlier this same
 session) are unaffected — scheduling and manual triggering are two independent paths to the same
 `runNow()`.
+
+## ADR-019: Payee Matching Evolves From Feature-Rich Rules to a Merge-Queue-Trained Classifier, in Two Phases
+
+**Status**: Accepted (Phase A implemented; Phase B deferred until labels accumulate)
+
+**Context**: ADR-013's canonicalization clustering (fuzzy `token_sort_ratio` + hierarchical
+clustering, plus the `merge_prefix_chains` truncation tier) and ADR-015's Merge Payees queue
+together decide which payee spelling variants are the same entity. Against real account data, the
+hand-tuned tiers systematically miss whole families of same-payee pairs that a human recognizes
+instantly:
+
+- **Name-derived UPI handles** — `AASHAYJ2` (first name + surname initial + a disambiguating
+  digit) for `AASHAY MAKRAND JADHAV`, `VIHAANSHINDE18` for `VIHAAN SACHIN`. A handle interleaves
+  the name with initials/digits, so it is neither a literal prefix of the spelled name nor a high
+  `token_sort_ratio` match — both existing tiers score it as unrelated.
+- **Sub-`min_len` truncations** — `ALP` → `ALPHA VIJAY RANE`, `YASH` → `YASH SAMEER SAWANT`,
+  `VIHAA` → `VIHAAN …`. `merge_prefix_chains`/`find_prefix_ambiguities` have a `min_len=6` floor
+  (short prefixes are too collision-prone to *auto-merge*), so a 3–5 char bare first name is never
+  even considered, not even for review.
+
+The user asked explicitly for a *generalizable* fix — one that learns the pattern rather than
+hardcoding these specific strings — usable for model training, designed for real production data
+(the ML-strategy phase's mandate), not the frozen demo CSV.
+
+**Options considered**:
+
+1. **Per-case patches** — lower `min_len` to 3, special-case trailing-digit handles, etc. Fixes
+   these exact strings, overfits to them, and adds false-positive auto-merges for every other user.
+2. **Feature-rich rule scoring now, learned pairwise classifier later** — replace the single-metric
+   threshold logic with a set of *generalizable* pairwise features (multi-metric string similarity,
+   any-length prefix relationship, UPI-handle stem decomposition, UPI local-part similarity), used
+   two ways: **(A)** immediately, as additional *review-only* ambiguity detectors that surface the
+   missed families into the Merge Payees queue without changing any auto-merge behavior; **(B)**
+   later, as the feature vector of a lightweight pairwise same/different classifier trained on the
+   queue's own `CONFIRMED_SAME`/`CONFIRMED_DIFFERENT` decisions, replacing the hand-tuned
+   `78`/`90`/`min_len` thresholds with a learned decision boundary.
+3. **Jump straight to the learned classifier** — skip Phase A, build the model now.
+
+**Decision**: Option 2, phased.
+
+**Rationale**:
+
+- **The learned classifier is the long-run target, but it cannot be trained yet.** A pairwise
+  matcher needs labeled `(same | different)` pairs. Those labels are produced *only* by users
+  resolving the Merge Payees queue (ADR-015) — and the queue was, until now, largely empty for
+  exactly the hard cases, because the tiers that feed it discarded them. **Phase A is what
+  generates Phase B's training data.** Building the model before any labels exist would mean
+  guessing weights with nothing to validate against — the opposite of this phase's "design for real
+  data" principle.
+- **Same adaptive-supervised precedent the rest of SpendWise already uses.** Phase B is the exact
+  `features + user-outcome → periodic batch retrain` shape of categorization (`ml_corrections`) and
+  recurring detection (`RecurringCorrection`, ADR-003). The queue's `recipient_merge_suggestions`
+  rows already store the pair, its features' inputs (`anchor_name`/`candidate_name`/UPI ids), and
+  the human outcome — so the label source needs no new table, just a retrain job reading resolved
+  rows, pooled across all users (a payee-name pattern is user-agnostic; `RAJ2`→`RAJESH KUMAR`
+  generalizes from another user's `AASHAYJ2`→`AASHAY …`).
+- **No contradiction with ADR-014.** ADR-014 said a canonicalization *correction* is a permanent
+  name **pin**, not a retrainable label, because there is no model behind the *name assignment*.
+  That still holds. Phase B trains a different decision — *whether two identities are the same
+  entity* — whose labels are the queue's same/different resolutions, not the name pins. The pin and
+  the match verdict are distinct signals; ADR-019 adds a model to the second, leaves the first as-is.
+- **Precision-first, human-in-the-loop for both phases.** A wrong auto-merge silently fuses two real
+  people's money — far worse than a missed merge. Phase A's new detectors therefore *only surface
+  review candidates*; they never touch `canonical_names`. Phase B keeps a conservative auto-merge
+  band (`P(same) > high` auto-merges, `[low, high]` routes to review, `< low` stays apart), so
+  uncertainty always reaches a human.
+- **Clean seam, no tier overlap.** Phase A's short-prefix detector is bounded to lengths 3–5 —
+  exactly the sub-6 gap `merge_prefix_chains` cannot touch — so the two never double-surface or
+  disagree. The handle detector requires an anchoring first token of length ≥ 5, so a coincidental
+  short collision doesn't fire it.
+- **UPI local-part similarity is deferred to Phase B, not shipped as a Phase-A rule.** It is a
+  genuine signal (same handle, different bank PSP → tier-1's exact-full-UPI match never fires), but
+  as a standalone hard threshold it blows up on real data: generic/gateway handles (`family`,
+  `paytmqr…`) fan a single local part across dozens of unrelated payees — the same shared-code
+  problem `group_by_upi_id`'s `max_distinct_names` guard already documents. It belongs in Phase B,
+  where "how many names share this handle" is one weighted feature among many, not a queue-flooding
+  rule. Validated on the labeled set: with UPI-similarity dropped, the two name detectors surface a
+  healthy 55 candidates (44 handle + 11 short-prefix) across 911 identities, largest group 4 — vs.
+  a near-fully-connected component when UPI-similarity ran unguarded.
+
+- **Architecture: entirely within the existing FastAPI gateway path — no invariant change for
+  Phase A.** Both new detectors live inside `training/merchant_normalizer.py`'s existing
+  `canonicalize_with_ambiguities` pass and ride the *same* `POST /normalize-recipients` response's
+  `ambiguous_groups` field (ADR-015), called only by `RecipientCanonicalizationJob` via the
+  Categorization gateway (ADR-012/013). No new endpoint, no new job, no new network round trip, no
+  new module dependency. Phase B adds only a retrain step + model artifact alongside the
+  categorization/recurring ones (same free-tier artifact pattern) — still behind the Categorization
+  gateway, so it too needs no new module-dependency exception when it lands.
+
+**Consequence** (Phase A, now): two new pure functions in `merchant_normalizer.py`
+(`find_upi_handle_pairs`, `find_short_prefix_pairs`) plus a `_squash` helper, wired into
+`canonicalize_with_ambiguities` as additional pre-oriented `extra_pairs` (filtered so a pair tier-3
+already auto-merged is never re-surfaced) fed to `_build_ambiguous_groups`. Two new `reason` values
+on the queue — `upi_handle_variant`, `short_prefix` — carried end to end as free-form strings
+(FastAPI `AmbiguousCandidate.reason`, Java `MlAmbiguousCandidate`, the nullable-free
+`recipient_merge_suggestions.reason` column, the frontend `MergeCandidate.reason` which does not
+switch on it), so no schema, DTO, or migration change is required and an older ML response still
+deserializes. No auto-merge behavior changes; `canonical_names` output is byte-for-byte unchanged.
+**Phase B (deferred)**: a `payee_match` classifier trained from resolved `recipient_merge_suggestions`
+rows on the existing weekly cadence, cold-starting behind the Phase-A rules until enough labeled
+pairs accumulate — to be specified in its own follow-up once the queue has produced real labels.

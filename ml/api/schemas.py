@@ -148,7 +148,9 @@ class AmbiguousCandidate(BaseModel):
     key: str
     name: str
     score: int
-    reason: str  # "fuzzy_near_miss" | "prefix_ambiguous"
+    # "fuzzy_near_miss" | "prefix_ambiguous" | "upi_handle_variant" | "short_prefix"
+    # (last two: Phase A enriched detectors, ADR-019)
+    reason: str
 
 
 class AmbiguousGroup(BaseModel):

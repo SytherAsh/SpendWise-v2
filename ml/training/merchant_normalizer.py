@@ -489,6 +489,74 @@ def find_prefix_ambiguities(names, min_len: int = 6) -> list:
     return ambiguities
 
 
+def _squash(name: str) -> str:
+    """Uppercase, alphanumeric-only, spaces removed -- the comparison form for the
+    enriched (Phase A, ADR-019) detectors below, which key on the *character run* of
+    a name rather than its whitespace-delimited tokens.
+
+    Bank/UPI truncation and handle-style names ("AASHAYJ2", "VIHAANSHINDE18") mangle
+    exactly the token structure `token_sort_ratio` and the prefix tier rely on, so
+    those two tiers miss them; the squashed form is what makes a name-derived UPI
+    handle comparable to the spelled name it came from.
+    """
+    return re.sub(r"[^A-Z0-9]", "", str(name).upper())
+
+
+def find_upi_handle_pairs(names, min_token_len: int = 5) -> list:
+    """Review candidates (Phase A, ADR-019) where a spaceless, name-derived UPI
+    handle ("AASHAYJ2", "VIHAANSHINDE18") begins with another name's spelled first
+    token ("AASHAY MAKRAND JADHAV", "VIHAAN SACHIN").
+
+    This is the generalizable pattern behind a large class of misses the token- and
+    prefix-based tiers can't catch: a handle interleaves the first name with surname
+    initials and digits, so it's neither a literal prefix of the full name nor a
+    high `token_sort_ratio` match -- but its leading character run IS the full name's
+    first token. `min_token_len` keeps that anchoring token long enough (>=5) that a
+    coincidental short-prefix collision doesn't fire this tier (short truncations are
+    `find_short_prefix_pairs`'s job instead). Never auto-merges -- pure review
+    surfacing, so a wrong guess costs the user one "different" tap, not a bad merge.
+    """
+    names = list(dict.fromkeys(names))
+    pairs = []
+    for a, b in itertools.combinations(names, 2):
+        for handle, spelled in ((a, b), (b, a)):
+            if handle in SENTINELS or spelled in SENTINELS:
+                continue
+            if " " in handle or " " not in spelled:
+                continue
+            token = _first_token(spelled)
+            if len(token) >= min_token_len and _squash(handle).startswith(_squash(token)):
+                pairs.append({"anchor": spelled, "candidate": handle, "score": 90, "reason": "upi_handle_variant"})
+    return pairs
+
+
+def find_short_prefix_pairs(names, min_len: int = 3, max_len: int = 5) -> list:
+    """Review candidates (Phase A, ADR-019) for bare truncated first names too short
+    for the `merge_prefix_chains` tier's `min_len=6` floor -- "YASH" -> "YASH SAMEER
+    SAWANT", "VIHAA" -> "VIHAAN SACHIN", "ALP" -> "ALPHA VIJAY RANE".
+
+    Deliberately bounded to `[min_len, max_len]` = `[3, 5]`, i.e. exactly the sub-6
+    gap the prefix tier can't touch (6+ is already handled there), so the two never
+    overlap or double-surface. Only a single-token candidate that prefixes the other
+    name's *first token* qualifies -- a bare truncated first name, not an arbitrary
+    substring -- which keeps this from firing on every short character run in a large
+    identity set. A 3-char prefix is a weak signal on its own, which is precisely why
+    this only ever routes to human review, never to an auto-merge.
+    """
+    names = list(dict.fromkeys(names))
+    pairs = []
+    for a, b in itertools.combinations(names, 2):
+        for short, long_ in ((a, b), (b, a)):
+            if short in SENTINELS or long_ in SENTINELS or short == long_ or " " in short:
+                continue
+            s = _squash(short)
+            if not (min_len <= len(s) <= max_len):
+                continue
+            if _squash(_first_token(long_)).startswith(s):
+                pairs.append({"anchor": long_, "candidate": short, "score": 80, "reason": "short_prefix"})
+    return pairs
+
+
 def _cluster_sizes(clusters: dict, occurrence_counts: Counter) -> Counter:
     """Total raw occurrence count per cluster canonical value -- sum of every raw
     variant's own count, not just the winning variant's -- used by
@@ -506,8 +574,9 @@ def _build_ambiguous_groups(
     fuzzy_cluster_sizes: Counter,
     prefix_ambiguous: list,
     name_to_keys: dict,
+    extra_pairs: list = (),
 ) -> list:
-    """Combines both tiers' ambiguous name-pairs into anchor/candidate groups keyed
+    """Combines every tier's ambiguous name-pairs into anchor/candidate groups keyed
     by entry key (not bare name) -- every candidate sharing an anchor lands in one
     group, so the Merge Payees review queue shows one anchor with all its open
     questions together rather than one row per pair.
@@ -516,7 +585,11 @@ def _build_ambiguous_groups(
     anchor (ties broken by shorter string), mirroring `cluster_by_fuzzy_name`'s own
     canonical-name tie-break. Prefix-ambiguous pairs already have a natural anchor
     per `find_prefix_ambiguities`'s own framing -- each competing "target" is a
-    candidate anchor for the ambiguous (shorter) member.
+    candidate anchor for the ambiguous (shorter) member. `extra_pairs` (Phase A,
+    ADR-019: handle / short-prefix / similar-UPI detectors) arrive pre-oriented as
+    `{"anchor", "candidate", "score", "reason"}`, added last so a pair an earlier,
+    higher-signal tier already surfaced keeps that tier's reason (add() dedups by
+    candidate within a group).
     """
     groups: dict = {}
 
@@ -536,6 +609,9 @@ def _build_ambiguous_groups(
     for item in prefix_ambiguous:
         for target in item["targets"]:
             add(target, item["name"], 100, "prefix_ambiguous")
+
+    for pair in extra_pairs:
+        add(pair["anchor"], pair["candidate"], pair["score"], pair["reason"])
 
     return list(groups.values())
 
@@ -600,7 +676,22 @@ def canonicalize_with_ambiguities(
     prefix_ambiguous = find_prefix_ambiguities(unique_canonical, min_len=min_len)
     final_canonical = canonical.map(chain_mapping)
 
-    ambiguous_groups = _build_ambiguous_groups(fuzzy_ambiguous, fuzzy_cluster_sizes, prefix_ambiguous, name_to_keys)
+    # Enriched review candidates (Phase A, ADR-019): generalizable same-payee signals
+    # the tiers above leave unmerged -- name-derived UPI handles ("AASHAYJ2") and
+    # sub-min_len prefix truncations ("ALP"). Surfaced for Merge Payees human review
+    # only, never auto-applied to canonical_names.
+    extra_pairs = find_upi_handle_pairs(unique_canonical) + find_short_prefix_pairs(unique_canonical)
+    # Never surface a pair tier-3 (merge_prefix_chains) already collapsed into one
+    # canonical -- that question is settled, not open.
+    extra_pairs = [
+        p
+        for p in extra_pairs
+        if chain_mapping.get(p["anchor"], p["anchor"]) != chain_mapping.get(p["candidate"], p["candidate"])
+    ]
+
+    ambiguous_groups = _build_ambiguous_groups(
+        fuzzy_ambiguous, fuzzy_cluster_sizes, prefix_ambiguous, name_to_keys, extra_pairs
+    )
 
     return {"canonical_names": final_canonical.to_dict(), "ambiguous_groups": ambiguous_groups}
 
