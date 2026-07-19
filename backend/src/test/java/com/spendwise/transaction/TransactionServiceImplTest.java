@@ -27,8 +27,17 @@ class TransactionServiceImplTest {
     private final CategoryRepository categoryRepository = mock(CategoryRepository.class);
     private final TransactionCategoryRepository transactionCategoryRepository = mock(TransactionCategoryRepository.class);
     private final MlCorrectionRepository mlCorrectionRepository = mock(MlCorrectionRepository.class);
+    private final RecipientCanonicalOverrideRepository recipientCanonicalOverrideRepository =
+            mock(RecipientCanonicalOverrideRepository.class);
+    private final RecipientMergeSuggestionRepository recipientMergeSuggestionRepository =
+            mock(RecipientMergeSuggestionRepository.class);
     private final TransactionServiceImpl service = new TransactionServiceImpl(
-            transactionRepository, categoryRepository, transactionCategoryRepository, mlCorrectionRepository);
+            transactionRepository,
+            categoryRepository,
+            transactionCategoryRepository,
+            mlCorrectionRepository,
+            recipientCanonicalOverrideRepository,
+            recipientMergeSuggestionRepository);
     private final UUID userId = UUID.randomUUID();
 
     @Test
@@ -148,6 +157,159 @@ class TransactionServiceImplTest {
 
         verify(transactionCategoryRepository, never()).upsertUserAssignment(any(), any(), org.mockito.ArgumentMatchers.anyInt());
         verify(mlCorrectionRepository, never()).insert(any(), any(), any(), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    void correctPayeeNameThrowsNotFoundForMissingTransaction() {
+        UUID transactionId = UUID.randomUUID();
+        given(transactionRepository.findById(userId, transactionId)).willReturn(Optional.empty());
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                TransactionNotFoundException.class, () -> service.correctPayeeName(userId, transactionId, "Sameer Sawant"));
+        verify(recipientCanonicalOverrideRepository, never()).upsert(any(), any(), any(), any());
+    }
+
+    @Test
+    void correctPayeeNameWritesOverrideAndUpdatesEveryTransactionSharingTheIdentity() {
+        UUID transactionId = UUID.randomUUID();
+        given(transactionRepository.findById(userId, transactionId)).willReturn(Optional.of(sampleTransaction()));
+
+        service.correctPayeeName(userId, transactionId, "Sameer Sawant");
+
+        verify(recipientCanonicalOverrideRepository).upsert(userId, "Swiggy", "swiggy@okicici", "Sameer Sawant");
+        verify(transactionRepository).updateCanonicalForIdentityAsUser(userId, "Swiggy", "swiggy@okicici", "Sameer Sawant");
+    }
+
+    @Test
+    void findAllCanonicalOverridesDelegatesToRepository() {
+        RecipientCanonicalOverride override = new RecipientCanonicalOverride(userId, "Swiggy", "swiggy@okicici", "Sameer Sawant");
+        given(recipientCanonicalOverrideRepository.findAll()).willReturn(List.of(override));
+
+        List<RecipientCanonicalOverride> result = service.findAllCanonicalOverrides();
+
+        assertThat(result).containsExactly(override);
+    }
+
+    @Test
+    void correctPayeeIdentityWritesOverrideAndUpdatesCanonicalDirectly() {
+        // Same effect as correctPayeeName, but starting from an identity directly rather than a
+        // transaction id — the Merge Payees review queue's "confirm same" path has no specific
+        // transaction id at hand, just the candidate's (recipient_name, upi_id) identity.
+        service.correctPayeeIdentity(userId, "Sameer B", "sameer@ok", "SAMEER BALIRAM SAWANT");
+
+        verify(recipientCanonicalOverrideRepository).upsert(userId, "Sameer B", "sameer@ok", "SAMEER BALIRAM SAWANT");
+        verify(transactionRepository).updateCanonicalForIdentityAsUser(userId, "Sameer B", "sameer@ok", "SAMEER BALIRAM SAWANT");
+    }
+
+    @Test
+    void correctPayeeNameDelegatesToCorrectPayeeIdentityWithTheTransactionsOwnIdentity() {
+        UUID transactionId = UUID.randomUUID();
+        given(transactionRepository.findById(userId, transactionId)).willReturn(Optional.of(sampleTransaction()));
+
+        service.correctPayeeName(userId, transactionId, "Sameer Sawant");
+
+        verify(recipientCanonicalOverrideRepository).upsert(userId, "Swiggy", "swiggy@okicici", "Sameer Sawant");
+        verify(transactionRepository).updateCanonicalForIdentityAsUser(userId, "Swiggy", "swiggy@okicici", "Sameer Sawant");
+    }
+
+    @Test
+    void resolveMergeSameCorrectsEachConfirmedCandidateAndFlipsStatus() {
+        UUID suggestionId = UUID.randomUUID();
+        RecipientMergeSuggestion suggestion = new RecipientMergeSuggestion(
+                suggestionId,
+                userId,
+                "SAMEER BALIRAM SAWA",
+                null,
+                "SAMEER BALIRAM SAWA",
+                "SAMEER SAWANT",
+                null,
+                100,
+                "prefix_ambiguous",
+                RecipientMergeSuggestion.STATUS_PENDING,
+                Instant.now(),
+                null);
+        given(recipientMergeSuggestionRepository.findPendingForUser(userId)).willReturn(List.of(suggestion));
+
+        service.resolveMergeSame(userId, List.of(suggestionId));
+
+        verify(recipientCanonicalOverrideRepository).upsert(userId, "SAMEER SAWANT", null, "SAMEER BALIRAM SAWA");
+        verify(transactionRepository).updateCanonicalForIdentityAsUser(userId, "SAMEER SAWANT", null, "SAMEER BALIRAM SAWA");
+        verify(recipientMergeSuggestionRepository)
+                .resolveMany(userId, List.of(suggestionId), RecipientMergeSuggestion.STATUS_CONFIRMED_SAME);
+    }
+
+    @Test
+    void resolveMergeSameSkipsCorrectionForAnUnknownSuggestionIdButStillResolvesIt() {
+        // An id that doesn't come back from findPendingForUser (e.g. it belongs to another user,
+        // and RLS scoping already filtered it out) is simply never corrected -- but resolveMany
+        // still receives the full requested id list, matching its own RLS-scoped, silently-skips-
+        // foreign-ids contract rather than this service layer re-deriving that filtering itself.
+        UUID knownId = UUID.randomUUID();
+        UUID unknownId = UUID.randomUUID();
+        RecipientMergeSuggestion suggestion = new RecipientMergeSuggestion(
+                knownId,
+                userId,
+                "SAMEER BALIRAM SAWA",
+                null,
+                "SAMEER BALIRAM SAWA",
+                "SAMEER SAWANT",
+                null,
+                100,
+                "prefix_ambiguous",
+                RecipientMergeSuggestion.STATUS_PENDING,
+                Instant.now(),
+                null);
+        given(recipientMergeSuggestionRepository.findPendingForUser(userId)).willReturn(List.of(suggestion));
+
+        service.resolveMergeSame(userId, List.of(knownId, unknownId));
+
+        verify(recipientCanonicalOverrideRepository, org.mockito.Mockito.times(1)).upsert(any(), any(), any(), any());
+        verify(recipientCanonicalOverrideRepository).upsert(userId, "SAMEER SAWANT", null, "SAMEER BALIRAM SAWA");
+        verify(recipientMergeSuggestionRepository)
+                .resolveMany(userId, List.of(knownId, unknownId), RecipientMergeSuggestion.STATUS_CONFIRMED_SAME);
+    }
+
+    @Test
+    void resolveMergeDifferentOnlyFlipsStatusWithoutAnyTransactionWrite() {
+        UUID suggestionId = UUID.randomUUID();
+
+        service.resolveMergeDifferent(userId, List.of(suggestionId));
+
+        verify(recipientMergeSuggestionRepository)
+                .resolveMany(userId, List.of(suggestionId), RecipientMergeSuggestion.STATUS_CONFIRMED_DIFFERENT);
+        verify(recipientCanonicalOverrideRepository, never()).upsert(any(), any(), any(), any());
+        verify(transactionRepository, never()).updateCanonicalForIdentityAsUser(any(), any(), any(), any());
+    }
+
+    @Test
+    void getMergeQueueSnapshotReturnsNullGroupWhenNothingPending() {
+        given(recipientMergeSuggestionRepository.findPendingForUser(userId)).willReturn(List.of());
+
+        MergeQueueSnapshot snapshot = service.getMergeQueueSnapshot(userId);
+
+        assertThat(snapshot.nextGroup()).isNull();
+        assertThat(snapshot.remainingGroupCount()).isZero();
+    }
+
+    @Test
+    void getMergeQueueSnapshotGroupsByAnchorAndCountsDistinctGroups() {
+        RecipientMergeSuggestion sameAnchorA = new RecipientMergeSuggestion(
+                UUID.randomUUID(), userId, "SAMEER BALIRAM SAWA", null, "SAMEER BALIRAM SAWA",
+                "SAMEER SAWANT", null, 100, "prefix_ambiguous", RecipientMergeSuggestion.STATUS_PENDING, Instant.now(), null);
+        RecipientMergeSuggestion sameAnchorB = new RecipientMergeSuggestion(
+                UUID.randomUUID(), userId, "SAMEER BALIRAM SAWA", null, "SAMEER BALIRAM SAWA",
+                "SAMEER", null, 100, "prefix_ambiguous", RecipientMergeSuggestion.STATUS_PENDING, Instant.now(), null);
+        RecipientMergeSuggestion differentAnchor = new RecipientMergeSuggestion(
+                UUID.randomUUID(), userId, "AIRTEL PREPAID", null, "AIRTEL PREPAID",
+                "AIRTEL POSTPAID", null, 83, "fuzzy_near_miss", RecipientMergeSuggestion.STATUS_PENDING, Instant.now(), null);
+        given(recipientMergeSuggestionRepository.findPendingForUser(userId))
+                .willReturn(List.of(sameAnchorA, sameAnchorB, differentAnchor));
+
+        MergeQueueSnapshot snapshot = service.getMergeQueueSnapshot(userId);
+
+        assertThat(snapshot.remainingGroupCount()).isEqualTo(2);
+        assertThat(snapshot.nextGroup().anchorName()).isEqualTo("SAMEER BALIRAM SAWA");
+        assertThat(snapshot.nextGroup().candidates()).containsExactly(sameAnchorA, sameAnchorB);
     }
 
     @Test

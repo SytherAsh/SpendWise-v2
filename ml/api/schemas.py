@@ -140,8 +140,26 @@ class NormalizeRecipientsRequest(BaseModel):
     entries: list[NormalizeEntry] = []
 
 
+class AmbiguousCandidate(BaseModel):
+    """One candidate the clustering algorithm considered but did not confidently
+    auto-merge into `anchor_key`'s cluster -- surfaced for the Merge Payees
+    human-review feature (2026-07-19) rather than silently left unmerged."""
+
+    key: str
+    name: str
+    score: int
+    reason: str  # "fuzzy_near_miss" | "prefix_ambiguous"
+
+
+class AmbiguousGroup(BaseModel):
+    anchor_key: str
+    anchor_name: str
+    candidates: list[AmbiguousCandidate] = []
+
+
 class NormalizeRecipientsResponse(BaseModel):
     canonical_names: dict[str, str]
+    ambiguous_groups: list[AmbiguousGroup] = []
 
 
 class RecurringEvaluationResponse(BaseModel):

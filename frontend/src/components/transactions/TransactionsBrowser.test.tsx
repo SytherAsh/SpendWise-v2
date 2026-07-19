@@ -147,14 +147,40 @@ describe("TransactionsBrowser", () => {
 
     renderIsolated(<TransactionsBrowser categoryFilter={null} onClearFilter={vi.fn()} />);
     const row = (await screen.findByText("Swiggy")).closest("tr")!;
-    const select = within(row).getByRole("combobox") as HTMLSelectElement;
-    expect(select.value).toBe("7");
+    const trigger = within(row).getByRole("combobox");
+    expect(within(trigger).getByText("Food / Dine Out")).toBeInTheDocument();
 
-    await user.selectOptions(select, "5");
+    await user.click(trigger);
+    await user.click(await screen.findByRole("option", { name: "Travel" }));
 
     await waitFor(() => {
       expect(put).toHaveBeenCalledWith("/transactions/t1/category", { category_id: 5 });
     });
-    expect(select.value).toBe("5"); // reflected immediately via optimistic override
+    // reflected immediately via optimistic override
+    expect(within(trigger).getByText("Travel")).toBeInTheDocument();
+  });
+
+  it("renames a payee via PUT and reflects it immediately (ADR-014)", async () => {
+    const user = userEvent.setup();
+    fetcher.mockImplementation((key: string) =>
+      key.includes("/contacts")
+        ? Promise.resolve([])
+        : Promise.resolve({ data: [txn("t1", 7, "Swiggy")], nextCursor: null, hasMore: false }),
+    );
+    put.mockResolvedValue({ transactionId: "t1", canonicalName: "Swiggy Bangalore" });
+
+    renderIsolated(<TransactionsBrowser categoryFilter={null} onClearFilter={vi.fn()} />);
+    const row = (await screen.findByText("Swiggy")).closest("tr")!;
+
+    await user.click(within(row).getByRole("button", { name: /rename payee/i }));
+    const input = within(row).getByRole("textbox", { name: /payee name/i });
+    await user.clear(input);
+    await user.type(input, "Swiggy Bangalore");
+    await user.click(within(row).getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(put).toHaveBeenCalledWith("/transactions/t1/payee", { canonical_name: "Swiggy Bangalore" });
+    });
+    expect(within(row).getByText("Swiggy Bangalore")).toBeInTheDocument();
   });
 });

@@ -8,9 +8,13 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -20,16 +24,22 @@ public class TransactionServiceImpl implements TransactionService {
     private final CategoryRepository categoryRepository;
     private final TransactionCategoryRepository transactionCategoryRepository;
     private final MlCorrectionRepository mlCorrectionRepository;
+    private final RecipientCanonicalOverrideRepository recipientCanonicalOverrideRepository;
+    private final RecipientMergeSuggestionRepository recipientMergeSuggestionRepository;
 
     public TransactionServiceImpl(
             TransactionRepository transactionRepository,
             CategoryRepository categoryRepository,
             TransactionCategoryRepository transactionCategoryRepository,
-            MlCorrectionRepository mlCorrectionRepository) {
+            MlCorrectionRepository mlCorrectionRepository,
+            RecipientCanonicalOverrideRepository recipientCanonicalOverrideRepository,
+            RecipientMergeSuggestionRepository recipientMergeSuggestionRepository) {
         this.transactionRepository = transactionRepository;
         this.categoryRepository = categoryRepository;
         this.transactionCategoryRepository = transactionCategoryRepository;
         this.mlCorrectionRepository = mlCorrectionRepository;
+        this.recipientCanonicalOverrideRepository = recipientCanonicalOverrideRepository;
+        this.recipientMergeSuggestionRepository = recipientMergeSuggestionRepository;
     }
 
     @Override
@@ -172,6 +182,12 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional
+    public List<RecurringCandidateTransaction> findForRecurringDetectionByUser(UUID userId, Instant since) {
+        return transactionRepository.findForRecurringDetectionByUser(userId, since);
+    }
+
+    @Override
     public List<RecipientIdentity> findAllRecipientIdentities() {
         // No @Transactional / RlsSession here — reads via the spendwise_jobs DataSource (BYPASSRLS),
         // same reasoning as findAllForRecurringDetection above.
@@ -184,6 +200,79 @@ public class TransactionServiceImpl implements TransactionService {
         // scoped explicitly to userId in the WHERE clause. A single UPDATE needs no explicit
         // transaction, same as findAllForRecurringDetection's read reasoning.
         return transactionRepository.updateCanonicalForIdentity(userId, recipientName, upiId, canonical);
+    }
+
+    @Override
+    @Transactional
+    public void correctPayeeName(UUID userId, UUID transactionId, String canonicalName) {
+        Transaction transaction = transactionRepository.findById(userId, transactionId).orElseThrow(TransactionNotFoundException::new);
+        correctPayeeIdentity(userId, transaction.recipientName(), transaction.upiId(), canonicalName);
+    }
+
+    @Override
+    @Transactional
+    public void correctPayeeIdentity(UUID userId, String recipientName, String upiId, String canonicalName) {
+        recipientCanonicalOverrideRepository.upsert(userId, recipientName, upiId, canonicalName);
+        transactionRepository.updateCanonicalForIdentityAsUser(userId, recipientName, upiId, canonicalName);
+    }
+
+    @Override
+    public List<RecipientCanonicalOverride> findAllCanonicalOverrides() {
+        // No @Transactional / RlsSession here — reads via the spendwise_jobs DataSource (BYPASSRLS),
+        // same reasoning as findAllRecipientIdentities above.
+        return recipientCanonicalOverrideRepository.findAll();
+    }
+
+    @Override
+    @Transactional
+    public MergeQueueSnapshot getMergeQueueSnapshot(UUID userId) {
+        List<RecipientMergeSuggestion> pending = recipientMergeSuggestionRepository.findPendingForUser(userId);
+        if (pending.isEmpty()) {
+            return new MergeQueueSnapshot(null, 0);
+        }
+        // findPendingForUser orders by created_at, and LinkedHashMap preserves insertion order, so
+        // the first key encountered is deterministically the oldest still-pending anchor group.
+        Map<String, List<RecipientMergeSuggestion>> byAnchor = new LinkedHashMap<>();
+        for (RecipientMergeSuggestion s : pending) {
+            byAnchor.computeIfAbsent(s.anchorName() + " " + s.anchorUpiId(), k -> new ArrayList<>()).add(s);
+        }
+        List<RecipientMergeSuggestion> firstGroup = byAnchor.values().iterator().next();
+        RecipientMergeSuggestion first = firstGroup.get(0);
+        MergeSuggestionGroup group =
+                new MergeSuggestionGroup(first.anchorName(), first.anchorUpiId(), first.anchorCanonicalName(), firstGroup);
+        return new MergeQueueSnapshot(group, byAnchor.size());
+    }
+
+    @Override
+    @Transactional
+    public void resolveMergeSame(UUID userId, List<UUID> suggestionIds) {
+        Set<UUID> idSet = new HashSet<>(suggestionIds);
+        for (RecipientMergeSuggestion s : recipientMergeSuggestionRepository.findPendingForUser(userId)) {
+            if (idSet.contains(s.id())) {
+                correctPayeeIdentity(userId, s.candidateName(), s.candidateUpiId(), s.anchorCanonicalName());
+            }
+        }
+        recipientMergeSuggestionRepository.resolveMany(userId, suggestionIds, RecipientMergeSuggestion.STATUS_CONFIRMED_SAME);
+    }
+
+    @Override
+    @Transactional
+    public void resolveMergeDifferent(UUID userId, List<UUID> suggestionIds) {
+        recipientMergeSuggestionRepository.resolveMany(userId, suggestionIds, RecipientMergeSuggestion.STATUS_CONFIRMED_DIFFERENT);
+    }
+
+    @Override
+    public void recordMergeSuggestions(UUID userId, List<NewMergeSuggestion> suggestions) {
+        // No @Transactional / RlsSession here — writes via the spendwise_jobs DataSource
+        // (BYPASSRLS), same reasoning as updateCanonicalForIdentity above.
+        recipientMergeSuggestionRepository.insertPending(userId, suggestions);
+    }
+
+    @Override
+    public Set<UnorderedPairKey> findExistingMergeSuggestionPairs(UUID userId) {
+        // No @Transactional / RlsSession here — reads via the spendwise_jobs DataSource
+        // (BYPASSRLS), same reasoning as findAllRecipientIdentities above.
+        return recipientMergeSuggestionRepository.findExistingPairsForUser(userId);
     }
 
     private static NewTransactionData withSource(NewTransactionData data, TransactionSource source) {

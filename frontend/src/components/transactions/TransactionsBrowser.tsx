@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import useSWRInfinite from "swr/infinite";
-import { ChevronDown, ChevronRight, Users, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Pencil, X } from "lucide-react";
 import { apiClient, swrFetcher } from "@/lib/apiClient";
 import { useApi } from "@/lib/useApi";
 import { useCategories } from "@/lib/useCategories";
@@ -11,9 +11,9 @@ import { useDateRange } from "@/lib/date-range";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Card, EmptyState, ErrorState, Spinner } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/input";
+import { CategorySelect } from "@/components/ui/category-select";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { categoryColor } from "@/lib/categories";
 import { cn } from "@/lib/cn";
 import type { CategorySelection } from "./CategorySummaryGrid";
 
@@ -41,9 +41,24 @@ interface TransactionListResponse {
 }
 
 interface BulkPrompt {
+  /** The transaction whose correction triggered this prompt — the prompt renders inline on
+   * this row (at the row's own action slot) rather than as a page-level banner, so a user
+   * correcting a category sees the follow-up offer right where they just acted. */
+  sourceId: string;
   payee: string;
   categoryId: number;
   ids: string[];
+}
+
+/** A proactive group-header action (category or payee rename) awaiting explicit confirmation
+ * before it's applied to every transaction in the group — unlike BulkPrompt above (which applies
+ * a single-row correction to the rest of a payee's transactions), this acts on a whole GroupCard's
+ * transactionIds at once and is a wider-blast-radius action, so it always confirms first. */
+interface GroupPending {
+  groupKey: string;
+  transactionIds: string[];
+  label: string;
+  apply: () => Promise<void>;
 }
 
 const PAGE_SIZE = 50;
@@ -91,9 +106,14 @@ export function TransactionsBrowser({
   // Optimistic category corrections overlaid on the fetched data — lets a change reflect
   // immediately without refetching the whole list.
   const [overrides, setOverrides] = useState<Record<string, number>>({});
+  // Optimistic payee-name corrections (ADR-014), same shape as the category overrides above.
+  const [payeeOverrides, setPayeeOverrides] = useState<Record<string, string>>({});
+  const [editingPayeeId, setEditingPayeeId] = useState<string | null>(null);
   const [correctionError, setCorrectionError] = useState<string | null>(null);
   const [bulk, setBulk] = useState<BulkPrompt | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [groupPending, setGroupPending] = useState<GroupPending | null>(null);
+  const [groupBusy, setGroupBusy] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [subFilter, setSubFilter] = useState<Contact["relationshipType"] | "other" | null>(null);
 
@@ -131,6 +151,8 @@ export function TransactionsBrowser({
   if (filterKey !== lastFilterKey) {
     setLastFilterKey(filterKey);
     setBulk(null);
+    setGroupPending(null);
+    setEditingPayeeId(null);
     setExpanded(new Set());
     setSubFilter(null);
   }
@@ -160,6 +182,7 @@ export function TransactionsBrowser({
   const hasError = isGrouped ? groupedError : flatError;
 
   const categoryOf = (t: Transaction): number | "" => overrides[t.id] ?? t.categoryId ?? "";
+  const payeeOf = (t: Transaction): string | null => payeeOverrides[t.id] ?? payeeName(t) ?? t.upiId ?? t.bank ?? null;
 
   const filterLabel =
     categoryFilter === "uncategorized"
@@ -188,7 +211,7 @@ export function TransactionsBrowser({
         const matches = items.filter(
           (o) => o.id !== t.id && payeeName(o) === payee && (overrides[o.id] ?? o.categoryId) !== categoryId,
         );
-        setBulk(matches.length > 0 ? { payee, categoryId, ids: matches.map((m) => m.id) } : null);
+        setBulk(matches.length > 0 ? { sourceId: t.id, payee, categoryId, ids: matches.map((m) => m.id) } : null);
       }
     } catch {
       setOverrides((prev) => {
@@ -211,6 +234,68 @@ export function TransactionsBrowser({
       setCorrectionError("Could not update all matching transactions. Some may not have changed.");
     } finally {
       setBulkBusy(false);
+    }
+  }
+
+  async function putPayee(id: string, canonicalName: string) {
+    setPayeeOverrides((prev) => ({ ...prev, [id]: canonicalName }));
+    await apiClient.put(`/transactions/${id}/payee`, { canonical_name: canonicalName });
+  }
+
+  async function correctPayee(t: Transaction, canonicalName: string) {
+    const trimmed = canonicalName.trim();
+    if (!trimmed || trimmed === payeeOf(t)) {
+      setEditingPayeeId(null);
+      return;
+    }
+    setCorrectionError(null);
+    try {
+      await putPayee(t.id, trimmed);
+      setEditingPayeeId(null);
+    } catch {
+      setPayeeOverrides((prev) => {
+        const next = { ...prev };
+        delete next[t.id];
+        return next;
+      });
+      setCorrectionError("Could not update the payee name. Please try again.");
+    }
+  }
+
+  // Proactive group-header actions (ADR-014 + the group category control below) — unlike the
+  // per-row correction above, these act on every transaction in a GroupCard at once, so they
+  // stage into groupPending and wait for an explicit confirm click rather than applying instantly.
+  function requestGroupCategoryChange(group: TransactionGroup, categoryId: number) {
+    setGroupPending({
+      groupKey: group.key,
+      transactionIds: group.transactionIds,
+      label: `Change all ${group.transactionIds.length} transactions to ${categoryName(categoryId)}?`,
+      apply: () => Promise.all(group.transactionIds.map((id) => putCategory(id, categoryId))).then(() => undefined),
+    });
+  }
+
+  function requestGroupPayeeRename(group: TransactionGroup, canonicalName: string) {
+    const trimmed = canonicalName.trim();
+    if (!trimmed) return;
+    setGroupPending({
+      groupKey: group.key,
+      transactionIds: group.transactionIds,
+      label: `Rename all ${group.transactionIds.length} transactions in "${group.label}" to "${trimmed}"?`,
+      apply: () => Promise.all(group.transactionIds.map((id) => putPayee(id, trimmed))).then(() => undefined),
+    });
+  }
+
+  async function confirmGroupPending() {
+    if (!groupPending) return;
+    setGroupBusy(true);
+    setCorrectionError(null);
+    try {
+      await groupPending.apply();
+      setGroupPending(null);
+    } catch {
+      setCorrectionError("Could not update all transactions in the group. Some may not have changed.");
+    } finally {
+      setGroupBusy(false);
     }
   }
 
@@ -246,22 +331,6 @@ export function TransactionsBrowser({
         <ErrorState message="Could not load transactions." onRetry={isGrouped ? refreshGrouped : undefined} />
       )}
 
-      {bulk && (
-        <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius-sm)] border border-brand-200 bg-brand-50 px-4 py-3 text-sm">
-          <Users className="size-4 shrink-0 text-brand-700" />
-          <span className="flex-1 text-foreground">
-            Apply <span className="font-medium">{categoryName(bulk.categoryId)}</span> to {bulk.ids.length} other{" "}
-            <span className="font-medium">{bulk.payee}</span> {bulk.ids.length === 1 ? "transaction" : "transactions"}?
-          </span>
-          <Button size="sm" onClick={applyBulk} disabled={bulkBusy}>
-            {bulkBusy ? "Applying…" : `Apply to all`}
-          </Button>
-          <button type="button" onClick={() => setBulk(null)} aria-label="Dismiss" className="rounded p-1 text-foreground-subtle hover:text-foreground">
-            <X className="size-4" />
-          </button>
-        </div>
-      )}
-
       {isLoading ? (
         <Spinner />
       ) : items.length === 0 ? (
@@ -290,6 +359,20 @@ export function TransactionsBrowser({
                   categoryName={categoryName}
                   categoryOf={categoryOf}
                   onCorrect={correctCategory}
+                  bulk={bulk}
+                  bulkBusy={bulkBusy}
+                  onApplyBulk={applyBulk}
+                  onDismissBulk={() => setBulk(null)}
+                  payeeOf={payeeOf}
+                  editingPayeeId={editingPayeeId}
+                  onStartEditPayee={setEditingPayeeId}
+                  onCorrectPayee={correctPayee}
+                  onRequestGroupCategory={requestGroupCategoryChange}
+                  onRequestGroupPayeeRename={requestGroupPayeeRename}
+                  groupPending={groupPending?.groupKey === group.key ? groupPending : null}
+                  groupBusy={groupBusy}
+                  onConfirmGroupPending={confirmGroupPending}
+                  onCancelGroupPending={() => setGroupPending(null)}
                 />
               ))}
             </div>
@@ -308,6 +391,15 @@ export function TransactionsBrowser({
                   categories={categories}
                   categoryName={categoryName}
                   onCorrect={(categoryId) => correctCategory(t, categoryId)}
+                  bulk={bulk?.sourceId === t.id ? bulk : undefined}
+                  bulkBusy={bulkBusy}
+                  onApplyBulk={applyBulk}
+                  onDismissBulk={() => setBulk(null)}
+                  payeeLabel={payeeOf(t)}
+                  isEditingPayee={editingPayeeId === t.id}
+                  onStartEditPayee={() => setEditingPayeeId(t.id)}
+                  onCancelEditPayee={() => setEditingPayeeId(null)}
+                  onCorrectPayee={(name) => correctPayee(t, name)}
                 />
               ))}
             </tbody>
@@ -334,6 +426,9 @@ function TransactionTableHead() {
         <th className="px-4 py-3 font-medium">Payee</th>
         <th className="px-4 py-3 text-right font-medium">Amount</th>
         <th className="px-4 py-3 font-medium">Category</th>
+        <th className="px-4 py-3 font-medium">
+          <span className="sr-only">Bulk actions</span>
+        </th>
       </tr>
     </thead>
   );
@@ -345,19 +440,61 @@ function TransactionRow({
   categories,
   categoryName,
   onCorrect,
+  bulk,
+  bulkBusy,
+  onApplyBulk,
+  onDismissBulk,
+  payeeLabel,
+  isEditingPayee,
+  onStartEditPayee,
+  onCancelEditPayee,
+  onCorrectPayee,
 }: {
   t: Transaction;
   catId: number | "";
   categories: Array<{ id: number; name: string }>;
   categoryName: (id: number) => string;
   onCorrect: (categoryId: number) => void;
+  /** Set only on the row whose correction produced this prompt — renders inline here instead
+   * of as a page-level banner, right next to the change the user just made. */
+  bulk?: BulkPrompt;
+  bulkBusy?: boolean;
+  onApplyBulk?: () => void;
+  onDismissBulk?: () => void;
+  /** ADR-014 per-row payee rename — optional so GroupCard's own header controls don't force
+   * every call site to wire these up. */
+  payeeLabel?: string | null;
+  isEditingPayee?: boolean;
+  onStartEditPayee?: () => void;
+  onCancelEditPayee?: () => void;
+  onCorrectPayee?: (canonicalName: string) => void;
 }) {
   return (
     <tr className="border-b border-border last:border-0 hover:bg-surface-muted/60">
       <td className="whitespace-nowrap px-4 py-3 text-foreground-muted">{formatDate(t.transactionDate)}</td>
       <td className="px-4 py-3">
-        <span className="font-medium text-foreground">{payeeName(t) ?? t.upiId ?? t.bank ?? "—"}</span>
-        {(t.upiId || t.bank) && payeeName(t) && (
+        {isEditingPayee ? (
+          <PayeeNameEditor
+            initialValue={payeeLabel ?? ""}
+            onSubmit={(value) => onCorrectPayee?.(value)}
+            onCancel={() => onCancelEditPayee?.()}
+          />
+        ) : (
+          <div className="group flex items-center gap-1.5">
+            <span className="font-medium text-foreground">{payeeLabel ?? "—"}</span>
+            {payeeLabel && onStartEditPayee && (
+              <button
+                type="button"
+                onClick={onStartEditPayee}
+                aria-label={`Rename payee ${payeeLabel}`}
+                className="rounded p-0.5 text-foreground-muted opacity-0 transition-opacity hover:text-brand-600 group-hover:opacity-100 dark:hover:text-brand-300"
+              >
+                <Pencil className="size-3" />
+              </button>
+            )}
+          </div>
+        )}
+        {(t.upiId || t.bank) && payeeLabel && !isEditingPayee && (
           <span className="block text-xs text-foreground-subtle">{t.upiId ?? t.bank}</span>
         )}
       </td>
@@ -370,28 +507,86 @@ function TransactionRow({
         {formatCurrency(t.amount, true)}
       </td>
       <td className="px-4 py-3">
-        <span className="flex items-center gap-2">
-          {typeof catId === "number" && (
-            <span
-              aria-hidden
-              className="size-5 shrink-0 rounded-[var(--radius-sm)]"
-              style={{ backgroundColor: categoryColor(categoryName(catId), catId) }}
-            />
-          )}
-          <Select
-            aria-label={`Category for transaction on ${formatDate(t.transactionDate)}`}
-            value={catId}
-            onChange={(e) => onCorrect(Number(e.target.value))}
-            className="h-8 w-40 text-sm"
-          >
-            <option value="" disabled>Uncategorized</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </Select>
-        </span>
+        <CategorySelect
+          ariaLabel={`Category for transaction on ${formatDate(t.transactionDate)}`}
+          categories={categories}
+          value={catId}
+          onChange={onCorrect}
+          className="w-44"
+        />
+      </td>
+      <td className="px-4 py-3 text-right">
+        {bulk && (
+          <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+            <span className="text-xs text-foreground-subtle">
+              Apply to {bulk.ids.length} other {bulk.payee}?
+            </span>
+            <Button size="sm" onClick={onApplyBulk} disabled={bulkBusy}>
+              {bulkBusy ? "Applying…" : "Apply to all"}
+            </Button>
+            <button
+              type="button"
+              onClick={onDismissBulk}
+              aria-label="Dismiss"
+              className="rounded p-1 text-foreground-subtle hover:text-foreground"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        )}
       </td>
     </tr>
+  );
+}
+
+/** Inline payee-rename control (ADR-014) shared by TransactionRow's per-row edit and GroupCard's
+ * whole-group rename — Enter/the check button submits, Escape/the X button cancels without
+ * committing. Deliberately does not act on blur: losing focus (e.g. to click Save/Cancel) should
+ * neither silently commit nor discard, only the explicit controls below should. */
+function PayeeNameEditor({
+  initialValue,
+  onSubmit,
+  onCancel,
+}: {
+  initialValue: string;
+  onSubmit: (value: string) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(initialValue);
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit(value);
+      }}
+      className="flex items-center gap-1.5"
+    >
+      <Input
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") onCancel();
+        }}
+        aria-label="Payee name"
+        className="h-8 flex-1 text-sm"
+      />
+      <button
+        type="submit"
+        aria-label="Save"
+        className="shrink-0 rounded p-1 text-brand-700 hover:bg-surface-muted dark:text-brand-300"
+      >
+        <Check className="size-4" />
+      </button>
+      <button
+        type="button"
+        onClick={onCancel}
+        aria-label="Cancel"
+        className="shrink-0 rounded p-1 text-foreground-subtle hover:text-foreground"
+      >
+        <X className="size-4" />
+      </button>
+    </form>
   );
 }
 
@@ -404,6 +599,20 @@ function GroupCard({
   categoryName,
   categoryOf,
   onCorrect,
+  bulk,
+  bulkBusy,
+  onApplyBulk,
+  onDismissBulk,
+  payeeOf,
+  editingPayeeId,
+  onStartEditPayee,
+  onCorrectPayee,
+  onRequestGroupCategory,
+  onRequestGroupPayeeRename,
+  groupPending,
+  groupBusy,
+  onConfirmGroupPending,
+  onCancelGroupPending,
 }: {
   group: TransactionGroup;
   expanded: boolean;
@@ -413,36 +622,112 @@ function GroupCard({
   categoryName: (id: number) => string;
   categoryOf: (t: Transaction) => number | "";
   onCorrect: (t: Transaction, categoryId: number) => void;
+  bulk?: BulkPrompt | null;
+  bulkBusy?: boolean;
+  onApplyBulk?: () => void;
+  onDismissBulk?: () => void;
+  payeeOf: (t: Transaction) => string | null;
+  editingPayeeId: string | null;
+  onStartEditPayee: (id: string | null) => void;
+  onCorrectPayee: (t: Transaction, canonicalName: string) => void;
+  /** Proactive group-header actions (this GroupCard's own controls, distinct from the per-row
+   * "keep the existing individual change, add a group-level one" request) — these stage into
+   * groupPending and require the confirm bar below rather than applying instantly. */
+  onRequestGroupCategory: (group: TransactionGroup, categoryId: number) => void;
+  onRequestGroupPayeeRename: (group: TransactionGroup, canonicalName: string) => void;
+  groupPending: GroupPending | null;
+  groupBusy: boolean;
+  onConfirmGroupPending: () => void;
+  onCancelGroupPending: () => void;
 }) {
+  const [renamingGroup, setRenamingGroup] = useState(false);
   const transactions = group.transactionIds.map((id) => transactionsById.get(id)).filter((t): t is Transaction => t != null);
 
   return (
     <Card className="p-0">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left"
-      >
-        {expanded ? (
-          <ChevronDown className="size-4 shrink-0 text-foreground-subtle" />
+      <div className="flex w-full items-center gap-3 px-4 py-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-label={expanded ? "Collapse group" : "Expand group"}
+          className="shrink-0 text-foreground-muted hover:text-brand-600 dark:hover:text-brand-300"
+        >
+          {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+        </button>
+
+        {renamingGroup ? (
+          <div className="min-w-0 flex-1">
+            <PayeeNameEditor
+              initialValue={group.label}
+              onSubmit={(value) => {
+                onRequestGroupPayeeRename(group, value);
+                setRenamingGroup(false);
+              }}
+              onCancel={() => setRenamingGroup(false)}
+            />
+          </div>
         ) : (
-          <ChevronRight className="size-4 shrink-0 text-foreground-subtle" />
+          <button type="button" onClick={onToggle} className="min-w-0 flex-1 truncate text-left font-medium text-foreground">
+            {group.label}
+          </button>
         )}
-        <span className="flex-1 truncate font-medium text-foreground">{group.label}</span>
+
         {group.relationshipType && <Badge tone="brand">{relationshipLabel(group.relationshipType)}</Badge>}
-        <span className="text-xs text-foreground-subtle">
+        <span className="tnum shrink-0 text-xs font-medium text-foreground-muted">
           {group.count} {group.count === 1 ? "txn" : "txns"}
         </span>
         <span
           className={cn(
-            "tnum whitespace-nowrap text-sm font-semibold",
+            "tnum shrink-0 whitespace-nowrap text-sm font-semibold",
             group.amount < 0 ? "text-[var(--color-danger)]" : "text-brand-700 dark:text-brand-300",
           )}
         >
           {formatCurrency(group.amount, true)}
         </span>
-      </button>
+
+        {!renamingGroup && (
+          <div className="flex shrink-0 items-center gap-2 border-l border-border pl-3">
+            <button
+              type="button"
+              onClick={() => setRenamingGroup(true)}
+              aria-label={`Rename all transactions in ${group.label}`}
+              className="rounded p-1.5 text-foreground-muted hover:bg-surface-muted hover:text-brand-600 dark:hover:text-brand-300"
+            >
+              <Pencil className="size-3.5" />
+            </button>
+            <CategorySelect
+              ariaLabel={`Change category for all transactions in ${group.label}`}
+              categories={categories}
+              value=""
+              placeholder="Change all…"
+              onChange={(categoryId) => onRequestGroupCategory(group, categoryId)}
+              variant="action"
+              className="w-36"
+            />
+          </div>
+        )}
+      </div>
+
+      {groupPending && (
+        <div className="flex items-center justify-between gap-2 border-t border-brand-500/30 bg-surface-muted px-4 py-2 text-sm">
+          <span className="font-medium text-foreground">{groupPending.label}</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button size="sm" onClick={onConfirmGroupPending} disabled={groupBusy}>
+              {groupBusy ? "Applying…" : "Confirm"}
+            </Button>
+            <button
+              type="button"
+              onClick={onCancelGroupPending}
+              aria-label="Cancel"
+              className="rounded p-1 text-foreground-subtle hover:text-foreground"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {expanded && (
         <div className="overflow-x-auto border-t border-border">
           <table className="w-full text-left text-sm">
@@ -456,6 +741,15 @@ function GroupCard({
                   categories={categories}
                   categoryName={categoryName}
                   onCorrect={(categoryId) => onCorrect(t, categoryId)}
+                  bulk={bulk?.sourceId === t.id ? bulk : undefined}
+                  bulkBusy={bulkBusy}
+                  onApplyBulk={onApplyBulk}
+                  onDismissBulk={onDismissBulk}
+                  payeeLabel={payeeOf(t)}
+                  isEditingPayee={editingPayeeId === t.id}
+                  onStartEditPayee={() => onStartEditPayee(t.id)}
+                  onCancelEditPayee={() => onStartEditPayee(null)}
+                  onCorrectPayee={(name) => onCorrectPayee(t, name)}
                 />
               ))}
             </tbody>

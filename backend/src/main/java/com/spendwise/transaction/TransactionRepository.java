@@ -344,6 +344,32 @@ public class TransactionRepository {
     }
 
     /**
+     * Per-user equivalent of {@link #findAllForRecurringDetection} (Merge Payees feature,
+     * 2026-07-19) — same shape and same {@code since}/debit/identity filter, but scoped to one
+     * already-authenticated user via the RLS-scoped {@code jdbcTemplate} rather than the {@code
+     * spendwise_jobs} bypass, since this backs {@code AlertEvaluatorJob#runForUser} (an immediate,
+     * per-request re-evaluation after a payee merge is confirmed) rather than the cross-user
+     * scheduled sweep.
+     */
+    public List<RecurringCandidateTransaction> findForRecurringDetectionByUser(UUID userId, Instant since) {
+        rlsSession.setCurrentUser(userId);
+        return jdbcTemplate.query(
+                "SELECT id, user_id, transaction_date, debit, upi_id, recipient_name, recipient_canonical FROM transactions "
+                        + "WHERE user_id = ? AND transaction_date >= ? AND debit > 0 "
+                        + "AND (upi_id IS NOT NULL OR recipient_name IS NOT NULL)",
+                (rs, rowNum) -> new RecurringCandidateTransaction(
+                        UUID.fromString(rs.getString("user_id")),
+                        UUID.fromString(rs.getString("id")),
+                        rs.getTimestamp("transaction_date").toInstant(),
+                        rs.getBigDecimal("debit"),
+                        rs.getString("upi_id"),
+                        rs.getString("recipient_name"),
+                        rs.getString("recipient_canonical")),
+                userId,
+                Timestamp.from(since));
+    }
+
+    /**
      * Cross-user (ML strategy phase, 2026-07-13) — every distinct (user_id, recipient_name, upi_id)
      * identity across all users, in one bulk read via the {@code spendwise_jobs} role. Backs
      * {@code RecipientCanonicalizationJob}, which groups these by user and sends each user's set to
@@ -371,6 +397,25 @@ public class TransactionRepository {
      */
     public int updateCanonicalForIdentity(UUID userId, String recipientName, String upiId, String canonical) {
         return jobsJdbcTemplate.update(
+                "UPDATE transactions SET recipient_canonical = ? "
+                        + "WHERE user_id = ? AND recipient_name IS NOT DISTINCT FROM ? AND upi_id IS NOT DISTINCT FROM ?",
+                canonical,
+                userId,
+                recipientName,
+                upiId);
+    }
+
+    /**
+     * User-triggered equivalent of {@link #updateCanonicalForIdentity} (ADR-014) — same
+     * NULL-safe identity match and same scope (every transaction sharing the identity, not just
+     * one row), but via the RLS-scoped {@code jdbcTemplate} rather than the {@code spendwise_jobs}
+     * bypass, since this runs inside a live user request rather than the background sweep
+     * (CLAUDE.md: RLS is a backstop, not a substitute for the explicit {@code user_id} guard
+     * already present here).
+     */
+    public int updateCanonicalForIdentityAsUser(UUID userId, String recipientName, String upiId, String canonical) {
+        rlsSession.setCurrentUser(userId);
+        return jdbcTemplate.update(
                 "UPDATE transactions SET recipient_canonical = ? "
                         + "WHERE user_id = ? AND recipient_name IS NOT DISTINCT FROM ? AND upi_id IS NOT DISTINCT FROM ?",
                 canonical,

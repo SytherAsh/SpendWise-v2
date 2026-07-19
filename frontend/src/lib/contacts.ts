@@ -32,6 +32,7 @@ export function useContacts() {
 
 interface MatchableTransaction {
   recipientName: string | null;
+  recipientCanonical: string | null;
   upiId: string | null;
 }
 
@@ -75,9 +76,14 @@ export interface TransactionGroup {
 }
 
 /**
- * Groups a bounded set of transactions by matched contact, falling back to the raw
- * recipient/UPI/bank string when nothing matches — the "Airtel x10, summed" view on the
- * Transactions page. Sorted by absolute amount, largest first.
+ * Groups a bounded set of transactions by matched contact, falling back to the
+ * canonical (deduplicated) recipient name when nothing matches — the "Airtel x10,
+ * summed" view on the Transactions page. Sorted by absolute amount, largest first.
+ *
+ * Grouping key prefers `recipientCanonical` over the raw `recipientName` so spelling
+ * variants of one payee that the canonicalization job already merged (e.g. "SAMEER B" /
+ * "SAMEER BALIRAM SAWA") collapse into a single group here too, instead of splintering
+ * back apart because this fallback ignored the canonical field.
  */
 export function groupTransactions<
   T extends MatchableTransaction & { id: string; amount: number; bank?: string | null },
@@ -85,7 +91,7 @@ export function groupTransactions<
   const groups = new Map<string, TransactionGroup>();
   for (const t of transactions) {
     const contact = matchContact(t, contacts);
-    const fallbackLabel = t.recipientName ?? t.upiId ?? t.bank ?? "Unknown";
+    const fallbackLabel = t.recipientCanonical ?? t.recipientName ?? t.upiId ?? t.bank ?? "Unknown";
     const key = contact ? `contact:${contact.id}` : `raw:${fallbackLabel}`;
     const existing = groups.get(key);
     if (existing) {

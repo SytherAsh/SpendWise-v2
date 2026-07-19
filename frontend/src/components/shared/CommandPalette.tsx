@@ -8,6 +8,7 @@ import {
   ArrowLeftRight,
   ChartPie,
   Target,
+  GitMerge,
   User,
   Settings as SettingsIcon,
   Plus,
@@ -24,6 +25,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   ArrowLeftRight,
   ChartPie,
   Target,
+  GitMerge,
   User,
   Settings: SettingsIcon,
 };

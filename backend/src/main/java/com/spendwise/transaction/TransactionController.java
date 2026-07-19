@@ -2,7 +2,9 @@ package com.spendwise.transaction;
 
 import com.spendwise.transaction.dto.CategoryCorrectionResponse;
 import com.spendwise.transaction.dto.CorrectCategoryRequest;
+import com.spendwise.transaction.dto.CorrectPayeeRequest;
 import com.spendwise.transaction.dto.CreateTransactionRequest;
+import com.spendwise.transaction.dto.PayeeCorrectionResponse;
 import com.spendwise.transaction.dto.TransactionListResponse;
 import com.spendwise.transaction.dto.TransactionResponse;
 import jakarta.validation.Valid;
@@ -112,6 +114,13 @@ public class TransactionController {
             @AuthenticationPrincipal UUID userId, @PathVariable UUID id, @Valid @RequestBody CorrectCategoryRequest request) {
         transactionService.correctCategory(userId, id, request.categoryId());
         return new CategoryCorrectionResponse(id, request.categoryId());
+    }
+
+    @PutMapping("/{id}/payee")
+    public PayeeCorrectionResponse correctPayee(
+            @AuthenticationPrincipal UUID userId, @PathVariable UUID id, @Valid @RequestBody CorrectPayeeRequest request) {
+        transactionService.correctPayeeName(userId, id, request.canonicalName());
+        return new PayeeCorrectionResponse(id, request.canonicalName());
     }
 
     private static NewTransactionData toNewTransactionData(CreateTransactionRequest request) {

@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -121,6 +122,14 @@ public interface TransactionService {
     List<RecurringCandidateTransaction> findAllForRecurringDetection(Instant since);
 
     /**
+     * Per-user equivalent of {@link #findAllForRecurringDetection} (Merge Payees feature,
+     * 2026-07-19) — backs {@code AlertEvaluatorJob#runForUser}'s immediate, per-request
+     * re-evaluation after a payee merge is confirmed. RLS-scoped, not the {@code
+     * spendwise_jobs} bypass, since the caller already has an authenticated {@code userId}.
+     */
+    List<RecurringCandidateTransaction> findForRecurringDetectionByUser(UUID userId, Instant since);
+
+    /**
      * Cross-user (ML strategy phase, 2026-07-13) — every distinct (user, recipient_name, upi_id)
      * identity across all users. Backs {@code RecipientCanonicalizationJob}, which groups these by
      * user and canonicalizes each user's set via the Categorization ML gateway; bypasses RLS via
@@ -135,4 +144,71 @@ public interface TransactionService {
      * RLS via the {@code spendwise_jobs} role. Returns the number of rows updated.
      */
     int updateCanonicalForIdentity(UUID userId, String recipientName, String upiId, String canonical);
+
+    /**
+     * Pins a permanent canonicalization override (ADR-014) for the raw (recipient_name, upi_id)
+     * identity behind {@code transactionId} — delegates to {@link #correctPayeeIdentity} with that
+     * transaction's own identity.
+     *
+     * @throws TransactionNotFoundException if absent or owned by a different user
+     */
+    void correctPayeeName(UUID userId, UUID transactionId, String canonicalName);
+
+    /**
+     * Pins a permanent canonicalization override (ADR-014) for a (recipient_name, upi_id)
+     * identity directly (not via a transaction id) — writes {@code
+     * recipient_canonicalization_overrides} and updates {@code recipient_canonical} immediately
+     * for every transaction sharing that identity, so the correction is visible right away and
+     * survives the next weekly {@code RecipientCanonicalizationSweep} instead of being recomputed
+     * by it. Extracted from {@link #correctPayeeName} (ML strategy phase, 2026-07-19) so the
+     * Merge Payees review queue's "confirm same" action (an identity-level decision, no specific
+     * transaction id at hand) can reuse this exact write path rather than duplicating it. No
+     * cross-module call to Categorization — the override table is owned and written directly by
+     * this module, same precedent as {@code ml_corrections}.
+     */
+    void correctPayeeIdentity(UUID userId, String recipientName, String upiId, String canonicalName);
+
+    /**
+     * Cross-user (ADR-014) — every user-pinned canonicalization override across all users. Backs
+     * {@code RecipientCanonicalizationSweep}; bypasses RLS via the {@code spendwise_jobs} role,
+     * same pattern as {@link #findAllRecipientIdentities}.
+     */
+    List<RecipientCanonicalOverride> findAllCanonicalOverrides();
+
+    /**
+     * The Merge Payees review queue's next unresolved anchor group for this user, plus how many
+     * distinct groups remain (ML strategy phase, 2026-07-19). RLS-scoped.
+     */
+    MergeQueueSnapshot getMergeQueueSnapshot(UUID userId);
+
+    /**
+     * User confirms each of the given suggestions' candidate identity is the same payee as its
+     * anchor — for each, delegates to {@link #correctPayeeIdentity} with the suggestion's own
+     * {@code anchorCanonicalName}, then marks it {@code CONFIRMED_SAME}. A suggestion id not
+     * owned by {@code userId} is silently skipped (RLS-scoped), not an error.
+     */
+    void resolveMergeSame(UUID userId, List<UUID> suggestionIds);
+
+    /**
+     * User confirms each of the given suggestions' candidate identity is a genuinely different
+     * payee from its anchor — marks each {@code CONFIRMED_DIFFERENT} with no transaction write, so
+     * {@code RecipientCanonicalizationSweep} never re-suggests that exact pair again.
+     */
+    void resolveMergeDifferent(UUID userId, List<UUID> suggestionIds);
+
+    /**
+     * Cross-user bulk write (Merge Payees) — persists new PENDING suggestions found by this
+     * resweep. Called only by {@code RecipientCanonicalizationSweep}, already filtered against
+     * {@link #findExistingMergeSuggestionPairs} so a resweep never re-suggests an already-known
+     * pair. Bypasses RLS via the {@code spendwise_jobs} role.
+     */
+    void recordMergeSuggestions(UUID userId, List<NewMergeSuggestion> suggestions);
+
+    /**
+     * Cross-user (Merge Payees) — every (anchor, candidate) identity pair already suggested for
+     * this user, in any status, normalized so anchor/candidate order doesn't matter. Backs {@code
+     * RecipientCanonicalizationSweep}'s dedup check; bypasses RLS via the {@code spendwise_jobs}
+     * role.
+     */
+    Set<UnorderedPairKey> findExistingMergeSuggestionPairs(UUID userId);
 }

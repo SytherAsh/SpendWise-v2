@@ -8,6 +8,7 @@ import {
   ArrowLeftRight,
   ChartPie,
   Target,
+  GitMerge,
   User,
   Settings,
   LogOut,
@@ -23,6 +24,7 @@ const ICONS: Record<string, LucideIcon> = {
   ArrowLeftRight,
   ChartPie,
   Target,
+  GitMerge,
   User,
   Settings,
 };
