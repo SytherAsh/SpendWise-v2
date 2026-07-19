@@ -90,6 +90,13 @@ tasks.register<Test>("integrationTest") {
     testClassesDirs = integrationTest.output.classesDirs
     classpath = integrationTest.output + integrationTest.runtimeClasspath
     shouldRunAfter(tasks.named("test"))
+    // Don't auto-schedule the DynamicJobScheduler's jobs on ApplicationReadyEvent in integration
+    // tests (ADR-018): a bare Testcontainers Postgres has no spendwise_jobs role, so each trigger's
+    // first job_schedules read retries a doomed auth for the full 30s connectionTimeout × 5 jobs per
+    // @SpringBootTest context — ~150s of dead wait per context (the ~17x slowdown noted below).
+    // Jobs are still exercised directly where a test needs them (e.g. CategorizationJobsIntegrationTest
+    // creates the role and invokes the job itself); prod leaves this enabled.
+    systemProperty("app.scheduling.startup-enabled", "false")
     // Diagnostic-only (Epic 4 CI incident, 2026-07-02): Gradle's default test logging prints
     // only failure stack traces, suppressing the application's own log output (Spring Boot
     // startup, connection pool activity, request timing) during normal operation. A ~17x

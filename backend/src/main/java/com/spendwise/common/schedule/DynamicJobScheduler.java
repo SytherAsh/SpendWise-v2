@@ -4,6 +4,7 @@ import com.spendwise.common.job.ManuallyTriggerableJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
@@ -35,6 +36,14 @@ import java.util.concurrent.ScheduledFuture;
 public class DynamicJobScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(DynamicJobScheduler.class);
+
+    // Integration tests set this false (build.gradle.kts): a bare Testcontainers Postgres has no
+    // spendwise_jobs role, so each trigger's first job_schedules read retries a doomed auth for the
+    // full Hikari connectionTimeout (30s) × 5 jobs per @SpringBootTest context — ~150s of dead wait
+    // per context, the "~17x suite slowdown" the integrationTest task comment documents. Prod leaves
+    // it true; the role exists and scheduling runs normally.
+    @Value("${app.scheduling.startup-enabled:true}")
+    private boolean startupSchedulingEnabled;
 
     private final TaskScheduler taskScheduler;
     private final JobScheduleRepository jobScheduleRepository;
@@ -74,6 +83,17 @@ public class DynamicJobScheduler {
      * posture every background job in this app already follows, rather than aborting the whole
      * context load. */
     @EventListener(ApplicationReadyEvent.class)
+    public void scheduleAllOnStartup() {
+        if (!startupSchedulingEnabled) {
+            log.info("Startup job scheduling disabled (app.scheduling.startup-enabled=false); jobs "
+                    + "remain manually triggerable and reschedulable, but are not auto-scheduled.");
+            return;
+        }
+        scheduleAll();
+    }
+
+    /** The actual registration, split from the {@link ApplicationReadyEvent} entry point above so
+     * it stays directly unit-testable and so the startup gate wraps it without duplicating it. */
     public void scheduleAll() {
         jobsByKey.keySet().forEach(jobKey -> {
             try {
