@@ -23,7 +23,9 @@ const detail = {
   phone: "+911111111111",
   email: null,
   createdAt: "2026-01-01T00:00:00Z",
-  transactions: [{ id: "t1", transactionDate: "2026-06-01T00:00:00Z", amount: -500, recipientName: "Swiggy", categoryId: 7 }],
+  transactions: [
+    { id: "t1", transactionDate: "2026-06-01T00:00:00Z", amount: -500, recipientName: "Swiggy", recipientCanonical: null, categoryId: 7 },
+  ],
   budgets: [{ id: "b1", categoryId: 1, monthlyLimit: 2000 }],
   alerts: [{ id: "a1", type: "category_overspend", priority: "high", triggeredAt: "2026-06-15T00:00:00Z", isRead: false }],
 };

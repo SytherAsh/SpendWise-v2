@@ -3,6 +3,7 @@ package com.spendwise.alerts;
 import com.spendwise.alerts.dto.AlertListResponse;
 import com.spendwise.alerts.dto.AlertResponse;
 import com.spendwise.transaction.dto.EmiResponse;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,9 +27,11 @@ public class AlertController {
     private static final int DEFAULT_PAGE_SIZE = 20;
 
     private final AlertsService alertsService;
+    private final AlertEvaluatorJob alertEvaluatorJob;
 
-    public AlertController(AlertsService alertsService) {
+    public AlertController(AlertsService alertsService, AlertEvaluatorJob alertEvaluatorJob) {
         this.alertsService = alertsService;
+        this.alertEvaluatorJob = alertEvaluatorJob;
     }
 
     @GetMapping
@@ -55,5 +58,20 @@ public class AlertController {
     @PostMapping("/{id}/confirm")
     public EmiResponse confirm(@AuthenticationPrincipal UUID userId, @PathVariable UUID id) {
         return EmiResponse.from(alertsService.confirmRecurringPayment(userId, id));
+    }
+
+    /**
+     * Manual per-user re-evaluation trigger (Merge Payees feature, 2026-07-19) — called by the
+     * frontend right after confirming a payee merge, so recurring-payment detection and budget
+     * alerts reflect the corrected identity immediately rather than waiting for the next scheduled
+     * {@code AlertEvaluatorJob} run. Injects {@link AlertEvaluatorJob} directly (same package,
+     * an intra-module dependency, not a cross-module one) rather than routing through {@link
+     * AlertsService}, since {@code AlertEvaluatorJob} already depends on {@code AlertsService} —
+     * the reverse direction would be a circular bean dependency.
+     */
+    @PostMapping("/reevaluate")
+    public ResponseEntity<Void> reevaluate(@AuthenticationPrincipal UUID userId) {
+        alertEvaluatorJob.runForUser(userId);
+        return ResponseEntity.accepted().build();
     }
 }

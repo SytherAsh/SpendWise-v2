@@ -13,6 +13,7 @@ interface AdminTransaction {
   transactionDate: string;
   amount: number;
   recipientName: string | null;
+  recipientCanonical: string | null;
   categoryId: number | null;
 }
 
@@ -80,7 +81,7 @@ export function UserDetailView({ userId }: { userId: string }) {
           <ul className="space-y-2 text-sm">
             {data.transactions.map((t) => (
               <li key={t.id} className="flex justify-between border-b border-black/5 pb-2 last:border-0 dark:border-white/5">
-                <span>{t.recipientName ?? "—"}</span>
+                <span>{t.recipientCanonical ?? t.recipientName ?? "—"}</span>
                 <span>{formatCurrency(t.amount)}</span>
               </li>
             ))}
