@@ -43,7 +43,23 @@ public class MlClient {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(CONNECT_TIMEOUT_MILLIS);
         requestFactory.setReadTimeout(READ_TIMEOUT_MILLIS);
-        this.restClient = restClientBuilder.baseUrl(baseUrl).requestFactory(requestFactory).build();
+        this.restClient = restClientBuilder
+                .baseUrl(baseUrl)
+                .requestFactory(requestFactory)
+                // Uvicorn (ml/, "uvicorn api.main:app") closes idle keep-alive sockets after its
+                // default 5s timeout without warning the client. JDK HttpURLConnection (which
+                // SimpleClientHttpRequestFactory wraps) pools connections in its own
+                // sun.net.www.http.KeepAliveCache and doesn't validate a pooled socket is still
+                // open before reusing it -- any call spaced more than ~5s apart (any manually
+                // triggered admin job, e.g. Job Schedules' recipient-canonicalization sweep) reuses
+                // a socket the server already closed, and the broken read surfaces here as "Error
+                // while extracting response ... content type [application/octet-stream]" (Spring's
+                // fallback content type when the response has no headers at all, per
+                // HttpMessageConverterExtractor). Setting "Connection: close" makes HttpURLConnection
+                // skip its keep-alive cache entirely for these requests, so every call opens a fresh
+                // socket instead of ever risking reuse of one the server may have already dropped.
+                .defaultHeader("Connection", "close")
+                .build();
         this.internalKey = internalKey;
     }
 
