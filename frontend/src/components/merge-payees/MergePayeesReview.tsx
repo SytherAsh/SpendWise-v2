@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Users } from "lucide-react";
 import { Card, EmptyState, ErrorState, Spinner, StaleBanner, ProgressBar } from "@/components/shared/ui";
 import { useMergeQueue, resolveMergeGroup } from "@/lib/mergePayees";
@@ -10,14 +10,11 @@ export function MergePayeesReview() {
   const { queue, error, isLoading, isStale, refresh } = useMergeQueue();
   const [busy, setBusy] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  // Captured once, the first time real data arrives, purely for the progress bar's denominator —
-  // the queue's own remainingGroupCount naturally shrinks as groups are cleared. A useState
-  // initializer would run before the data has loaded (queue is still undefined on that first
-  // render) and get stuck at null forever, so this uses a ref set lazily during render instead.
-  const startingCountRef = useRef<number | null>(null);
-  if (queue && startingCountRef.current === null) {
-    startingCountRef.current = queue.remainingGroupCount;
-  }
+  // Progress-bar denominator, derived without capturing a starting count during render (which
+  // trips the react-hooks lint). Each confirmed group increments resolvedCount in the event
+  // handler below while the queue's own remainingGroupCount shrinks by the same one, so
+  // (remaining + resolved) stays pinned to the count at load time — no ref, no effect.
+  const [resolvedCount, setResolvedCount] = useState(0);
 
   if (isLoading && !queue) return <Spinner label="Loading review queue…" />;
   if (error && !queue) return <ErrorState message="Could not load the payee review queue." onRetry={refresh} />;
@@ -28,6 +25,7 @@ export function MergePayeesReview() {
     setSubmitError(null);
     try {
       await resolveMergeGroup(decisions);
+      setResolvedCount((n) => n + 1);
       refresh();
     } catch {
       setSubmitError("Could not save your decisions. Please try again.");
@@ -36,7 +34,7 @@ export function MergePayeesReview() {
     }
   }
 
-  const total = startingCountRef.current && startingCountRef.current > 0 ? startingCountRef.current : queue.remainingGroupCount;
+  const total = queue.remainingGroupCount + resolvedCount;
 
   return (
     <div className="max-w-lg space-y-4">
