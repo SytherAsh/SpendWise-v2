@@ -147,6 +147,24 @@ class HierarchicalCategoryModel:
         category_ids, _ = self.predict_with_confidence(X)
         return category_ids
 
+    def set_inference_n_jobs(self, n_jobs: int) -> None:
+        """Overrides both stages' `RandomForestClassifier.n_jobs` after the model is
+        loaded, independent of whatever `n_jobs` the artifact was fit with.
+
+        `n_jobs=-1` (the fit-time default -- see `_build_random_forest`) is the right
+        call for *fitting* 300 trees across a full training set. But the same
+        attribute also governs `predict()`/`predict_proba()`, and on Windows
+        joblib's process-based `loky` backend (no `fork()` available) pays a large
+        per-call worker-startup cost that dwarfs the actual work of running 300
+        trees over a single request's one row. Measured on this project's model:
+        ~1.0-1.5s per `/predict` call at `n_jobs=-1` vs. ~0.2-0.3s at `n_jobs=1` for
+        a single row -- the entire difference is parallelization overhead, not
+        model work.
+        """
+        self.transfer_pipeline.named_steps["classifier"].n_jobs = n_jobs
+        if self.subcategory_pipeline is not None:
+            self.subcategory_pipeline.named_steps["classifier"].n_jobs = n_jobs
+
     def predict_proba(self, X) -> np.ndarray:
         """Full joint distribution over all 12 categories (sums to 1 per row),
         via the law of total probability: P(cat) = P(Transfer) for Transfers,
