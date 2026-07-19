@@ -445,3 +445,387 @@ analytics prefer the canonical name when present. The salary/recurring-credit an
 persistent recipient→category override-rule work discussed in the same phase are deliberately
 **not** included here and remain open. Retraining/refresh cadence matches the weekly
 categorization retrain; there is no online/incremental update (consistent with ADR-003).
+
+## ADR-014: Recipient-Canonicalization Corrections Are a User-Owned Permanent Override, Not a Retrainable Label
+
+**Status**: Accepted
+
+**Context**: ADR-013's clustering algorithm (fuzzy similarity + hierarchical clustering, fixed
+thresholds tuned against the offline demo dataset) will occasionally merge or fail to merge
+payees incorrectly once it runs against real users' bank/UPI naming conventions it wasn't tuned
+on. Unlike categorization (`ml_corrections`) or recurring detection (`recurring_corrections`),
+canonicalization has no trainable model behind it — `basic_normalize`/`cluster_by_fuzzy_name`/
+`merge_prefix_chains` are deterministic string-similarity code with fixed constants. There is
+nothing to retrain from a correction; a correction can only ever mean "pin this identity's
+displayed name and stop letting the algorithm recompute it."
+
+**Options considered**:
+1. **No correction mechanism** — treat canonicalization as fully automated, revisit thresholds
+   manually if enough complaints accumulate.
+2. **A permanent per-identity override table**, written directly by the Transaction module
+   (mirroring `ml_corrections`' precedent: `TransactionService#correctCategory` writes
+   `ml_corrections` itself, no cross-module call to Categorization) and re-applied on every
+   subsequent `RecipientCanonicalizationSweep` run so it can never be silently overwritten by a
+   later resweep.
+3. **A one-time admin-triggered fix** with no persistence — reapply manually after every sweep.
+
+**Decision**: Option 2.
+
+**Rationale**:
+- **Same module-ownership precedent as `ml_corrections`.** `recipient_canonicalization_overrides`
+  is owned and written by the Transaction module via a new `TransactionService#correctPayeeName`,
+  exactly like category corrections — no new cross-module call, no exception to "Categorization
+  may call: Transaction (update category)" needed in either direction.
+  `RecipientCanonicalizationSweep` (Categorization module) reads it back cross-user via the
+  `spendwise_jobs` role, the same read-a-correction-table shape `MlRetrainingJob` already uses.
+- **A correction is a pin, not a label.** Because there is no model to retrain, the override is
+  applied as the final step of `canonicalizeUser` — it wins over whatever the ML clustering
+  response says for that identity, forever, until the user changes it again or removes it. This
+  keeps the fix permanent across the weekly resweep instead of the algorithm quietly reverting it.
+- **Granularity matches the existing identity key.** The override keys on
+  `(user_id, recipient_name, upi_id)` — the same natural key `RecipientIdentity` and
+  `updateCanonicalForIdentity` already use. There is no finer-grained key available (raw
+  transactions carry no stable per-payee id), so two transactions that happen to share the exact
+  same raw `recipient_name`/`upi_id` cannot be split into different payees; this is a known,
+  accepted limitation, not a gap to solve here.
+- **Doubles as the recalibration signal discussed for ADR-013's threshold risk.** Because
+  overrides are durable and queryable, reviewing them periodically (manually, not automated)
+  shows whether real-user drift is "algorithm merges too eagerly" (splits) or "algorithm merges
+  too conservatively" (renames with no splits) — the same diagnostic role `ml_corrections` plays
+  for spotting categorization drift, without requiring separate telemetry.
+- **User-facing entry point.** The Transactions page exposes this per-transaction (rename/split
+  one payee) and per-group (rename every transaction currently grouped together at once, behind a
+  confirm step since it's a wider-blast-radius action than the per-row control).
+
+**Consequence**: A new table (`V14__recipient_canonicalization_overrides.sql`, RLS-scoped
+per-user, no unique constraint on the nullable identity columns — Postgres treats NULLs as
+distinct by default, so upsert semantics are enforced in
+`RecipientCanonicalOverrideRepository` via an explicit `IS NOT DISTINCT FROM` delete-then-insert
+rather than `ON CONFLICT`), a new `PUT /transactions/:id/payee` endpoint, and
+`RecipientCanonicalizationSweep` consulting the override map before writing the ML service's
+answer for each identity. No new module-dependency exception. A user renaming or splitting a
+payee sees the change reflected immediately (not after the next weekly sweep), since
+`correctPayeeName` updates `recipient_canonical` directly in the same call that writes the
+override row.
+
+## ADR-015: Merge Payees Is a Human-Review Queue Over the Clustering Algorithm's Own Discarded Ambiguity
+
+**Status**: Accepted
+
+**Context**: ADR-013's clustering pipeline has three guards that deliberately leave real matches
+unmerged rather than risk merging two different people: `_first_names_conflict` (forces two
+names apart on a raw fuzzy score alone), the fuzzy-clustering `threshold` boundary itself (a
+near-miss just below 90 stays split), and `merge_prefix_chains`'s "more than one competing
+maximal target" case (e.g. a bare first name that could belong to either of two fuller names —
+observed on real account data: `SAMEER` ambiguous between `SAMEER SAWANT` and `SAMEER BALIRAM
+SAWA`). Every one of these cases already computes the exact evidence needed to ask a human — a
+candidate pair and a reason — and then discards it, leaving the user with no way to resolve a
+splintered payee short of manually renaming one row at a time on the Transactions page. Merge
+Payees is a lightweight, gamified review queue: the user is shown an anchor identity plus its
+still-ambiguous candidates and taps same/different, one small group at a time.
+
+**Options considered** (four independent sub-decisions, each with a real alternative):
+
+1. **Candidate persistence** — one status-tracked table (`recipient_merge_suggestions`, lifecycle
+   `PENDING → CONFIRMED_SAME | CONFIRMED_DIFFERENT`) vs. two tables (a pending queue plus a
+   separate "confirmed different" record).
+2. **Module placement** — extend the Transaction module (which already owns the entire payee-
+   identity domain: `RecipientIdentity`, `recipient_canonical`,
+   `recipient_canonicalization_overrides`, `correctPayeeName`) vs. a new dedicated module.
+3. **Ambiguity-data transport** — extend `POST /normalize-recipients`'s existing response with an
+   `ambiguous_groups` field (same clustering pass) vs. a second FastAPI endpoint.
+4. **Immediate re-evaluation trigger** — after a merge is confirmed, recurring-payment detection
+   and budget alerts should reflect the corrected identity right away, not after the next
+   scheduled `AlertEvaluatorJob` run. Transaction has no existing path to call into Alerts (only
+   the reverse, Alerts → Transaction, is an allowed dependency); considered (a) a new direct
+   Transaction → Alerts dependency, (b) a Spring domain event, (c) the frontend sequencing two
+   already-authenticated per-user API calls (confirm the merge, then trigger re-evaluation).
+
+**Decision**: One table (1); extend Transaction (2); extend the existing response (3); frontend-
+sequenced calls, no new backend dependency (4).
+
+**Rationale**:
+- **One table, not two.** The sweep's dedup check ("has this exact pair already been suggested or
+  resolved?") has to look across every status regardless of how many tables exist, so a second
+  table buys no isolation, only a second existence check to keep in sync. Dedup compares the pair
+  as an *unordered* set (`UnorderedPairKey`) — the algorithm can flip which identity it calls
+  "anchor" between resweeps as name frequencies shift, so matching only on
+  `(anchor, candidate)` literally would let a rejected pair resurface forever on a role swap.
+- **Extend Transaction, not a new module.** Same reasoning ADR-014 already established for
+  `recipient_canonicalization_overrides`: this feature is entirely about the payee-identity
+  domain Transaction already owns end to end. A new module would need its own new dependency-
+  table row just to re-reach behavior that already lives here — pure duplication, no isolation
+  benefit. The "confirm same" write path reuses `correctPayeeName`'s core directly (extracted
+  into `correctPayeeIdentity(userId, recipientName, upiId, canonicalName)`, since the queue
+  resolves an identity, not a specific transaction id) rather than reimplementing the override
+  upsert + immediate `recipient_canonical` update a second time.
+- **Extend the response, not a second endpoint.** `ambiguous_groups` is a byproduct of the exact
+  clustering pass that already produces `canonical_names` — a second call would re-derive the
+  same clusters twice per user (doubling FastAPI cost) and risks the two answers disagreeing if
+  anything about the entries changed between calls. `RecipientCanonicalizationSweep` already
+  calls `/normalize-recipients` once per user on the existing schedule; the same call now also
+  populates the review queue, with zero new job and zero new network round trip.
+- **No new module dependency for the re-evaluation trigger.** A direct Transaction → Alerts call
+  would be the *first* reverse edge in the whole dependency graph ("data flows inward," per
+  `docs/spec/architecture.md`) and needs the same explicit sign-off as any other invariant
+  exception; a domain event avoids the hard dependency but introduces an event-based
+  communication pattern this codebase doesn't use anywhere else. Sequencing two already-
+  authenticated per-user calls client-side (`POST /payee-merge-queue/resolve` then
+  `POST /alerts/reevaluate`) needs neither — it reuses the same "extract the job's logic into a
+  directly-callable method" idiom `CategorizationServiceImpl#triggerCanonicalizationSweep`
+  already established for the admin manual-trigger endpoints, applied to a new
+  `AlertEvaluatorJob#runForUser`. If the second call fails, the merge itself has already been
+  saved and the next scheduled `AlertEvaluatorJob` run still catches it — the same
+  graceful-degradation contract every background job in this codebase already follows.
+- **A candidate identity already pinned by an override is never re-suggested.** If a user has
+  already confirmed identity X is the same as some other anchor, X is excluded from any *new*
+  suggestion the sweep would otherwise generate against a different anchor — otherwise a name
+  ambiguous against two or more targets (the exact `SAMEER` case above) could re-litigate an
+  already-settled question indefinitely.
+
+**Consequence**: A new table (`V15__recipient_merge_suggestions.sql`), a new
+`ambiguous_groups` field on `/normalize-recipients`'s response (default empty, so an older ML
+service response still deserializes), two new Transaction-module endpoints
+(`GET /payee-merge-queue`, `POST /payee-merge-queue/resolve`), a new
+`POST /alerts/reevaluate` endpoint on the existing `AlertController` (backed by
+`AlertEvaluatorJob#runForUser`, a genuinely new per-user-scoped code path alongside the existing
+cross-user `run()`), and a new user-facing page (`/merge-payees`). No new module-dependency
+exception, no new architecture-table entry. `review_floor` (the fuzzy near-miss band's lower
+bound, currently 78) is a starting value, not empirically validated against real data the way
+ADR-013's `threshold`/`min_upi_name_similarity` were — expect to recalibrate from real usage,
+the same posture ADR-014 already established for tuning after the fact.
+
+## ADR-016: Admin Can Manually Trigger Every Scheduled Job, via a Shared Marker Interface for the Jobs That Can't Route Through Their Own Service
+
+**Status**: Accepted
+
+**Context**: Before this ADR, only two of the app's five `@Scheduled` jobs were admin-triggerable
+on demand (`MlRetrainingJob`, `RecipientCanonicalizationJob` — both via
+`CategorizationService#triggerRetrain`/`#triggerCanonicalizationSweep`, the established "job
+delegates to its owning module's service method, both the schedule and the manual trigger call
+the same method" shape). The other three (`CategorizationRetryJob`, `AlertEvaluatorJob`,
+`RecommendationGeneratorJob`) had no manual trigger at all — a real gap surfaced directly by a
+production bug this same phase: the recipient-canonicalization sweep silently failed for a week
+(a missing `@Transactional` on an RLS-scoped read — see the `getMergeQueueSnapshot` fix in the
+same session) with no way to force a re-run or see that it had failed, short of waiting for the
+next Sunday cron and watching a console at the right moment.
+
+**Options considered**:
+1. **Extend each job's owning-module service interface** (`AlertsService#triggerFullEvaluation`,
+   `RecommendationsService#triggerGeneration`, `CategorizationService#triggerCategorizationRetry`)
+   and move each job's orchestration logic into that service implementation — full consistency
+   with the existing retrain/canonicalize shape.
+2. **A shared `ManuallyTriggerableJob` marker interface** (`common.job`, one method `runNow()`)
+   implemented directly by each job class, injected into `AdminServiceImpl` by qualifier —
+   Admin depends on an interface (satisfying "cross-module calls go through injected service
+   interfaces only") without either the job's internals or its owning module's service moving.
+3. **Inject the job classes directly into `AdminServiceImpl`** — simplest code, but a literal
+   violation of the "never depend on another module's implementation class" invariant.
+
+**Decision**: Option 2, applied uniformly to all three jobs — even though option 1 would have
+worked cleanly for `CategorizationRetryJob` and `RecommendationGeneratorJob` in isolation.
+
+**Rationale**:
+- **`AlertEvaluatorJob` rules out option 1 on its own.** Moving its orchestration into
+  `AlertsServiceImpl` would require injecting `BudgetService`, `TransactionService`,
+  `EmiService`, `AlertDispatchService`, and `CategorizationService` there too.
+  `AlertDispatchServiceImpl` already depends on `AlertsService` (to look up dispatch
+  preferences) — so `AlertsServiceImpl` depending on `AlertDispatchService` back would be a real
+  circular bean dependency, not a style objection. Verified directly (`grep` confirmed
+  `AlertDispatchServiceImpl`'s constructor already takes `AlertsService`) before deciding, not
+  assumed.
+- **One pattern beats two.** With `AlertEvaluatorJob` forced onto option 2 regardless, applying
+  option 1 to only the other two jobs would leave three different wiring styles for what is
+  conceptually one feature — harder to explain, and the next person adding a fourth
+  manually-triggerable job would have no single obvious pattern to follow.
+- **Zero risk to existing, working, well-tested job internals.** `AlertEvaluatorJobTest` alone
+  was 300+ lines of existing coverage; option 1 would have required moving that logic (and either
+  duplicating or relocating its tests) for a feature that is, at its core, "let admin call a
+  method that already exists." Option 2 adds one method (`runNow() { run(); }`) per job with zero
+  changes to any existing method's behavior.
+- **Still satisfies the module-boundary invariant's actual intent**, not just its letter: Admin
+  depends on an interface type it can be handed any implementation of, not a concrete class —
+  the interface just happens to be narrower (one method) than a full domain service.
+- **Run outcomes are visible without a return value.** Every job already follows the
+  "never throw, log and move on" contract so the scheduler thread survives a bad run — meaning
+  `runNow()` returning normally doesn't imply success. Each job now calls the same
+  `com.spendwise.common.db.AdminEventLog` (new this phase — previously nothing in the app wrote
+  to `admin_logs` at all, despite the table and its admin-portal reader existing since Epic 11)
+  at both its top-level bulk-lookup failure points and its successful-completion point, so the
+  admin Logs page shows real run history (`canonicalization_run`/`_failure`,
+  `categorization_retry_run`, `alert_evaluation_run`, `recommendation_generation_run`) — not just
+  "the button was pressed."
+
+**Consequence**: A new interface (`com.spendwise.common.job.ManuallyTriggerableJob`), three new
+`POST /admin/*` endpoints (`/categorization/retry`, `/alerts/evaluate`,
+`/recommendations/generate` — `/ml/canonicalize-recipients` already existed but had no admin-UI
+button until now), a new admin page (`/admin/ops`, "Scheduled Jobs"), and five new `admin_logs`
+event types. No change to any job's scheduled behavior or existing business logic — every change
+is additive (a new interface implementation, a new logging call, a new constructor parameter for
+`AdminEventLog`). `RecommendationGeneratorJob`'s manual trigger makes the same real, billed LLM
+call a scheduled run would — flagged in the admin UI, not gated behind a confirmation step.
+
+## ADR-017: The Labeled Dataset File Is Discovered by Directory Convention, Never Hardcoded
+
+**Status**: Accepted
+
+**Context**: `training/train.py`, `training/train_recurring.py`, `evaluation/evaluate.py`,
+`evaluation/evaluate_recurring.py`, `api/retrain.py`, and `api/retrain_recurring.py` each had
+their own `DEFAULT_DATA_PATH = .../data/spendwise_labeled.xlsx` constant (three independent
+copies of the same hardcoded filename). When the actual file on disk was replaced with a
+differently-named, updated export (`SpendWise_Final_Labeled.xlsx`), `GET /evaluate` started
+throwing `FileNotFoundError` on every call — which, one layer up, is the second instance this
+same session of an unhandled backend exception turning into an unhelpful, bodiless 403 on the
+Spring Boot side (`UserJwtAuthFilter`/`AdminJwtAuthFilter`, both `OncePerRequestFilter`s, don't
+re-run on the `/error` forward dispatch a thrown exception triggers — see the
+`getMergeQueueSnapshot` RLS fix earlier this session for the first instance of the same shape).
+Separately, the project owner expects to work with multiple labeled-dataset exports over time
+(more CSVs as more real transaction history gets labeled), not one permanent file.
+
+**Options considered**:
+1. **Rename the constant's target to match the new file** — a one-line fix, but recreates the
+   exact same failure mode the next time the file is replaced or renamed.
+2. **Directory-convention discovery**: a new `training/dataset_locator.py` scans `ml/data/`
+   for `.csv`/`.xlsx` files and returns whichever was modified most recently; every training/
+   evaluation/retraining call site defaults to this instead of a fixed path, while still
+   accepting an explicit `--data`/`data_path` override for one-off runs against a specific file.
+3. **A real upload feature** — an admin-portal page to upload a dataset file through the
+   browser, POSTed to a new backend endpoint, stored server-side. Considered and explicitly
+   declined by the project owner in favor of option 2 for now (confirmed via clarifying
+   questions before implementation, per this phase's interview-first working principle) — the
+   existing workflow is already "place a file in `ml/data/`," and that workflow keeps working
+   unchanged under option 2 with zero new endpoint/storage/security surface.
+
+**Decision**: Option 2.
+
+**Rationale**:
+- **Matches the actual failure mode.** The bug was never "the wrong filename" in isolation —
+  it was that *any* filename hardcoded in six places would eventually go stale again the next
+  time the dataset export changes. Discovery-by-convention is the only option that doesn't
+  recreate the same class of bug on the next file swap.
+- **"Most recently modified" needs no manifest or naming scheme.** Re-running
+  `labeling/scripts/merge_datasets.py`, or manually dropping in a newer CSV export, always
+  produces a fresher mtime than whatever was there before — the discovery rule falls out of
+  normal filesystem behavior, not a convention the user has to remember to follow (no required
+  prefix, suffix, or exact name).
+- **One shared implementation, not three copies.** All three previous `DEFAULT_DATA_PATH`
+  constants (`train.py`, `train_recurring.py`, and a re-export in `evaluate_recurring.py`) are
+  replaced by one call to `find_latest_dataset_file()`, resolved lazily inside
+  `load_labeled_dataset()` at call time — not a module-level constant resolved once at import
+  time, which would go stale for the lifetime of a running `--reload` process the moment a file
+  is swapped while it's up.
+- **Both formats supported, not a forced migration.** The current file is `.xlsx`; CSVs are
+  expected going forward. `load_labeled_dataset` dispatches on file extension
+  (`pd.read_csv`/`pd.read_excel`), so today's file keeps working unchanged and a future CSV
+  just works too — no re-export step required.
+- **Column names are normalized, not assumed.** Fixing discovery alone surfaced a second,
+  independent mismatch: the actual current file's headers are PascalCase
+  (`Transaction_Date`, `Recipient_Name`, `UPI_ID`, ...) while `build_feature_frame`/
+  `train_model`/`train_recurring` all expect lowercase snake_case, and reading it raised
+  `KeyError: 'transaction_date'` — the exact same masked-403 shape, one column-name away from
+  the first bug this ADR exists to prevent. `load_labeled_dataset` now lowercases and
+  underscore-normalizes every column name after reading (case/whitespace only — it does not
+  invent a semantic mapping for a differently-*named*, not just differently-*cased*, column),
+  so this file and any future differently-cased export both work without a code change either.
+- **A missing dataset now fails clearly, not silently as an opaque 500.** `FileNotFoundError`
+  from `pandas.read_excel` on a nonexistent path (the original bug) surfaces no useful
+  information. `NoLabeledDatasetFoundError` names the directory it searched and what it
+  expects to find there, and a new FastAPI exception handler (`api/main.py`) turns it into a
+  clean `503` with that message in the body, instead of the default unhandled-exception `500`
+  — this doesn't fix the separate Spring-side masked-403 mechanism (out of scope here), but it
+  does mean the *next* debugging session starts from a real error message instead of rediscovering
+  the same investigation this one required.
+
+**Consequence**: A new module (`training/dataset_locator.py`, with its own test coverage,
+`tests/test_dataset_locator.py`), six call sites simplified to a single shared discovery path,
+a new FastAPI exception handler, and four existing "skip if no real dataset present" test
+guards switched from `DEFAULT_DATA_PATH.exists()` to the same discovery function. No schema
+change, no new endpoint, no new module dependency. `ml/data/`'s `.gitignore` entries
+(`*.xlsx`, `*.csv`) are unchanged — the real labeled dataset stays out of version control
+exactly as before; only how it's *located* changed.
+
+## ADR-018: Every Background Job's Schedule Is Admin-Configurable at Runtime, via a Dynamic Spring `Trigger` Over a `job_schedules` Table
+
+**Status**: Accepted
+
+**Context**: All five background jobs (`MlRetrainingJob`, `RecipientCanonicalizationJob`,
+`CategorizationRetryJob`, `AlertEvaluatorJob`, `RecommendationGeneratorJob`) had their schedule
+fixed at compile/deploy time: two via `@Scheduled(cron = "${app.ml.*-cron}")` (env-var
+overridable, but still requires a redeploy to change), three via a literal
+`@Scheduled(fixedRate = N, ...)` in the annotation itself — not even externalized to a property.
+One of those three, `AlertEvaluatorJob`, had been shrunk from 30 minutes to 1 minute during local
+model verification on 2026-07-18 with a comment reading "TESTING ONLY... restore to 30 before any
+real use" that was never reverted — exactly the kind of drift a fixed, redeploy-only schedule
+makes easy to miss and hard to catch, and the project owner explicitly flagged it as a live
+concern while asking for this feature. The ask: an admin dashboard page to view and edit every
+job's schedule directly, with changes taking effect without a redeploy.
+
+**Options considered**:
+1. **Keep `@Scheduled`, make the cron string admin-editable but effective only on next restart.**
+   Smallest change — an admin-editable settings row Spring re-reads at startup — but doesn't meet
+   "I will adjust the time through admin dashboard" as actually asked; a change silently doesn't
+   apply until whenever the process next restarts.
+2. **Dynamic scheduling via a custom `Trigger`, read from a new `job_schedules` table, registered
+   through `TaskScheduler.schedule(Runnable, Trigger)` instead of `@Scheduled`** — the standard
+   Spring mechanism for a schedule that can change at runtime. `Trigger#nextExecution` is called
+   fresh each time Spring needs to know when to fire next, so it can read current DB state instead
+   of a value baked in at startup.
+3. **A general-purpose job-scheduling library (e.g. Quartz)** with a persistent job store. Full
+   job-scheduling feature set (misfire policies, clustering, job history) SpendWise doesn't need
+   at 20–30 users, and a new dependency + its own schema, contrary to CLAUDE.md's "do not add
+   [infrastructure] without explicit approval" posture for anything beyond what's asked.
+
+**Decision**: Option 2, with one addition beyond the textbook pattern: option 2 alone (a
+declarative `SchedulingConfigurer` registering `Trigger`s once at startup) still has a real gap —
+once Spring computes and locks in a concrete next-fire instant via the underlying
+`ScheduledExecutorService`, it does not ask the `Trigger` again until that instant arrives.
+Updating the DB row alone would only apply "starting from whichever run was already scheduled
+under the old value" — for a weekly job, that could mean up to a week's delay, which does not
+meet "I will adjust the time... through admin dashboard" as an immediate control. `DynamicJobScheduler`
+therefore keeps a `Map<String, ScheduledFuture<?>>` and exposes `reschedule(jobKey)`, called
+right after `AdminServiceImpl#updateJobSchedule` persists a change: it cancels the job's
+currently-pending future (`false` — let an in-flight run finish, only cancel the *next* one) and
+re-registers it, forcing an immediate re-read of the just-saved schedule.
+
+**Rationale**:
+- **One schedule representation, not two.** Every row — `INTERVAL` (the three frequent jobs) or
+  `WEEKLY` (the two ML batch jobs) — is converted to a six-field Spring cron expression
+  (`JobSchedule#toCronExpression`) before `JobScheduleTrigger` ever touches it, so there is exactly
+  one `nextExecution` code path (`CronExpression.parse(...).next(...)`) regardless of which kind of
+  row is read. `INTERVAL` schedules become step expressions (30 minutes → the cron equivalent of
+  "every 30 minutes"), which is wall-clock-aligned (fires at :00/:30 past the hour) rather than
+  N-minutes-after-the-previous-run the way `fixedRate` was — a small, deliberate semantic shift,
+  judged acceptable since none of these five jobs are timing-critical at sub-hour precision.
+- **`ManuallyTriggerableJob` (already built earlier this same session for Admin's manual "run
+  now" buttons) turns out to be exactly the right seam for this too.** `DynamicJobScheduler`
+  needs some way to invoke each job from outside its own module without Admin (or this scheduler,
+  which — like `ManuallyTriggerableJob` itself — lives in `common.schedule` rather than any single
+  job's module) depending on a concrete job class, which CLAUDE.md's "cross-module calls go
+  through injected service interfaces only" forbids. The two jobs that didn't already implement it
+  (`RecipientCanonicalizationJob`, `MlRetrainingJob` — their existing manual trigger routes through
+  `CategorizationService` instead) now do too, purely so `DynamicJobScheduler` has one uniform way
+  to call all five; their existing `CategorizationService`-routed manual-trigger endpoints are
+  untouched.
+- **Re-reading the schedule inside `Trigger#nextExecution` (not caching it) is what makes
+  `reschedule` correct, not just `reschedule` calling it.** If the trigger cached the schedule at
+  construction, cancel-and-re-register would just re-schedule the *same* stale value. Every call
+  to `JobScheduleTrigger#nextExecution` does a fresh `JobScheduleRepository#findByJobKey` — cheap
+  (single-row primary-key lookup), and the only way "admin's edit takes effect" is actually true
+  rather than true-until-the-next-server-restart.
+- **No new dependency, no new schema surface beyond one table.** `job_schedules` follows the same
+  no-RLS precedent as `categories` (system-wide, no `user_id`), read through the same
+  `spendwise_jobs` pool `AdminEventLog`/`AdminRepository` already use for the same reason (no
+  per-request RLS session exists on a `TaskScheduler` thread). `TaskScheduler` itself is Spring
+  Boot's own auto-configured bean (available because `@EnableScheduling` was already present) —
+  nothing new to wire up.
+
+**Consequence**: A new table (`V16__job_schedules.sql`, seeded with all five jobs' previous
+values — with `alert_evaluation` corrected to 30 minutes, not 1), a new package
+(`com.spendwise.common.schedule`: `JobSchedule`, `JobScheduleRepository`, `JobScheduleTrigger`,
+`DynamicJobScheduler`, plus `JobScheduleNotFoundException`/`InvalidJobScheduleException`), two new
+admin endpoints (`GET`/`PUT /admin/job-schedules`), and a new admin page (`/admin/schedules`).
+Every `@Scheduled` annotation in the app is gone; `app.ml.retrain-cron`/`app.ml.canonicalization-cron`
+and their `ML_RETRAIN_CRON`/`ML_CANONICALIZATION_CRON` env vars are removed as dead configuration.
+Admin's existing manual "run now" triggers (`ManuallyTriggerableJob`, ADR from earlier this same
+session) are unaffected — scheduling and manual triggering are two independent paths to the same
+`runNow()`.

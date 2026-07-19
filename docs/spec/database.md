@@ -306,12 +306,86 @@ CREATE TABLE ml_corrections (
 CREATE INDEX idx_ml_corrections_date ON ml_corrections(corrected_at);
 ```
 
+### `recipient_canonicalization_overrides`
+
+Added V14 (ADR-014, ML strategy phase, 2026-07-19) — a user-pinned correction to a
+`recipient_canonical` value (a bad merge or a bad split from `RecipientCanonicalizationJob`'s
+fuzzy-clustering algorithm), written by `TransactionService#correctPayeeName`. Unlike
+`ml_corrections`/`recurring_corrections`, canonicalization has no trainable model behind it, so
+this is a permanent pin rather than a labeled training example: `RecipientCanonicalizationSweep`
+reads it back every weekly run and lets it win over its own ML answer for the same identity, so
+the correction is never silently recomputed away.
+
+```sql
+CREATE TABLE recipient_canonicalization_overrides (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recipient_name  VARCHAR,
+    upi_id          VARCHAR,
+    canonical_name  VARCHAR NOT NULL,
+    corrected_at    TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- Covers RecipientCanonicalizationSweep's cross-user read.
+CREATE INDEX idx_recipient_overrides_user ON recipient_canonicalization_overrides(user_id);
+```
+
+No UNIQUE constraint on `(user_id, recipient_name, upi_id)` — Postgres treats NULLs as distinct
+by default, and both columns are nullable (matching `RecipientIdentity`'s shape), so a UNIQUE
+constraint would silently allow duplicate NULL-bearing rows for the same user. Upsert semantics
+are instead enforced in application code (`RecipientCanonicalOverrideRepository`) via an explicit
+`IS NOT DISTINCT FROM` delete-then-insert, the same null-safe identity match
+`updateCanonicalForIdentity` already uses.
+
+### `recipient_merge_suggestions`
+
+Added V15 (ADR-015, Merge Payees feature, ML strategy phase, 2026-07-19) — an anchor/candidate
+identity pair `/normalize-recipients`' clustering considered but did not confidently auto-merge
+(a fuzzy near-miss below the auto-merge threshold, or a name ambiguous between two or more
+prefix-chain targets — see ADR-013's `merge_prefix_chains`), awaiting a user decision on the
+`/payee-merge-queue` review page. Populated by `RecipientCanonicalizationSweep` from the same ML
+response that already produces `canonical_names`; resolved via
+`TransactionService#resolveMergeSame`/`resolveMergeDifferent`.
+
+```sql
+CREATE TABLE recipient_merge_suggestions (
+    id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id                UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    anchor_name            VARCHAR NOT NULL,
+    anchor_upi_id          VARCHAR,
+    anchor_canonical_name  VARCHAR NOT NULL,
+    candidate_name         VARCHAR NOT NULL,
+    candidate_upi_id       VARCHAR,
+    score                  INTEGER NOT NULL,
+    reason                 VARCHAR NOT NULL,
+    status                 VARCHAR NOT NULL DEFAULT 'PENDING',
+    created_at             TIMESTAMP NOT NULL DEFAULT NOW(),
+    resolved_at            TIMESTAMP,
+    CONSTRAINT chk_merge_suggestion_status CHECK (status IN ('PENDING', 'CONFIRMED_SAME', 'CONFIRMED_DIFFERENT'))
+);
+
+-- Covers both the per-user pending-queue read and RecipientCanonicalizationSweep's cross-user
+-- dedup read (which reads every status, not just PENDING).
+CREATE INDEX idx_merge_suggestions_user_status ON recipient_merge_suggestions(user_id, status);
+```
+
+One status-tracked table, not a separate "pending" plus "confirmed different" table — the
+sweep's dedup check needs to look across every status regardless of how many tables exist. No
+UNIQUE constraint, same reasoning as `recipient_canonicalization_overrides` above. Dedup compares
+each candidate pair as an *unordered* set (`UnorderedPairKey`), not `(anchor_name,
+candidate_name)` literally — the clustering algorithm can flip which identity it calls "anchor"
+between resweeps as name frequencies shift, so an ordered comparison would let a rejected pair
+resurface forever on a role swap. `anchor_canonical_name` is captured at insert time so
+confirming "same" never needs a second lookup to find out what name to merge into.
+
 ### `admin_logs`
 
 ```sql
 CREATE TABLE admin_logs (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    event_type  VARCHAR NOT NULL,  -- 'parse_failure', 'model_retrain', 'sync_error', 'prediction_low_confidence'
+    event_type  VARCHAR NOT NULL,  -- 'parse_failure', 'model_retrain', 'sync_error', 'prediction_low_confidence',
+                                    -- 'canonicalization_run', 'canonicalization_failure', 'categorization_retry_run',
+                                    -- 'alert_evaluation_run', 'recommendation_generation_run'
     user_id     UUID REFERENCES users(id) ON DELETE SET NULL,  -- null for system-wide events (e.g. model_retrain)
     payload     JSONB,
     created_at  TIMESTAMP NOT NULL DEFAULT NOW()
@@ -320,6 +394,40 @@ CREATE TABLE admin_logs (
 CREATE INDEX idx_admin_logs_event_type ON admin_logs(event_type, created_at DESC);
 CREATE INDEX idx_admin_logs_user ON admin_logs(user_id, created_at DESC) WHERE user_id IS NOT NULL;
 ```
+
+### `job_schedules` (ADR-018)
+
+Every background job's admin-configurable schedule — no `@Scheduled` cron/fixedRate is hardcoded
+anywhere in the app anymore. System-wide config, not user data: no `user_id` column, no RLS, same
+precedent as `categories`. `schedule_type` picks which half of the row is populated (enforced by
+`chk_job_schedule_shape`): `INTERVAL` for the three frequent jobs ("every N minutes/hours/days"),
+`WEEKLY` for the two ML batch jobs ("every &lt;day&gt; at &lt;hour&gt; UTC").
+
+```sql
+CREATE TABLE job_schedules (
+    job_key        VARCHAR PRIMARY KEY,  -- 'canonicalization', 'ml_retrain', 'categorization_retry',
+                                          -- 'alert_evaluation', 'recommendation_generation'
+    display_name   VARCHAR NOT NULL,
+    schedule_type  VARCHAR NOT NULL CHECK (schedule_type IN ('INTERVAL', 'WEEKLY')),
+    interval_value INTEGER CHECK (interval_value IS NULL OR interval_value >= 1),
+    interval_unit  VARCHAR CHECK (interval_unit IN ('MINUTES', 'HOURS', 'DAYS')),
+    day_of_week    VARCHAR CHECK (day_of_week IN ('MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN')),
+    hour_of_day    INTEGER CHECK (hour_of_day IS NULL OR hour_of_day BETWEEN 0 AND 23),
+    updated_at     TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_job_schedule_shape CHECK (
+        (schedule_type = 'INTERVAL' AND interval_value IS NOT NULL AND interval_unit IS NOT NULL
+            AND day_of_week IS NULL AND hour_of_day IS NULL)
+        OR
+        (schedule_type = 'WEEKLY' AND day_of_week IS NOT NULL AND hour_of_day IS NOT NULL
+            AND interval_value IS NULL AND interval_unit IS NULL)
+    )
+);
+```
+
+Seeded defaults (`V16__job_schedules.sql`) match what was previously hardcoded, with one
+deliberate correction: `alert_evaluation` is seeded at 30 minutes, not the 1-minute "TESTING
+ONLY" value a 2026-07-18 debugging session left in the `@Scheduled` annotation and never
+reverted — this migration is that revert.
 
 ### `chatbot_sessions`
 

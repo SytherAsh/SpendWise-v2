@@ -171,6 +171,21 @@ Backend's Integration tests step). Neither bug is Epic-3-specific; both were
 pre-existing and only became visible once Epic 3's push was the first to
 actually exercise `integrationTest` end-to-end.
 
+**Extended (2026-07-19, ML strategy phase):** E3-S2-T4's `PUT /transactions/:id/category`
+pattern (correct directly on the Transaction module, no cross-module call) is now mirrored by
+a new `PUT /transactions/:id/payee` (ADR-014, `docs/spec/decisions.md`) — a permanent
+user-pinned override to a wrongly-computed `recipient_canonical` (V14
+`recipient_canonicalization_overrides`), read back by `RecipientCanonicalizationSweep` so a
+correction is never silently reverted by the next weekly resweep. The same session also added
+**Merge Payees** (ADR-015): a human-review queue (`GET/POST /payee-merge-queue`, V15
+`recipient_merge_suggestions`, new `/merge-payees` frontend page) over anchor/candidate identity
+pairs the clustering algorithm considers but doesn't confidently auto-merge — populated from a
+new `ambiguous_groups` field on the existing `/normalize-recipients` ML call, resolved via
+`TransactionService#resolveMergeSame`/`resolveMergeDifferent`. Not itself a new Epic 3 story —
+tracked as ML-strategy-phase work extending E3-S2-T4's existing endpoint pattern, not a backlog
+task. Full reasoning in ADR-014/015; schema in `docs/spec/database.md`; endpoints in
+`docs/spec/api.md`.
+
 ## Epic 4 — [ML Categorization Service](../epics/epic-04-ml-categorization.md)
 
 - [x] E4-S1-T1 — `X-Internal-Key` middleware
@@ -953,6 +968,23 @@ Docker Desktop startup failure requiring a manual retry), not a code defect.
 running backend + browser (no Firebase project or live deployment available in this environment,
 consistent with every prior epic's same caveat); the epic explicitly excludes Epic 12
 (Deployment/Monitoring/Launch), which remains untouched.
+
+**Extended (2026-07-19, ML strategy phase):** E11-S2-T4's "admin can trigger retrain/evaluate
+on demand" pattern is now extended to every background job. **Admin manual job triggers**
+(ADR-016, `docs/spec/decisions.md`): three new `POST /admin/*` endpoints
+(`/categorization/retry`, `/alerts/evaluate`, `/recommendations/generate`) plus a UI button for
+the existing `/admin/ml/canonicalize-recipients`, via a new shared `ManuallyTriggerableJob`
+marker interface (`com.spendwise.common.job`) each job implements — a new `/admin/ops` page
+("Run Jobs Now"). Run outcomes are now recorded via a new `AdminEventLog` writer, visible on the
+existing `/admin/logs` page (five new `admin_logs` event types — see `docs/spec/database.md`).
+**Job schedules** (ADR-018): every job's `@Scheduled` annotation is removed in favor of a new
+`job_schedules` table (V16) and `com.spendwise.common.schedule.DynamicJobScheduler`, editable at
+runtime from a new `/admin/schedules` page (`GET`/`PUT /admin/job-schedules`) with no redeploy —
+this also corrects `AlertEvaluatorJob`'s schedule back to 30 minutes from a 1-minute
+"TESTING ONLY" value a 2026-07-18 debugging session left in place (see the migration's own
+comment). Neither is a new Epic 11 story — tracked as ML-strategy-phase work extending
+E11-S2-T4/E4-S3-T5's existing admin-trigger pattern, not a backlog task. Full reasoning in
+ADR-016/018; schema in `docs/spec/database.md`; endpoints in `docs/spec/api.md`.
 
 ## Epic 12 — [Deployment, Monitoring & Launch](../epics/epic-12-deployment-and-launch.md)
 

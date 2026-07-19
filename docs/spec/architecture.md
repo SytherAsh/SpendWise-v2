@@ -51,14 +51,14 @@ SpendWise is built as a **modular monolith** for the MVP. The codebase is organi
 | **Auth** | `com.spendwise.auth` | Phone OTP, Google OAuth, JWT issuance and refresh |
 | **User** | `com.spendwise.user` | User profiles, preferences, onboarding state, alert settings |
 | **Ingest** | `com.spendwise.ingest` | Receives parsed transactions from Android app, deduplication |
-| **Transaction** | `com.spendwise.transaction` | Storage, retrieval, filtering, pagination, validation, querying; EMI tracking (lifecycle, detection status, manual entry, deactivation); category listing (`GET /categories`); category correction writes (updates `transaction_categories` and records to `ml_corrections` — no cross-module call required) |
+| **Transaction** | `com.spendwise.transaction` | Storage, retrieval, filtering, pagination, validation, querying; EMI tracking (lifecycle, detection status, manual entry, deactivation); category listing (`GET /categories`); category correction writes (updates `transaction_categories` and records to `ml_corrections` — no cross-module call required); payee-identity ownership (`recipient_canonical`, permanent canonicalization overrides via `PUT /transactions/:id/payee` (ADR-014), and the Merge Payees human-review queue via `/payee-merge-queue` (ADR-015) — no cross-module call to Categorization for any of these) |
 | **Categorization** | `com.spendwise.categorization` | Calls FastAPI ML service, stores ML predictions in `transaction_categories`; reads `ml_corrections` as training data for batch retraining |
 | **Budget** | `com.spendwise.budget` | Budget CRUD, progress calculation, business rules |
 | **Alerts** | `com.spendwise.alerts` | Threshold evaluation, notification dispatch (push via FCM, email via SMTP) |
 | **Recommendations** | `com.spendwise.recommendations` | LLM-generated one-liners, priority assignment, dismissal |
 | **Chatbot** | `com.spendwise.chatbot` | LLM integration, session management, data-aware context injection |
 | **Analytics** | `com.spendwise.analytics` | Read-only aggregations, chart data, PDF/CSV export |
-| **Admin** | `com.spendwise.admin` | System monitoring, parser health, cross-user analytics, model retrain trigger |
+| **Admin** | `com.spendwise.admin` | System monitoring, parser health, cross-user analytics; manual on-demand triggers for every background job (ADR-016); admin-configurable job schedules (ADR-018) |
 
 ### Module communication rules
 
@@ -78,7 +78,7 @@ SpendWise is built as a **modular monolith** for the MVP. The codebase is organi
 | **Recommendations** | Analytics (read aggregations) | Alerts, Chatbot, Ingest, Categorization |
 | **Chatbot** | Transaction (read history), Analytics (read summaries) | Any module that writes data |
 | **Analytics** | Reads from all modules *(read-only)* | *(must not call any write methods on any module)* |
-| **Admin** | Reads from all; triggers Categorization (retrain + evaluate) | — |
+| **Admin** | Reads from all; triggers Categorization (retrain, canonicalize, categorization-retry), Alerts (evaluate), Recommendations (generate) | — |
 | **Auth / User** | User → Ingest (bank statement handoff only) | Any module except Ingest |
 
 > **Ingest's User/Auth calls (added during Epic 3 implementation):** `/api/v1/ingest/transactions`
@@ -135,6 +135,32 @@ SpendWise is built as a **modular monolith** for the MVP. The codebase is organi
 Direction rule: data flows inward through the stack (Ingest → Transaction → Analytics). No module calls back up the ingestion chain.
 
 > Admin calls Categorization's service interface for both retraining and accuracy evaluation — FastAPI is never called directly from Admin (CLAUDE.md invariant: only the Categorization module calls FastAPI).
+
+> **Admin's "run any scheduled job on demand" feature (ML strategy phase, 2026-07-19):** in
+> addition to the two `CategorizationService`-routed triggers above, Admin can also fire
+> `CategorizationRetryJob` (Categorization), `AlertEvaluatorJob` (Alerts), and
+> `RecommendationGeneratorJob` (Recommendations) directly, via each job implementing a shared
+> `com.spendwise.common.job.ManuallyTriggerableJob` marker interface (one method, `runNow()`)
+> rather than through those modules' own service interfaces (`AlertsService`,
+> `RecommendationsService`) the way retrain/canonicalize already are. For `AlertEvaluatorJob`
+> specifically this isn't a style choice: moving its orchestration logic into `AlertsServiceImpl`
+> would require injecting `AlertDispatchService` there too, which already depends on `AlertsService`
+> — a real circular bean dependency. The same shape is used for all three jobs for one consistent
+> pattern rather than three different one-off wirings. Like `DemoUserRegistry` above, this doesn't
+> fit the "May call" / "Must not call" table cleanly — it's a job class implementing a
+> module-agnostic marker interface, not a call into another module's domain service — but it *is*
+> a real, if narrow, new fan-in: Admin now depends on one bean per job class, each living in a
+> different module. See `ManuallyTriggerableJob`'s own Javadoc for the full reasoning.
+>
+> The same phase also added `com.spendwise.common.db.AdminEventLog`, a shared writer for
+> `admin_logs` (previously read-only from Admin's side — nothing in the app wrote to it before
+> this). `RecipientCanonicalizationSweep`, `CategorizationRetryJob`, `AlertEvaluatorJob`, and
+> `RecommendationGeneratorJob` each call it directly (not through Admin) to record their own
+> run/failure events, using the same `spendwise_jobs` (BYPASSRLS) pool `AdminRepository` already
+> reads `admin_logs` through — see `JobsDataSourceConfig`'s sanctioned-callers list. This is the
+> inverse direction from the jobs above: modules call *into* a shared `common` writer that Admin's
+> UI happens to read the result of, not Admin calling out to them — no new dependency on Admin
+> itself, and no cycle.
 
 ## FastAPI ML Service
 
@@ -278,13 +304,19 @@ Dashboard and budget suggestions reflect imported data
 
 ## Background Jobs (inside Spring Boot process)
 
-| Job | Owner | Schedule | What it does |
+Every schedule below is admin-configurable at runtime (ADR-018, 2026-07-19) — the "Schedule"
+column shows each job's seeded default (`V16__job_schedules.sql`), not a fixed value. None of
+these are `@Scheduled` annotations anymore; `com.spendwise.common.schedule.DynamicJobScheduler`
+registers all five against whatever their `job_schedules` row currently says, and re-registers a
+job immediately when an admin edits it from the portal's "Scheduled Jobs" page — no redeploy.
+
+| Job | Owner | Default schedule | What it does |
 | --- | --- | --- | --- |
 | Alert evaluator | Alerts | Every 30 minutes | Checks mid-month budget thresholds and category overspend for all users; also runs recurring-payment detection — proposes loosened candidates (`RecurringPaymentDetector`), then gates each on `CategorizationService#predictRecurring` (V11, ADR-012) — reuses this same cadence since detection isn't time-critical (`docs/spec/decisions.md` ADR-011's scheduled-over-event-driven reasoning applies here too) |
 | Recommendation generator | Recommendations | Every 6 hours | Reads spending aggregations from Analytics; generates recommendations where a threshold has been crossed since the last generation for that user and category, determined by comparing transaction and budget timestamps against the time of its own last run. Idempotent — suppresses duplicates by checking `generated_at` on the most recent record per user per category. |
-| ML retraining | Categorization | Weekly (configurable) | Sends `ml_corrections` data to FastAPI /retrain |
+| ML retraining | Categorization | Weekly, Sunday 03:00 UTC | Sends `ml_corrections` data to FastAPI /retrain |
 | Categorization retry | Categorization | Every 30 minutes | Re-triggers ML categorization for transactions ingested but not yet categorized (e.g., FastAPI unavailable during ingest), and re-attempts low-confidence Miscellaneous-fallback rows so a later retrain can upgrade them |
-| Recipient canonicalization | Categorization | Weekly (configurable) | Per user, sends the full recipient set to FastAPI `/normalize-recipients` and writes the deduplicated name to each transaction's `recipient_canonical` (V13, ADR-013). Whole-history batch, so scheduled rather than per-ingest; offset from ML retraining to avoid FastAPI contention |
+| Recipient canonicalization | Categorization | Weekly, Sunday 04:00 UTC | Per user, sends the full recipient set to FastAPI `/normalize-recipients` and writes the deduplicated name to each transaction's `recipient_canonical` (V13, ADR-013). Whole-history batch, so scheduled rather than per-ingest; offset from ML retraining to avoid FastAPI contention |
 
 ## Counterparty Metadata Enrichment (built 2026-07-09, UI/UX polish phase)
 

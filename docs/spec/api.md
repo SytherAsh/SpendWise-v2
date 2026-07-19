@@ -77,7 +77,10 @@ Authorization: Bearer <access_token>
 | GET | `/transactions/:id` | Get single transaction | User |
 | POST | `/transactions` | Manually create a transaction | User |
 | PUT | `/transactions/:id/category` | Correct a transaction's category; writes a labeled example to `ml_corrections` for the next retraining cycle | User |
+| PUT | `/transactions/:id/payee` | Pin a permanent canonical payee name (ADR-014) for the transaction's (recipient_name, upi_id) identity; updates `recipientCanonical` immediately for every transaction sharing that identity | User |
 
+> **Payee correction ownership (ADR-014, ML strategy phase, 2026-07-19):** `PUT /transactions/:id/payee` is served by the Transaction module, same shape as the category correction above — it writes directly to `recipient_canonicalization_overrides` and updates `transactions.recipient_canonical` within its own DB access scope, with no cross-module call to Categorization. `RecipientCanonicalizationSweep` (Categorization module) reads the overrides table independently on its weekly run and lets a pinned override win over its own ML answer for that identity, so a correction is never silently reverted by the next resweep. To rename every transaction currently grouped under one payee at once, call this once per transaction id in the group (mirrors the existing bulk-apply pattern for category corrections) — the identity-level update means repeated calls for the same identity are idempotent.
+>
 > **Category correction ownership:** `PUT /transactions/:id/category` is served by the Transaction module. The controller updates `transaction_categories` (new category assignment) and writes directly to `ml_corrections` (correction record) — both within the Transaction module's own DB access scope. No cross-module service call to the Categorization module is made; the Categorization module reads `ml_corrections` independently during its retraining cycle. This keeps the module dependency graph acyclic: Categorization → Transaction remains one-way.
 >
 > **`category=uncategorized` (added for the Transactions page redesign):** `GET /transactions`'s `category` filter accepts a numeric category id, the literal string `uncategorized` (filters to transactions with no `transaction_categories` row at all), or is omitted (no filter). Any other non-numeric value is a 400 (`INVALID_CATEGORY_FILTER`). Backward compatible — numeric filtering is unchanged.
@@ -89,6 +92,15 @@ Authorization: Bearer <access_token>
 > **`direction` (added for the Transactions page "Received" tile, UI/UX polish phase):** `credit` restricts the result to credit-direction transactions (`credit > 0`), `debit` to debit-direction (`debit > 0`); omitted applies no direction filter. Independent of `category`/`uncategorized` — passing both is accepted but the two filters simply AND together (a category filter's own implicit `debit > 0` combined with `direction=credit` yields no rows, since a transaction can't be both). The Received tile calls this with `direction=credit` and no `category`, deliberately pulling every credit-direction transaction across all categories — see `docs/spec/decisions.md` ADR-010's status update. Any value other than `credit`/`debit` is a 400 (`INVALID_DIRECTION`).
 >
 > **`sort=amount_desc` (added for the Analytics category deep-dive's "biggest transactions"):** ranks by `ABS(amount)` descending instead of the default `transaction_date DESC, id DESC`. This is a **bounded, non-paginated top-N read**, not a second pagination mode — `cursor` cannot be combined with it (400 `INVALID_SORT`; ranking by magnitude has no stable keyset seek across concurrent inserts the way `(transaction_date, id)` does), and the response always has `nextCursor: null`, `hasMore: false` regardless of how many rows actually match. Ask for a bigger `limit` if you need more than one "page." Any `sort` value other than `date_desc` (the default) or `amount_desc` is a 400 (`INVALID_SORT`).
+
+### `/payee-merge-queue` — Merge Payees Review Queue (ADR-015, ML strategy phase, 2026-07-19)
+
+| Method | Path | Description | Auth |
+| --- | --- | --- | --- |
+| GET | `/payee-merge-queue` | The oldest still-unresolved anchor identity plus its ambiguous candidates (`nextGroup`, `null` once cleared), plus how many distinct groups remain (`remainingGroupCount`) | User |
+| POST | `/payee-merge-queue/resolve` | Body `{"decisions": [{"suggestion_id": "...", "same": true}, ...]}` — for each `same: true`, pins the candidate's identity to the anchor's canonical name (same effect as `PUT /transactions/:id/payee`, via `TransactionService#correctPayeeIdentity`) and marks it `CONFIRMED_SAME`; each `same: false` is marked `CONFIRMED_DIFFERENT` with no transaction write. Returns `{"confirmedSame": n, "confirmedDifferent": n}` | User |
+
+> **Served by the Transaction module** — same module that already owns `recipient_canonical`/`recipient_canonicalization_overrides` (ADR-013/014), not a new module (ADR-015). Candidates are populated by `RecipientCanonicalizationSweep` from the same `/normalize-recipients` ML call it already makes on its weekly run (or an admin-triggered manual run) — `ambiguous_groups` is a new field on that response, not a second FastAPI call. A candidate already resolved against one anchor is never re-suggested against a different one. After a successful `resolve`, call `POST /alerts/reevaluate` (see `/alerts` below) to reflect the corrected identity in recurring-payment detection and budget alerts immediately rather than waiting for the next scheduled sweep.
 
 ### `/categories` — Categories
 
@@ -118,6 +130,7 @@ Authorization: Bearer <access_token>
 | GET | `/alerts` | List alerts for user (paginated, cursor-based); supports optional filter: `is_read` | User |
 | PUT | `/alerts/:id/read` | Mark alert as read (also serves as "dismiss" for a `recurring_payment` alert — no EMI is created) | User |
 | POST | `/alerts/:id/confirm` | Confirm a `recurring_payment` alert as a tracked subscription — creates an `emis` row linked to the alert's representative transaction and marks the alert read (E6-S2-T2). 400 if the alert isn't type `recurring_payment`. Idempotent: confirming the same alert twice returns the already-created EMI rather than erroring. | User |
+| POST | `/alerts/reevaluate` | Manual per-user trigger (ADR-015, ML strategy phase, 2026-07-19) for `AlertEvaluatorJob#runForUser` — re-runs recurring-payment detection and budget-threshold alerts for the calling user only, immediately rather than waiting for the next scheduled 30-minute sweep. Called by the frontend right after `POST /payee-merge-queue/resolve` succeeds; best-effort from the caller's perspective (the next scheduled `run()` still catches anything a failed call here misses) | User |
 
 ### `/recommendations` — Savings Recommendations
 
@@ -222,6 +235,12 @@ All admin endpoints require an admin JWT (signed with `ADMIN_JWT_SECRET` — a c
 | GET | `/admin/logs` | System logs (parser failures, errors, sync events) | Admin JWT |
 | GET | `/admin/ml/accuracy` | ML model accuracy metrics | Admin JWT |
 | POST | `/admin/ml/retrain` | Trigger manual model retraining via Categorization module | Admin JWT |
+| POST | `/admin/ml/canonicalize-recipients` | Trigger the recipient-name canonicalization sweep on demand via Categorization module, instead of waiting for its scheduled run | Admin JWT |
+| POST | `/admin/categorization/retry` | Trigger `CategorizationRetryJob` on demand, instead of waiting for its scheduled run | Admin JWT |
+| POST | `/admin/alerts/evaluate` | Trigger `AlertEvaluatorJob` (budget/overspend alerts + recurring-payment detection) on demand | Admin JWT |
+| POST | `/admin/recommendations/generate` | Trigger `RecommendationGeneratorJob` on demand — makes a real (billed) LLM call per candidate | Admin JWT |
+| GET | `/admin/job-schedules` | Every background job's current admin-configurable schedule (ADR-018) | Admin JWT |
+| PUT | `/admin/job-schedules/:jobKey` | Update one job's schedule; takes effect immediately, no redeploy (ADR-018) | Admin JWT |
 | DELETE | `/admin/users/:id` | Hard-delete user and purge all data (DPDP Act 2023 compliance) | Admin JWT |
 
 ## Pagination
@@ -314,6 +333,38 @@ All fields correspond to the `transactions` table schema. `transaction_id` is re
 ```
 
 The server writes a row to `ml_corrections` (old `category_id` → new `category_id`) before updating `transaction_categories`. This labeled example is included in the next ML retraining cycle.
+
+### `PUT /transactions/:id/payee` — Request (ADR-014)
+
+```json
+{
+  "canonical_name": "Sameer Sawant"
+}
+```
+
+The server upserts a row in `recipient_canonicalization_overrides` keyed on the transaction's own `(recipient_name, upi_id)` identity, then immediately sets `recipient_canonical` to `canonical_name` on every transaction sharing that identity (not just this one). The pin survives every subsequent weekly `RecipientCanonicalizationSweep` run.
+
+### `PUT /admin/job-schedules/:jobKey` — Request (ADR-018)
+
+Shape depends on `scheduleType` — the three frequent jobs (`categorization_retry`, `alert_evaluation`, `recommendation_generation`) use `INTERVAL`, the two weekly ML jobs (`canonicalization`, `ml_retrain`) use `WEEKLY`:
+
+```json
+{
+  "scheduleType": "INTERVAL",
+  "intervalValue": 45,
+  "intervalUnit": "MINUTES"
+}
+```
+
+```json
+{
+  "scheduleType": "WEEKLY",
+  "dayOfWeek": "MON",
+  "hourOfDay": 6
+}
+```
+
+`intervalUnit` is one of `MINUTES`/`HOURS`/`DAYS`; `dayOfWeek` is a three-letter code (`MON`..`SUN`); `hourOfDay` is 0–23 (UTC). A malformed or internally-inconsistent body (e.g. `WEEKLY` with `intervalValue` instead of `dayOfWeek`) returns `400`; an unrecognized `:jobKey` returns `404`. On success (`204`), `com.spendwise.common.schedule.DynamicJobScheduler` cancels the job's currently-scheduled next run and re-registers it against the new schedule immediately — no redeploy, and no waiting for whichever run was already locked in under the old schedule.
 
 ## Error Responses
 
