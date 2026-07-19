@@ -26,7 +26,7 @@ public class CategorizationRetryJob {
     // Not specified in docs — caps how many transactions one run re-attempts, so a large backlog
     // (e.g. after an extended FastAPI outage) can't make a single scheduled run unboundedly slow;
     // the next run 30 minutes later picks up whatever's left.
-    private static final int BATCH_LIMIT = 500;
+    private static final int BATCH_LIMIT = 2200;
 
     private final TransactionService transactionService;
     private final CategorizationService categorizationService;
