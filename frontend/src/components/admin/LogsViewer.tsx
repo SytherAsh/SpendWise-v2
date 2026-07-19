@@ -12,7 +12,7 @@ interface AdminLog {
   createdAt: string;
 }
 
-const EVENT_TYPES = ["parse_failure", "model_retrain", "sync_error", "prediction_low_confidence"];
+const EVENT_TYPES = ["parse_failure", "model_retrain", "sync_error", "prediction_low_confidence", "canonicalization_failure"];
 
 export function LogsViewer() {
   const [eventType, setEventType] = useState("");

@@ -1,17 +1,19 @@
 package com.spendwise.alerts;
 
 import com.spendwise.budget.Budget;
+import com.spendwise.budget.BudgetProgress;
 import com.spendwise.budget.BudgetService;
 import com.spendwise.categorization.CategorizationService;
 import com.spendwise.categorization.dto.MlRecurringPredictionRequest;
 import com.spendwise.categorization.dto.MlRecurringPredictionResponse;
+import com.spendwise.common.db.AdminEventLog;
+import com.spendwise.common.job.ManuallyTriggerableJob;
 import com.spendwise.transaction.EmiService;
 import com.spendwise.transaction.RecurringCandidateTransaction;
 import com.spendwise.transaction.TransactionService;
 import com.spendwise.transaction.UserCategorySpend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -24,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +37,14 @@ import java.util.stream.Collectors;
  * cycle, and docs/requirements.md's 1-hour alert SLA doesn't need event-driven latency. See
  * implementation/tracking/STATUS.md's Epic 5 close-out for the deferred event-driven optimization
  * this decision explicitly leaves on the table.
+ *
+ * <p>Implements {@link ManuallyTriggerableJob} both for Admin's manual "run now" trigger and as
+ * the scheduling entry point {@code com.spendwise.common.schedule.DynamicJobScheduler} calls on
+ * whatever cadence the admin-configurable {@code job_schedules} row for {@code "alert_evaluation"}
+ * currently says (ADR-018) — no more static {@code @Scheduled} annotation, and no more risk of a
+ * "restore to 30 before real use" testing tweak (2026-07-18) quietly shipping, since there's no
+ * hardcoded value left to forget to revert. See {@link ManuallyTriggerableJob}'s own javadoc for
+ * why this shape rather than routing through {@link AlertsService}.
  *
  * <p>Cross-user by nature — {@link BudgetService#findAllForMonth} and {@link
  * TransactionService#findAllSpendForMonth} both read via the {@code spendwise_jobs} role (see
@@ -61,7 +70,7 @@ import java.util.stream.Collectors;
  * silently dropped, same as a candidate the old strict rule didn't qualify was.
  */
 @Component
-public class AlertEvaluatorJob {
+public class AlertEvaluatorJob implements ManuallyTriggerableJob {
 
     private static final Logger log = LoggerFactory.getLogger(AlertEvaluatorJob.class);
     private static final long RECURRING_LOOKBACK_DAYS = 60;
@@ -72,6 +81,7 @@ public class AlertEvaluatorJob {
     private final AlertsService alertsService;
     private final AlertDispatchService alertDispatchService;
     private final CategorizationService categorizationService;
+    private final AdminEventLog adminEventLog;
 
     public AlertEvaluatorJob(
             BudgetService budgetService,
@@ -79,20 +89,40 @@ public class AlertEvaluatorJob {
             EmiService emiService,
             AlertsService alertsService,
             AlertDispatchService alertDispatchService,
-            CategorizationService categorizationService) {
+            CategorizationService categorizationService,
+            AdminEventLog adminEventLog) {
         this.budgetService = budgetService;
         this.transactionService = transactionService;
         this.emiService = emiService;
         this.alertsService = alertsService;
         this.alertDispatchService = alertDispatchService;
         this.categorizationService = categorizationService;
+        this.adminEventLog = adminEventLog;
     }
 
-    // initialDelay so this doesn't fire the instant the app starts — same reasoning as
-    // CategorizationRetryJob.
-    @Scheduled(initialDelay = 30, fixedRate = 30, timeUnit = TimeUnit.MINUTES)
-    public void evaluateAll() {
+    @Override
+    public void runNow() {
         run();
+    }
+
+    /**
+     * Immediate, single-user re-evaluation (Merge Payees feature, 2026-07-19) — called via {@link
+     * AlertsService#triggerForUser} right after a payee-merge confirmation, so recurring-payment
+     * detection and budget alerts reflect the corrected payee identity without waiting for the
+     * next scheduled sweep. Reuses the exact same rule/prediction logic {@link #run} does, just
+     * scoped to one already-authenticated user instead of the cross-user bulk reads — never
+     * touches {@link #evaluateAll}'s cross-user datasource, so this can safely run inside a live
+     * user request. Never throws; a failure here just means the next scheduled {@link #run}
+     * catches it, same graceful-degradation contract every job in this codebase follows.
+     */
+    public void runForUser(UUID userId) {
+        try {
+            List<BudgetProgress> progress = budgetService.progressForCurrentMonth(userId);
+            evaluateUserFromProgress(userId, progress, LocalDate.now().getDayOfMonth());
+        } catch (RuntimeException e) {
+            log.warn("Single-user alert evaluation failed for user {}: {}", userId, e.getMessage());
+        }
+        evaluateRecurringPaymentsForUser(userId);
     }
 
     /** Package-visible so tests can invoke it directly rather than waiting on the real schedule. */
@@ -109,6 +139,8 @@ public class AlertEvaluatorJob {
             // The next scheduled run retries — a transient failure here (e.g. spendwise_jobs
             // connection issue) must not crash the scheduler thread.
             log.warn("Alert evaluator's bulk lookup failed: {}", e.getMessage());
+            adminEventLog.record(
+                    "alert_evaluation_run", null, Map.of("status", "failure", "stage", "budget_lookup", "error", String.valueOf(e.getMessage())));
             return;
         }
 
@@ -129,6 +161,7 @@ public class AlertEvaluatorJob {
                 log.warn("Alert evaluation failed for user {}: {}", userId, e.getMessage());
             }
         }
+        adminEventLog.record("alert_evaluation_run", null, Map.of("status", "success", "stage", "budget_lookup", "usersEvaluated", budgetsByUser.size()));
 
         evaluateRecurringPayments();
     }
@@ -148,6 +181,10 @@ public class AlertEvaluatorJob {
             // Same contract as the bulk lookup above — a transient failure here must not crash
             // the scheduler thread; the next scheduled run retries.
             log.warn("Recurring-payment evaluator's bulk lookup failed: {}", e.getMessage());
+            adminEventLog.record(
+                    "alert_evaluation_run",
+                    null,
+                    Map.of("status", "failure", "stage", "recurring_lookup", "error", String.valueOf(e.getMessage())));
             return;
         }
 
@@ -162,6 +199,54 @@ public class AlertEvaluatorJob {
                 }
             } catch (RuntimeException e) {
                 log.warn("Recurring-payment evaluation failed for user {}: {}", userId, e.getMessage());
+            }
+        }
+        adminEventLog.record(
+                "alert_evaluation_run", null, Map.of("status", "success", "stage", "recurring_lookup", "usersEvaluated", candidatesByUser.size()));
+    }
+
+    /** Single-user equivalent of {@link #evaluateRecurringPayments} (Merge Payees feature,
+     * 2026-07-19) — same candidate-detection/ML-prediction logic, scoped to one user via {@link
+     * TransactionService#findForRecurringDetectionByUser} (RLS-scoped) rather than the cross-user
+     * bulk read. {@link EmiService#findAllActiveSourceTransactionIds} is reused as-is (cheap, and
+     * correctness-neutral to reuse the global exclusion set for a single-user pass). */
+    private void evaluateRecurringPaymentsForUser(UUID userId) {
+        try {
+            Instant since = Instant.now().minus(RECURRING_LOOKBACK_DAYS, ChronoUnit.DAYS);
+            List<RecurringCandidateTransaction> candidates = transactionService.findForRecurringDetectionByUser(userId, since);
+            Set<UUID> excludedTransactionIds = emiService.findAllActiveSourceTransactionIds();
+            for (RecurringGroup group : RecurringPaymentDetector.detect(candidates, excludedTransactionIds)) {
+                evaluateCandidate(userId, group);
+            }
+        } catch (RuntimeException e) {
+            log.warn("Single-user recurring-payment evaluation failed for user {}: {}", userId, e.getMessage());
+        }
+    }
+
+    private void evaluateUserFromProgress(UUID userId, List<BudgetProgress> progress, int dayOfMonth) {
+        BigDecimal totalBudget = progress.stream().map(BudgetProgress::monthlyLimit).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalSpent = progress.stream().map(BudgetProgress::spent).reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (MidMonthBudgetRule.triggers(totalSpent, totalBudget, dayOfMonth)) {
+            recordAndDispatch(
+                    userId,
+                    AlertType.MID_MONTH_BUDGET,
+                    null,
+                    AlertPriority.HIGH,
+                    Map.of("total_spent", totalSpent, "total_budget", totalBudget));
+        }
+
+        for (BudgetProgress budgetProgress : progress) {
+            Map<String, Object> payload = Map.of(
+                    "category_id", budgetProgress.categoryId(),
+                    "amount_spent", budgetProgress.spent(),
+                    "monthly_limit", budgetProgress.monthlyLimit());
+            // Overspend takes precedence once >=100% — same boundary rule as evaluateUser.
+            if (CategoryOverspendRule.triggers(budgetProgress.spent(), budgetProgress.monthlyLimit())) {
+                recordAndDispatch(userId, AlertType.CATEGORY_OVERSPEND, budgetProgress.categoryId(), AlertPriority.HIGH, payload);
+            } else if (CategoryApproachingLimitRule.triggers(budgetProgress.spent(), budgetProgress.monthlyLimit())) {
+                recordAndDispatch(
+                        userId, AlertType.CATEGORY_APPROACHING_LIMIT, budgetProgress.categoryId(), AlertPriority.MEDIUM, payload);
             }
         }
     }

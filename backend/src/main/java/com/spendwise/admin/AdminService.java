@@ -1,5 +1,7 @@
 package com.spendwise.admin;
 
+import com.spendwise.admin.dto.JobScheduleResponse;
+import com.spendwise.admin.dto.UpdateJobScheduleRequest;
 import com.spendwise.analytics.AnalyticsComparison;
 import com.spendwise.analytics.AnalyticsSummary;
 import com.spendwise.categorization.dto.MlEvaluationResponse;
@@ -35,6 +37,45 @@ public interface AdminService {
 
     /** E11-S2-T4 — delegates to {@code CategorizationService}; never touches the FastAPI client directly. */
     void triggerRetrain();
+
+    /**
+     * Manual trigger for the weekly recipient-canonicalization sweep (ML strategy phase), so
+     * testing/support doesn't have to wait for its next scheduled run (ADR-018: the schedule
+     * itself is admin-configurable via {@link #listJobSchedules}/{@link #updateJobSchedule}, not
+     * a fixed property anymore). Delegates to {@code CategorizationService}, same shape as
+     * {@link #triggerRetrain}.
+     */
+    void triggerCanonicalization();
+
+    /**
+     * Manual trigger for {@code CategorizationRetryJob} (ML strategy phase, 2026-07-19) — the
+     * "admin can run every scheduled job on demand" feature. Unlike {@link #triggerRetrain}/
+     * {@link #triggerCanonicalization}, this delegates to a {@code ManuallyTriggerableJob} rather
+     * than a module service method — see that interface's javadoc for why.
+     */
+    void triggerCategorizationRetry();
+
+    /** Manual trigger for {@code AlertEvaluatorJob} (budget/overspend alerts + recurring-payment detection). */
+    void triggerAlertEvaluation();
+
+    /** Manual trigger for {@code RecommendationGeneratorJob} — makes a real (billed) LLM call per candidate. */
+    void triggerRecommendationGeneration();
+
+    /**
+     * ADR-018 (2026-07-19) — every background job's current admin-configurable schedule, for the
+     * admin portal's "Scheduled Jobs" page.
+     */
+    List<JobScheduleResponse> listJobSchedules();
+
+    /**
+     * Persists the new schedule for {@code jobKey} and forces it to take effect immediately
+     * ({@code DynamicJobScheduler#reschedule}) rather than waiting for whichever run was already
+     * locked in under the old schedule.
+     *
+     * @throws com.spendwise.common.schedule.InvalidJobScheduleException if request is malformed
+     * @throws com.spendwise.common.schedule.JobScheduleNotFoundException if jobKey is unknown
+     */
+    void updateJobSchedule(String jobKey, UpdateJobScheduleRequest request);
 
     /**
      * E11-S2-T5 — irreversible. Hard-deletes the user (cascades to every dependent table) and

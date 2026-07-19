@@ -40,7 +40,6 @@ ADMIN_USERNAME=
 ADMIN_PASSWORD_HASH=
 ML_INTERNAL_KEY=
 ML_LOW_CONFIDENCE_THRESHOLD=0.5
-ML_RETRAIN_CRON=0 0 3 * * SUN
 ```
 
 > `ADMIN_USERNAME`/`ADMIN_PASSWORD_HASH` (E11-S1-T1): a single seeded admin credential — never
@@ -54,8 +53,11 @@ ML_RETRAIN_CRON=0 0 3 * * SUN
 > uncategorized for the categorization retry job (`docs/spec/architecture.md` Background Jobs
 > table) rather than written to `transaction_categories`. Defaults to `0.5` if unset.
 >
-> `ML_RETRAIN_CRON` (E4-S3-T4): the "Weekly (configurable)" schedule from `docs/spec/architecture.md`'s
-> Background Jobs table. Defaults to Sunday 03:00 server time if unset.
+> **Background job schedules are not environment variables.** ADR-018 (2026-07-19,
+> `docs/spec/decisions.md`) moved every job's schedule (previously `ML_RETRAIN_CRON` plus four
+> hardcoded `@Scheduled` annotations) into the `job_schedules` table, editable at runtime from
+> the admin portal's "Scheduled Jobs" page — no env var, no redeploy. See `docs/spec/database.md`
+> "job_schedules" for the seeded defaults new environments start with.
 >
 > `SPRING_DATASOURCE_JOBS_USERNAME`/`_PASSWORD` (E4-S3-T3/T4) follow the same pattern as
 > `SPRING_DATASOURCE_URL`/`_USERNAME`/`_PASSWORD` above — internal JDBC role credentials for

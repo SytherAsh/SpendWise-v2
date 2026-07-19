@@ -10,6 +10,7 @@ import com.spendwise.categorization.dto.MlRecurringPredictionRequest;
 import com.spendwise.categorization.dto.MlRecurringPredictionResponse;
 import com.spendwise.categorization.dto.MlRetrainRequest;
 import com.spendwise.categorization.dto.MlRetrainResponse;
+import com.spendwise.common.db.AdminEventLog;
 import com.spendwise.transaction.MlCorrectionRecord;
 import com.spendwise.transaction.Transaction;
 import com.spendwise.transaction.TransactionService;
@@ -43,13 +44,14 @@ class CategorizationServiceImplTest {
 
     private final MlClient mlClient = mock(MlClient.class);
     private final TransactionService transactionService = mock(TransactionService.class);
+    private final AdminEventLog adminEventLog = mock(AdminEventLog.class);
     private final UUID userId = UUID.randomUUID();
     private final UUID transactionId = UUID.randomUUID();
 
     private static final int FALLBACK_CATEGORY_ID = 6; // Miscellaneous
 
     private final CategorizationServiceImpl service =
-            new CategorizationServiceImpl(mlClient, transactionService, 0.5, FALLBACK_CATEGORY_ID);
+            new CategorizationServiceImpl(mlClient, transactionService, adminEventLog, 0.5, FALLBACK_CATEGORY_ID);
 
     @Test
     void successfulPredictWritesTransactionCategoriesRow() {

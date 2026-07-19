@@ -1,8 +1,8 @@
 package com.spendwise.categorization;
 
+import com.spendwise.common.job.ManuallyTriggerableJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
@@ -10,9 +10,15 @@ import org.springframework.stereotype.Component;
  * docs/architecture.md's Background Jobs table ("ML retraining — Weekly (configurable)"; ADR-003
  * adaptive supervised batch retraining). Cross-user by nature — see {@link
  * CategorizationService#triggerRetrain} and STATUS.md's Epic 4 close-out.
+ *
+ * <p>Scheduling itself is no longer a static {@code @Scheduled} annotation — {@code
+ * com.spendwise.common.schedule.DynamicJobScheduler} calls {@link #runNow} on whatever cadence
+ * the admin-configurable {@code job_schedules} row for {@code "ml_retrain"} currently says
+ * (ADR-018), so "Weekly (configurable)" is now actually configurable, from the admin portal,
+ * without a redeploy.
  */
 @Component
-public class MlRetrainingJob {
+public class MlRetrainingJob implements ManuallyTriggerableJob {
 
     private static final Logger log = LoggerFactory.getLogger(MlRetrainingJob.class);
 
@@ -22,8 +28,8 @@ public class MlRetrainingJob {
         this.categorizationService = categorizationService;
     }
 
-    @Scheduled(cron = "${app.ml.retrain-cron}")
-    public void retrainWeekly() {
+    @Override
+    public void runNow() {
         run();
     }
 

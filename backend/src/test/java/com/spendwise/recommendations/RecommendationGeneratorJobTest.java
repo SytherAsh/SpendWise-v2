@@ -2,6 +2,7 @@ package com.spendwise.recommendations;
 
 import com.spendwise.analytics.AnalyticsService;
 import com.spendwise.analytics.CategoryMonthSpend;
+import com.spendwise.common.db.AdminEventLog;
 import com.spendwise.common.llm.LlmClient;
 import com.spendwise.common.llm.LlmResponse;
 import org.junit.jupiter.api.Test;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -27,8 +30,9 @@ class RecommendationGeneratorJobTest {
     private final AnalyticsService analyticsService = mock(AnalyticsService.class);
     private final RecommendationsService recommendationsService = mock(RecommendationsService.class);
     private final LlmClient llmClient = mock(LlmClient.class);
+    private final AdminEventLog adminEventLog = mock(AdminEventLog.class);
     private final RecommendationGeneratorJob job =
-            new RecommendationGeneratorJob(analyticsService, recommendationsService, llmClient);
+            new RecommendationGeneratorJob(analyticsService, recommendationsService, llmClient, adminEventLog);
 
     private final YearMonth currentMonth = YearMonth.now();
     private final YearMonth previousMonth = currentMonth.minusMonths(1);
@@ -46,6 +50,7 @@ class RecommendationGeneratorJobTest {
 
         verify(recommendationsService)
                 .recordIfNoActiveRecommendationExists(eq(userId), eq(1), eq("You spent more on Food."), eq(RecommendationPriority.MEDIUM));
+        verify(adminEventLog).record(eq("recommendation_generation_run"), isNull(), eq(Map.of("status", "success", "candidatesEvaluated", 1)));
     }
 
     @Test
@@ -101,6 +106,20 @@ class RecommendationGeneratorJobTest {
         given(analyticsService.findAllCategorySpendForMonth(anyInt(), anyInt())).willThrow(new RuntimeException("spendwise_jobs connection lost"));
 
         assertThatCode(job::run).doesNotThrowAnyException();
+        verify(adminEventLog)
+                .record(
+                        eq("recommendation_generation_run"),
+                        isNull(),
+                        eq(Map.of("status", "failure", "stage", "lookup", "error", "spendwise_jobs connection lost")));
+    }
+
+    @Test
+    void runNowDelegatesToRun() {
+        stubBulkReads(List.of(), List.of());
+
+        job.runNow();
+
+        verify(adminEventLog).record(eq("recommendation_generation_run"), isNull(), eq(Map.of("status", "success", "candidatesEvaluated", 0)));
     }
 
     @Test

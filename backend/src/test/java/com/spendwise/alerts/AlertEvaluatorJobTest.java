@@ -1,10 +1,12 @@
 package com.spendwise.alerts;
 
 import com.spendwise.budget.Budget;
+import com.spendwise.budget.BudgetProgress;
 import com.spendwise.budget.BudgetService;
 import com.spendwise.categorization.CategorizationService;
 import com.spendwise.categorization.dto.MlRecurringPredictionRequest;
 import com.spendwise.categorization.dto.MlRecurringPredictionResponse;
+import com.spendwise.common.db.AdminEventLog;
 import com.spendwise.transaction.EmiService;
 import com.spendwise.transaction.RecurringCandidateTransaction;
 import com.spendwise.transaction.TransactionService;
@@ -41,8 +43,9 @@ class AlertEvaluatorJobTest {
     private final AlertsService alertsService = mock(AlertsService.class);
     private final AlertDispatchService alertDispatchService = mock(AlertDispatchService.class);
     private final CategorizationService categorizationService = mock(CategorizationService.class);
+    private final AdminEventLog adminEventLog = mock(AdminEventLog.class);
     private final AlertEvaluatorJob job = new AlertEvaluatorJob(
-            budgetService, transactionService, emiService, alertsService, alertDispatchService, categorizationService);
+            budgetService, transactionService, emiService, alertsService, alertDispatchService, categorizationService, adminEventLog);
 
     private final YearMonth currentMonth = YearMonth.now();
 
@@ -117,6 +120,11 @@ class AlertEvaluatorJobTest {
         given(budgetService.findAllForMonth(anyInt(), anyInt())).willThrow(new RuntimeException("spendwise_jobs connection lost"));
 
         assertThatCode(job::run).doesNotThrowAnyException();
+        verify(adminEventLog)
+                .record(
+                        eq("alert_evaluation_run"),
+                        isNull(),
+                        eq(Map.of("status", "failure", "stage", "budget_lookup", "error", "spendwise_jobs connection lost")));
     }
 
     @Test
@@ -239,6 +247,83 @@ class AlertEvaluatorJobTest {
         given(transactionService.findAllForRecurringDetection(any())).willThrow(new RuntimeException("spendwise_jobs connection lost"));
 
         assertThatCode(job::run).doesNotThrowAnyException();
+        verify(adminEventLog)
+                .record(
+                        eq("alert_evaluation_run"),
+                        isNull(),
+                        eq(Map.of("status", "failure", "stage", "recurring_lookup", "error", "spendwise_jobs connection lost")));
+    }
+
+    @Test
+    void runNowDelegatesToRun() {
+        stubBulkReads(List.of(), List.of());
+        given(transactionService.findAllForRecurringDetection(any())).willReturn(List.of());
+        given(emiService.findAllActiveSourceTransactionIds()).willReturn(Set.of());
+
+        job.runNow();
+
+        verify(adminEventLog).record(eq("alert_evaluation_run"), isNull(), eq(Map.of("status", "success", "stage", "budget_lookup", "usersEvaluated", 0)));
+    }
+
+    @Test
+    void runForUserEvaluatesOnlyThatUsersBudgetProgress() {
+        UUID userId = UUID.randomUUID();
+        given(budgetService.progressForCurrentMonth(userId))
+                .willReturn(List.of(new BudgetProgress(1, BigDecimal.valueOf(1000), BigDecimal.valueOf(1500), BigDecimal.valueOf(150))));
+        given(transactionService.findForRecurringDetectionByUser(eq(userId), any())).willReturn(List.of());
+        Alert alert = new Alert(UUID.randomUUID(), userId, AlertType.CATEGORY_OVERSPEND, AlertPriority.HIGH, Instant.now(), null, false, Map.of());
+        given(alertsService.recordIfNotAlreadyTriggeredThisMonth(eq(userId), eq(AlertType.CATEGORY_OVERSPEND), eq(1), eq(AlertPriority.HIGH), any()))
+                .willReturn(Optional.of(alert));
+
+        job.runForUser(userId);
+
+        verify(alertsService).recordIfNotAlreadyTriggeredThisMonth(eq(userId), eq(AlertType.CATEGORY_OVERSPEND), eq(1), eq(AlertPriority.HIGH), any());
+        verify(alertDispatchService).dispatch(alert);
+        // Never touches the cross-user bulk methods `run()` uses -- this is a single-user pass.
+        verify(budgetService, never()).findAllForMonth(anyInt(), anyInt());
+        verify(transactionService, never()).findAllSpendForMonth(anyInt(), anyInt());
+    }
+
+    @Test
+    void runForUserEvaluatesRecurringPaymentsViaThePerUserRead() {
+        UUID userId = UUID.randomUUID();
+        given(budgetService.progressForCurrentMonth(userId)).willReturn(List.of());
+        given(transactionService.findForRecurringDetectionByUser(eq(userId), any())).willReturn(recurringGroupFixture(userId));
+        given(emiService.findAllActiveSourceTransactionIds()).willReturn(Set.of());
+        given(categorizationService.predictRecurring(any(MlRecurringPredictionRequest.class)))
+                .willReturn(new MlRecurringPredictionResponse(true, 0.92, "monthly"));
+        Alert alert = new Alert(
+                UUID.randomUUID(), userId, AlertType.RECURRING_PAYMENT, AlertPriority.MEDIUM, Instant.now(), null, false, Map.of());
+        given(alertsService.recordRecurringPaymentIfNotAlreadyTriggeredThisMonth(eq(userId), eq("netflix@okicici"), any(), any()))
+                .willReturn(Optional.of(alert));
+
+        job.runForUser(userId);
+
+        verify(alertsService)
+                .recordRecurringPaymentIfNotAlreadyTriggeredThisMonth(eq(userId), eq("netflix@okicici"), eq(BigDecimal.valueOf(199)), any());
+        // Never touches the cross-user bulk recurring-detection read -- this is a single-user pass.
+        verify(transactionService, never()).findAllForRecurringDetection(any());
+    }
+
+    @Test
+    void runForUserBudgetFailureDoesNotThrowAndStillRunsTheRecurringPass() {
+        UUID userId = UUID.randomUUID();
+        given(budgetService.progressForCurrentMonth(userId)).willThrow(new RuntimeException("unexpected"));
+        given(transactionService.findForRecurringDetectionByUser(eq(userId), any())).willReturn(List.of());
+
+        assertThatCode(() -> job.runForUser(userId)).doesNotThrowAnyException();
+
+        verify(transactionService).findForRecurringDetectionByUser(eq(userId), any());
+    }
+
+    @Test
+    void runForUserRecurringFailureDoesNotThrow() {
+        UUID userId = UUID.randomUUID();
+        given(budgetService.progressForCurrentMonth(userId)).willReturn(List.of());
+        given(transactionService.findForRecurringDetectionByUser(eq(userId), any()))
+                .willThrow(new RuntimeException("spendwise_jobs connection lost"));
+
+        assertThatCode(() -> job.runForUser(userId)).doesNotThrowAnyException();
     }
 
     private List<RecurringCandidateTransaction> recurringGroupFixture(UUID userId) {

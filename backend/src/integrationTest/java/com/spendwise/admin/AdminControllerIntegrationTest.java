@@ -171,6 +171,89 @@ class AdminControllerIntegrationTest {
     }
 
     @Test
+    void jobSchedulesListsAllFiveJobsSeededByV16() {
+        ResponseEntity<List> response =
+                restTemplate.exchange(baseUrl() + "/admin/job-schedules", HttpMethod.GET, new HttpEntity<>(adminHeaders()), List.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        List<Object> jobKeys = response.getBody().stream().map(row -> ((Map) row).get("jobKey")).toList();
+        assertThat(jobKeys).containsExactlyInAnyOrder(
+                "canonicalization", "ml_retrain", "categorization_retry", "alert_evaluation", "recommendation_generation");
+        // The bug this feature exists to fix (2026-07-18's "TESTING ONLY, restore to 30" leftover
+        // that never got reverted) -- confirms the seed migration corrected it, not just the code.
+        Map alertRow = (Map) response.getBody().stream()
+                .filter(row -> ((Map) row).get("jobKey").equals("alert_evaluation"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(alertRow.get("intervalValue")).isEqualTo(30);
+        assertThat(alertRow.get("intervalUnit")).isEqualTo("MINUTES");
+    }
+
+    @Test
+    void updateJobScheduleWithIntervalTypePersistsTheChange() {
+        HttpHeaders adminHeaders = adminHeaders();
+
+        ResponseEntity<Void> update = restTemplate.exchange(
+                baseUrl() + "/admin/job-schedules/categorization_retry",
+                HttpMethod.PUT,
+                new HttpEntity<>(Map.of("scheduleType", "INTERVAL", "intervalValue", 45, "intervalUnit", "MINUTES"), adminHeaders),
+                Void.class);
+        assertThat(update.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        ResponseEntity<List> list =
+                restTemplate.exchange(baseUrl() + "/admin/job-schedules", HttpMethod.GET, new HttpEntity<>(adminHeaders), List.class);
+        Map row = (Map) list.getBody().stream()
+                .filter(r -> ((Map) r).get("jobKey").equals("categorization_retry"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(row.get("intervalValue")).isEqualTo(45);
+        assertThat(row.get("intervalUnit")).isEqualTo("MINUTES");
+    }
+
+    @Test
+    void updateJobScheduleWithWeeklyTypePersistsTheChange() {
+        HttpHeaders adminHeaders = adminHeaders();
+
+        ResponseEntity<Void> update = restTemplate.exchange(
+                baseUrl() + "/admin/job-schedules/canonicalization",
+                HttpMethod.PUT,
+                new HttpEntity<>(Map.of("scheduleType", "WEEKLY", "dayOfWeek", "WED", "hourOfDay", 2), adminHeaders),
+                Void.class);
+        assertThat(update.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        ResponseEntity<List> list =
+                restTemplate.exchange(baseUrl() + "/admin/job-schedules", HttpMethod.GET, new HttpEntity<>(adminHeaders), List.class);
+        Map row = (Map) list.getBody().stream()
+                .filter(r -> ((Map) r).get("jobKey").equals("canonicalization"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(row.get("dayOfWeek")).isEqualTo("WED");
+        assertThat(row.get("hourOfDay")).isEqualTo(2);
+    }
+
+    @Test
+    void updateJobScheduleWithInvalidIntervalValueReturns400() {
+        ResponseEntity<Map> response = restTemplate.exchange(
+                baseUrl() + "/admin/job-schedules/categorization_retry",
+                HttpMethod.PUT,
+                new HttpEntity<>(Map.of("scheduleType", "INTERVAL", "intervalValue", 0, "intervalUnit", "MINUTES"), adminHeaders()),
+                Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void updateJobScheduleWithUnknownJobKeyReturns404() {
+        ResponseEntity<Map> response = restTemplate.exchange(
+                baseUrl() + "/admin/job-schedules/not_a_real_job",
+                HttpMethod.PUT,
+                new HttpEntity<>(Map.of("scheduleType", "INTERVAL", "intervalValue", 30, "intervalUnit", "MINUTES"), adminHeaders()),
+                Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
     void logsFilterReturnsOnlyTheMatchingEventType() throws Exception {
         insertAdminLog("parse_failure", null, "{\"reason\":\"unparseable sms\"}");
         insertAdminLog("sync_error", null, "{\"reason\":\"network timeout\"}");

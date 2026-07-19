@@ -57,15 +57,24 @@ import javax.sql.DataSource;
  * <p>{@code jobsDataSource}/{@code jobsJdbcTemplate} connect as {@code spendwise_jobs}
  * (db-init/02-jobs-role.sql — {@code BYPASSRLS}, same host/port/database as the primary
  * connection, different credentials) and must be injected with {@code
- * @Qualifier("jobsJdbcTemplate")} by name explicitly. Two categories of caller are sanctioned:
+ * @Qualifier("jobsJdbcTemplate")} by name explicitly. Four categories of caller are sanctioned:
  * {@code @Scheduled} job classes across several modules (E4-S3-T3/T4, E5-S2-T4, E6-S2-T1,
- * E8-S2-T1) reading across all users for a background pass, and — added in Epic 11 —
- * {@code com.spendwise.admin.AdminRepository}'s request-scoped reads, since Admin has no
- * per-request "current user" to scope RLS to by construction (it must enumerate every user and
- * read the system-wide {@code admin_logs} table). Both are narrow, audited exceptions to "every
- * query bypassing RLS must be a background job," not a blanket bypass — see
- * implementation/tracking/STATUS.md's Epic 4 close-out for why this role exists at all, and its
- * Epic 11 close-out for the request-scoped broadening.
+ * E8-S2-T1) reading across all users for a background pass — as of ADR-018 (2026-07-19) these are
+ * no longer {@code @Scheduled}-annotated (see {@code com.spendwise.common.schedule.DynamicJobScheduler})
+ * but are the same cross-user jobs the category always meant; {@code
+ * com.spendwise.admin.AdminRepository}'s request-scoped reads (added in Epic 11), since Admin has
+ * no per-request "current user" to scope RLS to by construction (it must enumerate every user and
+ * read the system-wide {@code admin_logs} table); {@code
+ * com.spendwise.common.db.AdminEventLog} (ML strategy phase, 2026-07-19), which writes that same
+ * system-wide {@code admin_logs} table on behalf of whichever of the first category's jobs calls
+ * it — not a new independent caller pattern, just the write side of the table Admin already reads
+ * cross-user; and {@code com.spendwise.common.schedule.JobScheduleRepository} (ADR-018), which
+ * reads/writes {@code job_schedules} — another system-wide, non-user table, read from a
+ * TaskScheduler thread with no RLS session of its own by construction, same reasoning as
+ * {@code AdminRepository}. All four are narrow, audited exceptions to "every query bypassing RLS
+ * must be a background job," not a blanket bypass — see implementation/tracking/STATUS.md's
+ * Epic 4 close-out for why this role exists at all, and its Epic 11 close-out for the
+ * request-scoped broadening.
  */
 @Configuration
 public class JobsDataSourceConfig {

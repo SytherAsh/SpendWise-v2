@@ -19,7 +19,9 @@ import java.util.UUID;
  * module's role rather than a new exception to the "only Categorization calls FastAPI" invariant
  * — see docs/spec/decisions.md. The same reasoning covers {@link #normalizeRecipients} (ML
  * strategy phase, 2026-07-13): recipient-name canonicalization is a third ML capability routed
- * through this gateway, consumed by {@code RecipientCanonicalizationJob}.
+ * through this gateway, consumed by {@code RecipientCanonicalizationJob} and, via {@link
+ * #triggerCanonicalizationSweep}, by Admin's manual trigger — the same Admin relationship already
+ * established for {@link #triggerRetrain}.
  */
 public interface CategorizationService {
 
@@ -89,4 +91,13 @@ public interface CategorizationService {
      * @throws org.springframework.web.client.RestClientException on network failure or non-2xx response
      */
     MlNormalizeRecipientsResponse normalizeRecipients(MlNormalizeRecipientsRequest request);
+
+    /**
+     * Runs the full cross-user recipient-canonicalization sweep (reads every identity, calls
+     * {@link #normalizeRecipients} once per user, writes each result back) — the same body {@code
+     * RecipientCanonicalizationJob}'s weekly schedule runs, exposed here so Admin can also trigger
+     * it on demand, same shape as {@link #triggerRetrain}. Never throws — each user's failure is
+     * isolated internally, matching the job's existing contract.
+     */
+    void triggerCanonicalizationSweep();
 }

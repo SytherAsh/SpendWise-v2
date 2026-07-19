@@ -1,15 +1,19 @@
 package com.spendwise.categorization;
 
+import com.spendwise.common.db.AdminEventLog;
 import com.spendwise.transaction.TransactionService;
 import com.spendwise.transaction.UncategorizedTransactionRef;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -24,7 +28,8 @@ class CategorizationRetryJobTest {
 
     private final TransactionService transactionService = mock(TransactionService.class);
     private final CategorizationService categorizationService = mock(CategorizationService.class);
-    private final CategorizationRetryJob job = new CategorizationRetryJob(transactionService, categorizationService);
+    private final AdminEventLog adminEventLog = mock(AdminEventLog.class);
+    private final CategorizationRetryJob job = new CategorizationRetryJob(transactionService, categorizationService, adminEventLog);
 
     CategorizationRetryJobTest() {
         given(categorizationService.lowConfidenceThreshold()).willReturn(0.5);
@@ -43,6 +48,7 @@ class CategorizationRetryJobTest {
 
         verify(categorizationService).categorize(userA, txnA);
         verify(categorizationService).categorize(userB, txnB);
+        verify(adminEventLog).record(eq("categorization_retry_run"), isNull(), eq(Map.of("status", "success", "retried", 2)));
     }
 
     @Test
@@ -57,6 +63,20 @@ class CategorizationRetryJobTest {
         given(transactionService.findAllUncategorized(anyInt(), anyDouble())).willThrow(new RuntimeException("spendwise_jobs connection lost"));
 
         assertThatCode(job::run).doesNotThrowAnyException();
+        verify(adminEventLog)
+                .record(
+                        eq("categorization_retry_run"),
+                        isNull(),
+                        eq(Map.of("status", "failure", "stage", "lookup", "error", "spendwise_jobs connection lost")));
+    }
+
+    @Test
+    void runNowDelegatesToRun() {
+        given(transactionService.findAllUncategorized(anyInt(), anyDouble())).willReturn(List.of());
+
+        job.runNow();
+
+        verify(transactionService).findAllUncategorized(anyInt(), anyDouble());
     }
 
     @Test

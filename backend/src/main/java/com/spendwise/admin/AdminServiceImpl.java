@@ -1,5 +1,7 @@
 package com.spendwise.admin;
 
+import com.spendwise.admin.dto.JobScheduleResponse;
+import com.spendwise.admin.dto.UpdateJobScheduleRequest;
 import com.spendwise.alerts.AlertPage;
 import com.spendwise.alerts.AlertsService;
 import com.spendwise.analytics.AnalyticsComparison;
@@ -12,8 +14,13 @@ import com.spendwise.budget.Budget;
 import com.spendwise.budget.BudgetService;
 import com.spendwise.categorization.CategorizationService;
 import com.spendwise.categorization.dto.MlEvaluationResponse;
+import com.spendwise.common.job.ManuallyTriggerableJob;
+import com.spendwise.common.schedule.DynamicJobScheduler;
+import com.spendwise.common.schedule.JobSchedule;
+import com.spendwise.common.schedule.JobScheduleRepository;
 import com.spendwise.transaction.TransactionPage;
 import com.spendwise.transaction.TransactionService;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -40,6 +47,11 @@ public class AdminServiceImpl implements AdminService {
     private final AlertsService alertsService;
     private final AnalyticsService analyticsService;
     private final CategorizationService categorizationService;
+    private final ManuallyTriggerableJob categorizationRetryJob;
+    private final ManuallyTriggerableJob alertEvaluatorJob;
+    private final ManuallyTriggerableJob recommendationGeneratorJob;
+    private final JobScheduleRepository jobScheduleRepository;
+    private final DynamicJobScheduler dynamicJobScheduler;
 
     public AdminServiceImpl(
             AdminRepository adminRepository,
@@ -47,13 +59,23 @@ public class AdminServiceImpl implements AdminService {
             BudgetService budgetService,
             AlertsService alertsService,
             AnalyticsService analyticsService,
-            CategorizationService categorizationService) {
+            CategorizationService categorizationService,
+            @Qualifier("categorizationRetryJob") ManuallyTriggerableJob categorizationRetryJob,
+            @Qualifier("alertEvaluatorJob") ManuallyTriggerableJob alertEvaluatorJob,
+            @Qualifier("recommendationGeneratorJob") ManuallyTriggerableJob recommendationGeneratorJob,
+            JobScheduleRepository jobScheduleRepository,
+            DynamicJobScheduler dynamicJobScheduler) {
         this.adminRepository = adminRepository;
         this.transactionService = transactionService;
         this.budgetService = budgetService;
         this.alertsService = alertsService;
         this.analyticsService = analyticsService;
         this.categorizationService = categorizationService;
+        this.categorizationRetryJob = categorizationRetryJob;
+        this.alertEvaluatorJob = alertEvaluatorJob;
+        this.recommendationGeneratorJob = recommendationGeneratorJob;
+        this.jobScheduleRepository = jobScheduleRepository;
+        this.dynamicJobScheduler = dynamicJobScheduler;
     }
 
     @Override
@@ -108,6 +130,42 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void triggerRetrain() {
         categorizationService.triggerRetrain();
+    }
+
+    @Override
+    public void triggerCanonicalization() {
+        categorizationService.triggerCanonicalizationSweep();
+    }
+
+    @Override
+    public void triggerCategorizationRetry() {
+        categorizationRetryJob.runNow();
+    }
+
+    @Override
+    public void triggerAlertEvaluation() {
+        alertEvaluatorJob.runNow();
+    }
+
+    @Override
+    public void triggerRecommendationGeneration() {
+        recommendationGeneratorJob.runNow();
+    }
+
+    @Override
+    public List<JobScheduleResponse> listJobSchedules() {
+        return jobScheduleRepository.findAll().stream().map(JobScheduleResponse::from).toList();
+    }
+
+    @Override
+    public void updateJobSchedule(String jobKey, UpdateJobScheduleRequest request) {
+        request.validate();
+        if (JobSchedule.TYPE_WEEKLY.equals(request.scheduleType())) {
+            jobScheduleRepository.updateWeekly(jobKey, request.dayOfWeek(), request.hourOfDay());
+        } else {
+            jobScheduleRepository.updateInterval(jobKey, request.intervalValue(), request.intervalUnit());
+        }
+        dynamicJobScheduler.reschedule(jobKey);
     }
 
     @Override

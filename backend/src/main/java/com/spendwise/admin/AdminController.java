@@ -3,6 +3,8 @@ package com.spendwise.admin;
 import com.spendwise.admin.dto.AdminLogResponse;
 import com.spendwise.admin.dto.AdminUserDetailResponse;
 import com.spendwise.admin.dto.AdminUserSummaryResponse;
+import com.spendwise.admin.dto.JobScheduleResponse;
+import com.spendwise.admin.dto.UpdateJobScheduleRequest;
 import com.spendwise.analytics.dto.AnalyticsComparisonResponse;
 import com.spendwise.analytics.dto.AnalyticsSummaryResponse;
 import com.spendwise.categorization.dto.MlEvaluationResponse;
@@ -11,6 +13,8 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -74,6 +78,47 @@ public class AdminController {
     public ResponseEntity<Void> retrain() {
         adminService.triggerRetrain();
         return ResponseEntity.accepted().build();
+    }
+
+    /** Manual trigger for the weekly recipient-canonicalization sweep — same shape as {@link #retrain}. */
+    @PostMapping("/ml/canonicalize-recipients")
+    public ResponseEntity<Void> canonicalizeRecipients() {
+        adminService.triggerCanonicalization();
+        return ResponseEntity.accepted().build();
+    }
+
+    /** Manual trigger for the 30-minute categorization retry job (ML strategy phase, 2026-07-19). */
+    @PostMapping("/categorization/retry")
+    public ResponseEntity<Void> retryCategorization() {
+        adminService.triggerCategorizationRetry();
+        return ResponseEntity.accepted().build();
+    }
+
+    /** Manual trigger for the 30-minute alert + recurring-payment evaluator (ML strategy phase, 2026-07-19). */
+    @PostMapping("/alerts/evaluate")
+    public ResponseEntity<Void> evaluateAlerts() {
+        adminService.triggerAlertEvaluation();
+        return ResponseEntity.accepted().build();
+    }
+
+    /** Manual trigger for the 6-hourly recommendation generator (ML strategy phase, 2026-07-19) — real LLM cost per call. */
+    @PostMapping("/recommendations/generate")
+    public ResponseEntity<Void> generateRecommendations() {
+        adminService.triggerRecommendationGeneration();
+        return ResponseEntity.accepted().build();
+    }
+
+    /** ADR-018 (2026-07-19) — every background job's current admin-configurable schedule. */
+    @GetMapping("/job-schedules")
+    public List<JobScheduleResponse> jobSchedules() {
+        return adminService.listJobSchedules();
+    }
+
+    /** Persists a new schedule for {@code jobKey} and applies it immediately — no redeploy needed. */
+    @PutMapping("/job-schedules/{jobKey}")
+    public ResponseEntity<Void> updateJobSchedule(@PathVariable String jobKey, @RequestBody UpdateJobScheduleRequest request) {
+        adminService.updateJobSchedule(jobKey, request);
+        return ResponseEntity.noContent().build();
     }
 
     /** Accepts both a full ISO-8601 instant and a date-only ISO-8601 string, mirroring {@code AnalyticsController}. */

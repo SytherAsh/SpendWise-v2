@@ -9,6 +9,7 @@ import com.spendwise.categorization.dto.MlRecurringPredictionRequest;
 import com.spendwise.categorization.dto.MlRecurringPredictionResponse;
 import com.spendwise.categorization.dto.MlRetrainCorrection;
 import com.spendwise.categorization.dto.MlRetrainRequest;
+import com.spendwise.common.db.AdminEventLog;
 import com.spendwise.transaction.MlCorrectionRecord;
 import com.spendwise.transaction.Transaction;
 import com.spendwise.transaction.TransactionService;
@@ -27,16 +28,19 @@ public class CategorizationServiceImpl implements CategorizationService {
 
     private final MlClient mlClient;
     private final TransactionService transactionService;
+    private final AdminEventLog adminEventLog;
     private final double lowConfidenceThreshold;
     private final int fallbackCategoryId;
 
     public CategorizationServiceImpl(
             MlClient mlClient,
             TransactionService transactionService,
+            AdminEventLog adminEventLog,
             @Value("${app.ml.low-confidence-threshold}") double lowConfidenceThreshold,
             @Value("${app.ml.fallback-category-id}") int fallbackCategoryId) {
         this.mlClient = mlClient;
         this.transactionService = transactionService;
+        this.adminEventLog = adminEventLog;
         this.lowConfidenceThreshold = lowConfidenceThreshold;
         this.fallbackCategoryId = fallbackCategoryId;
     }
@@ -91,6 +95,11 @@ public class CategorizationServiceImpl implements CategorizationService {
     @Override
     public MlNormalizeRecipientsResponse normalizeRecipients(MlNormalizeRecipientsRequest request) {
         return mlClient.normalizeRecipients(request);
+    }
+
+    @Override
+    public void triggerCanonicalizationSweep() {
+        RecipientCanonicalizationSweep.run(transactionService, this, adminEventLog);
     }
 
     private static MlPredictionRequest toPredictionRequest(Transaction transaction) {

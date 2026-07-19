@@ -104,15 +104,11 @@ app:
     # documented default for one-off unmatched transactions. Configurable rather than
     # hardcoded in CategorizationServiceImpl in case the seeded id ever changes.
     fallback-category-id: ${ML_FALLBACK_CATEGORY_ID:6}
-    # "Weekly (configurable)" per docs/architecture.md's Background Jobs table —
-    # default fires Sunday 03:00 server time (cron: sec min hour day month weekday).
-    retrain-cron: ${ML_RETRAIN_CRON:0 0 3 * * SUN}
-    # Recipient-name canonicalization (ML strategy phase) — same weekly cadence as the
-    # retrain, offset to 04:00 Sunday so the two ML batch jobs don't contend for the
-    # single free-tier FastAPI worker. Clustering runs across each user's full recipient
-    # history, so it's a whole-history batch job, not per-transaction (see
-    # RecipientCanonicalizationJob).
-    canonicalization-cron: ${ML_CANONICALIZATION_CRON:0 0 4 * * SUN}
+    # retrain-cron / canonicalization-cron used to live here as env-var-overridable
+    # properties. ADR-018 (2026-07-19) moved every background job's schedule, including
+    # these two, into the admin-configurable `job_schedules` table (see
+    # com.spendwise.common.schedule) so it's editable at runtime from the admin portal
+    # instead of requiring a redeploy — there is deliberately no property here anymore.
   llm:
     # CLAUDE.md: "No vendor has been selected. Do not hardcode any LLM SDK into business
     # logic." Only "stub" exists today (LlmConfig) — a real provider is a future addition,

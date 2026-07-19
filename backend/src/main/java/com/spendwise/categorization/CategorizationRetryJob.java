@@ -1,14 +1,15 @@
 package com.spendwise.categorization;
 
+import com.spendwise.common.db.AdminEventLog;
+import com.spendwise.common.job.ManuallyTriggerableJob;
 import com.spendwise.transaction.TransactionService;
 import com.spendwise.transaction.UncategorizedTransactionRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
 
 /**
  * E4-S3-T3 — re-triggers ML categorization for transactions ingested while FastAPI was
@@ -17,9 +18,16 @@ import java.util.concurrent.TimeUnit;
  * Background Jobs table ("Categorization retry — every 30 minutes"). Cross-user by nature —
  * {@link TransactionService#findAllUncategorized} reads via the {@code spendwise_jobs} role (see
  * {@code com.spendwise.common.db.JobsDataSourceConfig} and STATUS.md's Epic 4 close-out).
+ *
+ * <p>Implements {@link ManuallyTriggerableJob} both for Admin's manual "run now" trigger and as
+ * the scheduling entry point {@code com.spendwise.common.schedule.DynamicJobScheduler} calls on
+ * whatever cadence the admin-configurable {@code job_schedules} row for
+ * {@code "categorization_retry"} currently says (ADR-018) — no more static {@code @Scheduled}
+ * annotation. See {@link ManuallyTriggerableJob}'s own javadoc for why this shape rather than
+ * routing through {@link CategorizationService} the way retrain/canonicalize already do.
  */
 @Component
-public class CategorizationRetryJob {
+public class CategorizationRetryJob implements ManuallyTriggerableJob {
 
     private static final Logger log = LoggerFactory.getLogger(CategorizationRetryJob.class);
 
@@ -30,18 +38,17 @@ public class CategorizationRetryJob {
 
     private final TransactionService transactionService;
     private final CategorizationService categorizationService;
+    private final AdminEventLog adminEventLog;
 
-    public CategorizationRetryJob(TransactionService transactionService, CategorizationService categorizationService) {
+    public CategorizationRetryJob(
+            TransactionService transactionService, CategorizationService categorizationService, AdminEventLog adminEventLog) {
         this.transactionService = transactionService;
         this.categorizationService = categorizationService;
+        this.adminEventLog = adminEventLog;
     }
 
-    // initialDelay so this doesn't fire the instant the app starts (Spring's default for
-    // fixedRate with no initialDelay) -- a full system-wide categorization sweep on every app
-    // restart/redeploy is wasteful and not what "every 30 minutes" means. Also avoids hitting
-    // the jobs DataSource before the app has had a moment to settle.
-    @Scheduled(initialDelay = 30, fixedRate = 30, timeUnit = TimeUnit.MINUTES)
-    public void retryUncategorized() {
+    @Override
+    public void runNow() {
         run();
     }
 
@@ -54,6 +61,8 @@ public class CategorizationRetryJob {
             // The next scheduled run retries — a transient failure here (e.g. spendwise_jobs
             // connection issue) must not crash the scheduler thread.
             log.warn("Categorization retry job's lookup failed: {}", e.getMessage());
+            adminEventLog.record(
+                    "categorization_retry_run", null, Map.of("status", "failure", "stage", "lookup", "error", String.valueOf(e.getMessage())));
             return;
         }
 
@@ -67,5 +76,6 @@ public class CategorizationRetryJob {
                 log.warn("Categorization retry failed for transaction {}: {}", ref.transactionId(), e.getMessage());
             }
         }
+        adminEventLog.record("categorization_retry_run", null, Map.of("status", "success", "retried", uncategorized.size()));
     }
 }

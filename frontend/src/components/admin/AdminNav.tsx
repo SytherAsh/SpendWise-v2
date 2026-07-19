@@ -8,6 +8,8 @@ const NAV_ITEMS = [
   { href: "/admin/users", label: "Users" },
   { href: "/admin/logs", label: "Logs" },
   { href: "/admin/ml", label: "ML Accuracy" },
+  { href: "/admin/ops", label: "Run Jobs Now" },
+  { href: "/admin/schedules", label: "Job Schedules" },
 ];
 
 export function AdminNav() {

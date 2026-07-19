@@ -30,4 +30,11 @@ class MlRetrainingJobTest {
 
         assertThatCode(job::run).doesNotThrowAnyException();
     }
+
+    @Test
+    void runNowDelegatesToRun() {
+        job.runNow();
+
+        verify(categorizationService).triggerRetrain();
+    }
 }

@@ -1,5 +1,7 @@
 package com.spendwise.admin;
 
+import com.spendwise.admin.dto.JobScheduleResponse;
+import com.spendwise.admin.dto.UpdateJobScheduleRequest;
 import com.spendwise.alerts.Alert;
 import com.spendwise.alerts.AlertPage;
 import com.spendwise.alerts.AlertPriority;
@@ -15,6 +17,10 @@ import com.spendwise.budget.Budget;
 import com.spendwise.budget.BudgetService;
 import com.spendwise.categorization.CategorizationService;
 import com.spendwise.categorization.dto.MlEvaluationResponse;
+import com.spendwise.common.job.ManuallyTriggerableJob;
+import com.spendwise.common.schedule.DynamicJobScheduler;
+import com.spendwise.common.schedule.JobSchedule;
+import com.spendwise.common.schedule.JobScheduleRepository;
 import com.spendwise.transaction.Transaction;
 import com.spendwise.transaction.TransactionPage;
 import com.spendwise.transaction.TransactionService;
@@ -44,8 +50,23 @@ class AdminServiceImplTest {
     private final AlertsService alertsService = mock(AlertsService.class);
     private final AnalyticsService analyticsService = mock(AnalyticsService.class);
     private final CategorizationService categorizationService = mock(CategorizationService.class);
+    private final ManuallyTriggerableJob categorizationRetryJob = mock(ManuallyTriggerableJob.class);
+    private final ManuallyTriggerableJob alertEvaluatorJob = mock(ManuallyTriggerableJob.class);
+    private final ManuallyTriggerableJob recommendationGeneratorJob = mock(ManuallyTriggerableJob.class);
+    private final JobScheduleRepository jobScheduleRepository = mock(JobScheduleRepository.class);
+    private final DynamicJobScheduler dynamicJobScheduler = mock(DynamicJobScheduler.class);
     private final AdminServiceImpl service = new AdminServiceImpl(
-            adminRepository, transactionService, budgetService, alertsService, analyticsService, categorizationService);
+            adminRepository,
+            transactionService,
+            budgetService,
+            alertsService,
+            analyticsService,
+            categorizationService,
+            categorizationRetryJob,
+            alertEvaluatorJob,
+            recommendationGeneratorJob,
+            jobScheduleRepository,
+            dynamicJobScheduler);
 
     @Test
     void listUsersDelegatesToRepository() {
@@ -160,6 +181,24 @@ class AdminServiceImplTest {
     }
 
     @Test
+    void triggerCanonicalizationDelegatesToCategorizationService() {
+        service.triggerCanonicalization();
+        verify(categorizationService).triggerCanonicalizationSweep();
+    }
+
+    @Test
+    void manualJobTriggersDelegateToTheirRespectiveManuallyTriggerableJob() {
+        service.triggerCategorizationRetry();
+        verify(categorizationRetryJob).runNow();
+
+        service.triggerAlertEvaluation();
+        verify(alertEvaluatorJob).runNow();
+
+        service.triggerRecommendationGeneration();
+        verify(recommendationGeneratorJob).runNow();
+    }
+
+    @Test
     void deleteUserThrowsWhenUserDoesNotExist() {
         UUID userId = UUID.randomUUID();
         given(adminRepository.findUserCoreById(userId)).willReturn(Optional.empty());
@@ -183,5 +222,46 @@ class AdminServiceImplTest {
         verify(adminRepository).scrubAdminLogs(
                 org.mockito.ArgumentMatchers.eq(List.of(logId)),
                 org.mockito.ArgumentMatchers.argThat(strings -> strings.containsAll(List.of("+911111111111", "a@b.com", "google-123"))));
+    }
+
+    @Test
+    void listJobSchedulesDelegatesToRepository() {
+        JobSchedule schedule =
+                new JobSchedule("categorization_retry", "Categorization retry", "INTERVAL", 30, "MINUTES", null, null, Instant.now());
+        given(jobScheduleRepository.findAll()).willReturn(List.of(schedule));
+
+        List<JobScheduleResponse> result = service.listJobSchedules();
+
+        assertThat(result).extracting(JobScheduleResponse::jobKey).containsExactly("categorization_retry");
+    }
+
+    @Test
+    void updateJobScheduleWithIntervalTypePersistsAndReschedulesImmediately() {
+        UpdateJobScheduleRequest request = new UpdateJobScheduleRequest("INTERVAL", 45, "MINUTES", null, null);
+
+        service.updateJobSchedule("categorization_retry", request);
+
+        verify(jobScheduleRepository).updateInterval("categorization_retry", 45, "MINUTES");
+        verify(dynamicJobScheduler).reschedule("categorization_retry");
+    }
+
+    @Test
+    void updateJobScheduleWithWeeklyTypePersistsAndReschedulesImmediately() {
+        UpdateJobScheduleRequest request = new UpdateJobScheduleRequest("WEEKLY", null, null, "MON", 6);
+
+        service.updateJobSchedule("canonicalization", request);
+
+        verify(jobScheduleRepository).updateWeekly("canonicalization", "MON", 6);
+        verify(dynamicJobScheduler).reschedule("canonicalization");
+    }
+
+    @Test
+    void updateJobScheduleWithInvalidRequestNeverPersistsOrReschedules() {
+        UpdateJobScheduleRequest request = new UpdateJobScheduleRequest("INTERVAL", 0, "MINUTES", null, null);
+
+        assertThatThrownBy(() -> service.updateJobSchedule("categorization_retry", request))
+                .isInstanceOf(com.spendwise.common.schedule.InvalidJobScheduleException.class);
+        verify(jobScheduleRepository, never()).updateInterval(any(), org.mockito.ArgumentMatchers.anyInt(), any());
+        verify(dynamicJobScheduler, never()).reschedule(any());
     }
 }

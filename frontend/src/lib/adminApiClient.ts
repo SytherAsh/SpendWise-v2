@@ -68,6 +68,7 @@ async function adminRequest<T>(path: string, options: RequestOptions = {}): Prom
 export const adminApiClient = {
   get: <T>(path: string, options?: RequestOptions) => adminRequest<T>(path, { ...options, method: "GET" }),
   post: <T>(path: string, body?: unknown, options?: RequestOptions) => adminRequest<T>(path, { ...options, method: "POST", body }),
+  put: <T>(path: string, body?: unknown, options?: RequestOptions) => adminRequest<T>(path, { ...options, method: "PUT", body }),
   delete: <T>(path: string, options?: RequestOptions) => adminRequest<T>(path, { ...options, method: "DELETE" }),
 };
 
