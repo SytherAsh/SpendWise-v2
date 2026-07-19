@@ -26,6 +26,7 @@ dist/
 *.war
 target/
 .gradle/
+bin/
 
 # Node / Next.js
 node_modules/

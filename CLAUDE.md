@@ -303,6 +303,7 @@ This is the authoritative process for how Claude Code operates on this repositor
 - Use the conventional-commits format defined in [docs/operations/development_guidelines.md § Commit Messages](./docs/operations/development_guidelines.md#commit-messages).
 - Never commit code that fails to build or fails its test suite, unless the user explicitly asks for a checkpoint commit — say so in the message (e.g. `wip: checkpoint, tests not passing`).
 - Run the relevant test suite(s) for whatever was touched (see [docs/operations/testing.md](./docs/operations/testing.md) and [docs/operations/development_guidelines.md § Running Tests Locally](./docs/operations/development_guidelines.md#running-tests-locally)) before recommending a commit or a push. If any test fails, explain the failure and its cause before committing or pushing — do not proceed silently.
+- Before recommending a push (not every commit — routine same-session commits don't need a full agent run each time, but the last one before `git push` does), run the `test-drift-guardian` agent on the accumulated diff since the last push. It runs the actual suites for whatever surfaces changed and separately flags tests that didn't move in step with the code they cover (stale-but-green tests are exactly what turns CI red after the fact). Surface its verdict before asking for push confirmation.
 
 ### Working on `main`
 
@@ -310,6 +311,15 @@ This is the authoritative process for how Claude Code operates on this repositor
 - Commit each completed unit of work straight to `main` (per the Commit Policy above), then ask before pushing (per Git Operations above).
 - Branches remain available if *you or the user* deliberately choose to isolate a risky or experimental change — but they are optional, never the default. Don't open one without a specific reason, and don't require one for routine work, including epics.
 - If a task grows past its expected 2–4 hour size, stop and split it per the complexity guidance in [implementation/README.md](./implementation/README.md) — this is about task sizing, not branching.
+
+### Commit Cadence Nudge
+
+This project's recurring failure mode: work continues across many changes without a commit or push, so nothing checks whether the branch would actually go green, and docs drift accumulates unnoticed until it's expensive to untangle. Watch for that state and speak up about it — don't wait to be asked.
+
+- Notice accumulated state, not a fixed number of turns. At natural stopping points — a task finishes, the user asks "what's next," a TodoWrite item is marked done — a quick `git status` / `git log origin/main..HEAD` check is enough; don't run this on every message, that's noise.
+- If a meaningful backlog of uncommitted or unpushed work has built up — several completed logical units, or multi-file changes spanning more than one task, sitting there for a while with nothing committed or pushed — say so and suggest a checkpoint: run `test-drift-guardian` on the accumulated diff, commit, and (with explicit confirmation, per Git Operations) push, specifically so CI can confirm the branch is still green and `docs-curator` can catch documentation drift before it compounds further.
+- Keep it proportionate — one small fix doesn't warrant a nudge. The actual risk this guards against is a growing pile of unverified changes, where a later red build is harder to isolate because it could be any of several changes. Scale the urgency of the nudge to how much has piled up, not to elapsed time alone.
+- A nudge is a suggestion, never an auto-commit or auto-push — it surfaces the option; the user still decides per the existing Commit Policy and Git Operations rules above.
 
 ### Task Workflow (UI/UX polish & remaining launch work)
 
