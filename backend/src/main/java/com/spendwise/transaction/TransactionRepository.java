@@ -85,8 +85,8 @@ public class TransactionRepository {
         return jobsJdbcTemplate.query(
                 "SELECT t.id, t.user_id FROM transactions t "
                         + "LEFT JOIN transaction_categories tc ON tc.transaction_id = t.id "
-                        + "WHERE tc.transaction_id IS NULL "
-                        + "OR (tc.assigned_by = 'ml' AND tc.confidence_score < ?) "
+                        + "WHERE t.deleted_at IS NULL AND (tc.transaction_id IS NULL "
+                        + "OR (tc.assigned_by = 'ml' AND tc.confidence_score < ?)) "
                         + "ORDER BY t.parsed_at ASC LIMIT ?",
                 (rs, rowNum) -> new UncategorizedTransactionRef(UUID.fromString(rs.getString("user_id")), UUID.fromString(rs.getString("id"))),
                 lowConfidenceThreshold,
@@ -162,7 +162,7 @@ public class TransactionRepository {
         rlsSession.setCurrentUser(userId);
         String sql = "SELECT " + SELECT_COLUMNS
                 + " FROM transactions t LEFT JOIN transaction_categories tc ON tc.transaction_id = t.id "
-                + "WHERE t.user_id = ? AND t.id = ?";
+                + "WHERE t.user_id = ? AND t.id = ? AND t.deleted_at IS NULL";
         return jdbcTemplate.query(sql, ROW_MAPPER, userId, id).stream().findFirst();
     }
 
@@ -170,12 +170,21 @@ public class TransactionRepository {
         rlsSession.setCurrentUser(userId);
         return jdbcTemplate
                 .query(
-                        "SELECT transaction_date FROM transactions WHERE user_id = ? AND id = ?",
+                        "SELECT transaction_date FROM transactions WHERE user_id = ? AND id = ? AND deleted_at IS NULL",
                         (rs, rowNum) -> rs.getTimestamp("transaction_date").toInstant(),
                         userId,
                         id)
                 .stream()
                 .findFirst();
+    }
+
+    /** @return rows affected — 0 means no matching non-deleted row for this user (already deleted, wrong owner, or doesn't exist). */
+    public int softDelete(UUID userId, UUID id) {
+        rlsSession.setCurrentUser(userId);
+        return jdbcTemplate.update(
+                "UPDATE transactions SET deleted_at = now() WHERE user_id = ? AND id = ? AND deleted_at IS NULL",
+                userId,
+                id);
     }
 
     /**
@@ -192,13 +201,15 @@ public class TransactionRepository {
             Instant from,
             Instant to,
             Boolean creditOnly,
+            String search,
             Instant cursorDate,
             UUID cursorId,
             int limitPlusOne) {
         rlsSession.setCurrentUser(userId);
         StringBuilder sql = new StringBuilder("SELECT ")
                 .append(SELECT_COLUMNS)
-                .append(" FROM transactions t LEFT JOIN transaction_categories tc ON tc.transaction_id = t.id WHERE t.user_id = ?");
+                .append(" FROM transactions t LEFT JOIN transaction_categories tc ON tc.transaction_id = t.id "
+                        + "LEFT JOIN categories c ON c.id = tc.category_id WHERE t.user_id = ? AND t.deleted_at IS NULL");
         List<Object> args = new ArrayList<>();
         args.add(userId);
         appendCategoryAndDateFilters(sql, args, categoryId, uncategorizedOnly, from, to);
@@ -209,6 +220,7 @@ public class TransactionRepository {
         if (creditOnly != null) {
             sql.append(creditOnly ? " AND t.credit > 0" : " AND t.debit > 0");
         }
+        appendSearchFilter(sql, args, search);
         if (cursorDate != null && cursorId != null) {
             sql.append(" AND (t.transaction_date, t.id) < (?, ?::uuid)");
             args.add(Timestamp.from(cursorDate));
@@ -231,13 +243,27 @@ public class TransactionRepository {
         rlsSession.setCurrentUser(userId);
         StringBuilder sql = new StringBuilder("SELECT ")
                 .append(SELECT_COLUMNS)
-                .append(" FROM transactions t LEFT JOIN transaction_categories tc ON tc.transaction_id = t.id WHERE t.user_id = ?");
+                .append(" FROM transactions t LEFT JOIN transaction_categories tc ON tc.transaction_id = t.id "
+                        + "WHERE t.user_id = ? AND t.deleted_at IS NULL");
         List<Object> args = new ArrayList<>();
         args.add(userId);
         appendCategoryAndDateFilters(sql, args, categoryId, uncategorizedOnly, from, to);
         sql.append(" ORDER BY ABS(t.amount) DESC, t.transaction_date DESC, t.id DESC LIMIT ?");
         args.add(limit);
         return jdbcTemplate.query(sql.toString(), ROW_MAPPER, args.toArray());
+    }
+
+    /** Free-text filter for the Transactions page search box — matches payee, UPI id, note, or category name. */
+    private static void appendSearchFilter(StringBuilder sql, List<Object> args, String search) {
+        if (search == null || search.isBlank()) {
+            return;
+        }
+        String pattern = "%" + search.trim() + "%";
+        sql.append(" AND (t.recipient_name ILIKE ? OR t.upi_id ILIKE ? OR t.note ILIKE ? OR c.name ILIKE ?)");
+        args.add(pattern);
+        args.add(pattern);
+        args.add(pattern);
+        args.add(pattern);
     }
 
     /** Shared by {@link #listPage} and {@link #topByAmount} — the category/date WHERE fragment, identical in both. */
@@ -273,7 +299,7 @@ public class TransactionRepository {
                 "SELECT tc.category_id, SUM(t.debit) AS total_spent FROM transactions t "
                         + "JOIN transaction_categories tc ON tc.transaction_id = t.id "
                         + "WHERE t.user_id = ? AND EXTRACT(MONTH FROM t.transaction_date) = ? "
-                        + "AND EXTRACT(YEAR FROM t.transaction_date) = ? AND t.debit > 0 "
+                        + "AND EXTRACT(YEAR FROM t.transaction_date) = ? AND t.debit > 0 AND t.deleted_at IS NULL "
                         + "GROUP BY tc.category_id",
                 (rs, rowNum) -> new Object[] {rs.getInt("category_id"), rs.getBigDecimal("total_spent")},
                 userId,
@@ -297,6 +323,7 @@ public class TransactionRepository {
                         + "EXTRACT(YEAR FROM t.transaction_date)::int AS year, SUM(t.debit) AS total_spent "
                         + "FROM transactions t JOIN transaction_categories tc ON tc.transaction_id = t.id "
                         + "WHERE t.user_id = ? AND t.transaction_date >= ? AND t.transaction_date < ? AND t.debit > 0 "
+                        + "AND t.deleted_at IS NULL "
                         + "GROUP BY tc.category_id, month, year",
                 (rs, rowNum) -> new MonthlyCategorySpend(
                         rs.getInt("category_id"), rs.getInt("month"), rs.getInt("year"), rs.getBigDecimal("total_spent")),
@@ -315,7 +342,7 @@ public class TransactionRepository {
                 "SELECT t.user_id, tc.category_id, SUM(t.debit) AS total_spent FROM transactions t "
                         + "JOIN transaction_categories tc ON tc.transaction_id = t.id "
                         + "WHERE EXTRACT(MONTH FROM t.transaction_date) = ? AND EXTRACT(YEAR FROM t.transaction_date) = ? "
-                        + "AND t.debit > 0 GROUP BY t.user_id, tc.category_id",
+                        + "AND t.debit > 0 AND t.deleted_at IS NULL GROUP BY t.user_id, tc.category_id",
                 (rs, rowNum) -> new UserCategorySpend(
                         UUID.fromString(rs.getString("user_id")), rs.getInt("category_id"), rs.getBigDecimal("total_spent")),
                 month,
@@ -331,7 +358,8 @@ public class TransactionRepository {
     public List<RecurringCandidateTransaction> findAllForRecurringDetection(Instant since) {
         return jobsJdbcTemplate.query(
                 "SELECT id, user_id, transaction_date, debit, upi_id, recipient_name, recipient_canonical FROM transactions "
-                        + "WHERE transaction_date >= ? AND debit > 0 AND (upi_id IS NOT NULL OR recipient_name IS NOT NULL)",
+                        + "WHERE transaction_date >= ? AND debit > 0 AND deleted_at IS NULL "
+                        + "AND (upi_id IS NOT NULL OR recipient_name IS NOT NULL)",
                 (rs, rowNum) -> new RecurringCandidateTransaction(
                         UUID.fromString(rs.getString("user_id")),
                         UUID.fromString(rs.getString("id")),
@@ -355,7 +383,7 @@ public class TransactionRepository {
         rlsSession.setCurrentUser(userId);
         return jdbcTemplate.query(
                 "SELECT id, user_id, transaction_date, debit, upi_id, recipient_name, recipient_canonical FROM transactions "
-                        + "WHERE user_id = ? AND transaction_date >= ? AND debit > 0 "
+                        + "WHERE user_id = ? AND transaction_date >= ? AND debit > 0 AND deleted_at IS NULL "
                         + "AND (upi_id IS NOT NULL OR recipient_name IS NOT NULL)",
                 (rs, rowNum) -> new RecurringCandidateTransaction(
                         UUID.fromString(rs.getString("user_id")),
@@ -380,7 +408,7 @@ public class TransactionRepository {
     public List<RecipientIdentity> findAllRecipientIdentities() {
         return jobsJdbcTemplate.query(
                 "SELECT DISTINCT user_id, recipient_name, upi_id FROM transactions "
-                        + "WHERE recipient_name IS NOT NULL OR upi_id IS NOT NULL",
+                        + "WHERE deleted_at IS NULL AND (recipient_name IS NOT NULL OR upi_id IS NOT NULL)",
                 (rs, rowNum) -> new RecipientIdentity(
                         UUID.fromString(rs.getString("user_id")),
                         rs.getString("recipient_name"),
@@ -398,7 +426,8 @@ public class TransactionRepository {
     public int updateCanonicalForIdentity(UUID userId, String recipientName, String upiId, String canonical) {
         return jobsJdbcTemplate.update(
                 "UPDATE transactions SET recipient_canonical = ? "
-                        + "WHERE user_id = ? AND recipient_name IS NOT DISTINCT FROM ? AND upi_id IS NOT DISTINCT FROM ?",
+                        + "WHERE user_id = ? AND recipient_name IS NOT DISTINCT FROM ? AND upi_id IS NOT DISTINCT FROM ? "
+                        + "AND deleted_at IS NULL",
                 canonical,
                 userId,
                 recipientName,
@@ -417,7 +446,8 @@ public class TransactionRepository {
         rlsSession.setCurrentUser(userId);
         return jdbcTemplate.update(
                 "UPDATE transactions SET recipient_canonical = ? "
-                        + "WHERE user_id = ? AND recipient_name IS NOT DISTINCT FROM ? AND upi_id IS NOT DISTINCT FROM ?",
+                        + "WHERE user_id = ? AND recipient_name IS NOT DISTINCT FROM ? AND upi_id IS NOT DISTINCT FROM ? "
+                        + "AND deleted_at IS NULL",
                 canonical,
                 userId,
                 recipientName,

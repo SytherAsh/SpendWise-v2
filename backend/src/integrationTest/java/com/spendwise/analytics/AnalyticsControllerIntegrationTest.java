@@ -86,6 +86,21 @@ class AnalyticsControllerIntegrationTest {
     }
 
     @Test
+    void summaryExcludesASoftDeletedTransaction() {
+        HttpHeaders headers = authHeaders();
+        createManual(headers, "2025-07-05T10:00:00Z", -100.0);
+        String deletedId = createManual(headers, "2025-07-06T10:00:00Z", -900.0);
+        restTemplate.exchange(
+                baseUrl() + "/transactions/" + deletedId, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
+
+        ResponseEntity<Map> response = restTemplate.exchange(
+                baseUrl() + "/analytics/summary?from=2025-07-01&to=2025-07-31", HttpMethod.GET, new HttpEntity<>(headers), Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(numberOf(response.getBody().get("totalSpend"))).isEqualByComparingTo("100");
+    }
+
+    @Test
     void categoriesReturnsPerCategoryTotalsAndTransactionCounts() {
         HttpHeaders headers = authHeaders();
         categorize(headers, createManual(headers, "2025-02-05T10:00:00Z", -40.0), 4);

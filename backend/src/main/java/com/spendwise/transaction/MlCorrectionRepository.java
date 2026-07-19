@@ -55,7 +55,8 @@ public class MlCorrectionRepository {
     public List<MlCorrectionRecord> findAllCorrections() {
         return jobsJdbcTemplate.query(
                 "SELECT t.recipient_name, t.upi_id, t.bank, t.transaction_mode, t.amount, t.note, mc.new_category_id "
-                        + "FROM ml_corrections mc JOIN transactions t ON t.id = mc.transaction_id",
+                        + "FROM ml_corrections mc JOIN transactions t ON t.id = mc.transaction_id "
+                        + "WHERE t.deleted_at IS NULL",
                 (rs, rowNum) -> new MlCorrectionRecord(
                         rs.getString("recipient_name"),
                         rs.getString("upi_id"),

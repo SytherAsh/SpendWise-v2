@@ -94,7 +94,7 @@ class AdminServiceImplTest {
                 UUID.randomUUID(), userId, Instant.now(), BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.TEN.negate(), BigDecimal.ZERO,
                 "UPI", "DR", "txn-1", "Swiggy", "swiggy@okhdfc", null, null,
                 com.spendwise.transaction.TransactionSource.SMS, Instant.now(), null, null, null, null);
-        given(transactionService.list(userId, 200, null, null, false, null, null, null))
+        given(transactionService.list(userId, 200, null, null, false, null, null, null, null))
                 .willReturn(new TransactionPage(List.of(transaction), null, false));
         Budget budget = new Budget(UUID.randomUUID(), userId, 1, BigDecimal.valueOf(2000), 7, 2026);
         given(budgetService.listForCurrentMonth(userId)).willReturn(List.of(budget));

@@ -86,7 +86,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public AdminUserDetail getUserDetail(UUID userId) {
         AdminUserCore core = adminRepository.findUserCoreById(userId).orElseThrow(AdminUserNotFoundException::new);
-        TransactionPage transactions = transactionService.list(userId, DETAIL_VIEW_LIMIT, null, null, false, null, null, null);
+        TransactionPage transactions = transactionService.list(userId, DETAIL_VIEW_LIMIT, null, null, false, null, null, null, null);
         List<Budget> budgets = budgetService.listForCurrentMonth(userId);
         AlertPage alerts = alertsService.list(userId, DETAIL_VIEW_LIMIT, null, null);
         return new AdminUserDetail(

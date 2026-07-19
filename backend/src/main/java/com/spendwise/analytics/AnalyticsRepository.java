@@ -45,7 +45,8 @@ public class AnalyticsRepository {
         rlsSession.setCurrentUser(userId);
         return jdbcTemplate.queryForObject(
                 "SELECT COALESCE(SUM(debit), 0) AS total_spend, COALESCE(SUM(credit), 0) AS total_income "
-                        + "FROM transactions WHERE user_id = ? AND transaction_date >= ? AND transaction_date <= ?",
+                        + "FROM transactions WHERE user_id = ? AND transaction_date >= ? AND transaction_date <= ? "
+                        + "AND deleted_at IS NULL",
                 (rs, rowNum) -> new OverallTotals(rs.getBigDecimal("total_spend"), rs.getBigDecimal("total_income")),
                 userId,
                 Timestamp.from(from),
@@ -62,6 +63,7 @@ public class AnalyticsRepository {
                         + "JOIN transaction_categories tc ON tc.transaction_id = t.id "
                         + "JOIN categories c ON c.id = tc.category_id "
                         + "WHERE t.user_id = ? AND t.transaction_date >= ? AND t.transaction_date <= ? "
+                        + "AND t.deleted_at IS NULL "
                         + "GROUP BY tc.category_id, c.name ORDER BY tc.category_id",
                 (rs, rowNum) -> new CategoryTotal(
                         rs.getInt("category_id"),
@@ -90,7 +92,7 @@ public class AnalyticsRepository {
                         + "COUNT(*) AS txn_count FROM transactions t "
                         + "LEFT JOIN transaction_categories tc ON tc.transaction_id = t.id "
                         + "WHERE t.user_id = ? AND t.transaction_date >= ? AND t.transaction_date <= ? "
-                        + "AND tc.category_id IS NULL AND t.debit > 0",
+                        + "AND tc.category_id IS NULL AND t.debit > 0 AND t.deleted_at IS NULL",
                 (rs, rowNum) -> new UncategorizedTotal(
                         rs.getBigDecimal("total_spend"), rs.getBigDecimal("total_income"), rs.getLong("txn_count")),
                 userId,
@@ -104,7 +106,7 @@ public class AnalyticsRepository {
         StringBuilder sql = new StringBuilder(
                 "SELECT date_trunc(?, t.transaction_date) AS bucket, COALESCE(SUM(t.debit), 0) AS total_spend "
                         + "FROM transactions t LEFT JOIN transaction_categories tc ON tc.transaction_id = t.id "
-                        + "WHERE t.user_id = ? AND t.transaction_date >= ? AND t.transaction_date <= ?");
+                        + "WHERE t.user_id = ? AND t.transaction_date >= ? AND t.transaction_date <= ? AND t.deleted_at IS NULL");
         List<Object> args = new ArrayList<>();
         args.add(granularity);
         args.add(userId);
@@ -132,6 +134,7 @@ public class AnalyticsRepository {
                         + "LEFT JOIN transaction_categories tc ON tc.transaction_id = t.id "
                         + "LEFT JOIN categories c ON c.id = tc.category_id "
                         + "WHERE t.user_id = ? AND t.transaction_date >= ? AND t.transaction_date <= ? "
+                        + "AND t.deleted_at IS NULL "
                         + "ORDER BY t.transaction_date DESC",
                 (rs, rowNum) -> new AnalyticsExportRow(
                         UUID.fromString(rs.getString("id")),
@@ -170,7 +173,7 @@ public class AnalyticsRepository {
                         + "JOIN transaction_categories tc ON tc.transaction_id = t.id "
                         + "JOIN categories c ON c.id = tc.category_id "
                         + "WHERE EXTRACT(MONTH FROM t.transaction_date) = ? AND EXTRACT(YEAR FROM t.transaction_date) = ? "
-                        + "AND t.debit > 0 GROUP BY t.user_id, tc.category_id, c.name",
+                        + "AND t.debit > 0 AND t.deleted_at IS NULL GROUP BY t.user_id, tc.category_id, c.name",
                 (rs, rowNum) -> new CategoryMonthSpend(
                         UUID.fromString(rs.getString("user_id")),
                         rs.getInt("category_id"),

@@ -94,11 +94,12 @@ public class TransactionServiceImpl implements TransactionService {
             boolean uncategorizedOnly,
             Instant from,
             Instant to,
-            Boolean creditOnly) {
+            Boolean creditOnly,
+            String search) {
         Instant cursorDate = cursor == null ? null : transactionRepository.findTransactionDate(userId, cursor).orElse(null);
         UUID effectiveCursorId = cursorDate == null ? null : cursor;
         List<Transaction> rows = transactionRepository.listPage(
-                userId, categoryId, uncategorizedOnly, from, to, creditOnly, cursorDate, effectiveCursorId, limit + 1);
+                userId, categoryId, uncategorizedOnly, from, to, creditOnly, search, cursorDate, effectiveCursorId, limit + 1);
         boolean hasMore = rows.size() > limit;
         List<Transaction> page = hasMore ? rows.subList(0, limit) : rows;
         UUID nextCursor = hasMore ? page.get(page.size() - 1).id() : null;
@@ -116,6 +117,14 @@ public class TransactionServiceImpl implements TransactionService {
     @Transactional
     public Transaction getById(UUID userId, UUID transactionId) {
         return transactionRepository.findById(userId, transactionId).orElseThrow(TransactionNotFoundException::new);
+    }
+
+    @Override
+    @Transactional
+    public void softDelete(UUID userId, UUID transactionId) {
+        if (transactionRepository.softDelete(userId, transactionId) == 0) {
+            throw new TransactionNotFoundException();
+        }
     }
 
     @Override

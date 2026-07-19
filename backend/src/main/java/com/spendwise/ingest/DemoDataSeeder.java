@@ -172,7 +172,7 @@ public class DemoDataSeeder {
         Map<String, UUID> byClientTransactionId = new HashMap<>();
         UUID cursor = null;
         do {
-            TransactionPage page = transactionService.list(userId, 100, cursor, null, false, null, null, null);
+            TransactionPage page = transactionService.list(userId, 100, cursor, null, false, null, null, null, null);
             for (Transaction t : page.data()) {
                 byClientTransactionId.put(t.transactionId(), t.id());
             }

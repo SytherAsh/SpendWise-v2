@@ -96,6 +96,51 @@ class TransactionControllerIntegrationTest {
     }
 
     @Test
+    void deletingATransactionRemovesItAndReturns404OnRefetchOrRedelete() {
+        HttpHeaders headers = authHeadersViaOtp();
+        ResponseEntity<Map> created = restTemplate.exchange(
+                baseUrl() + "/transactions",
+                HttpMethod.POST,
+                new HttpEntity<>(Map.of("transactionDate", "2025-06-15T14:32:00Z", "amount", -100.0), headers),
+                Map.class);
+        String transactionId = (String) created.getBody().get("id");
+
+        ResponseEntity<Void> delete = restTemplate.exchange(
+                baseUrl() + "/transactions/" + transactionId, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
+        assertThat(delete.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        ResponseEntity<Map> refetch = restTemplate.exchange(
+                baseUrl() + "/transactions/" + transactionId, HttpMethod.GET, new HttpEntity<>(headers), Map.class);
+        assertThat(refetch.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        ResponseEntity<Map> redelete = restTemplate.exchange(
+                baseUrl() + "/transactions/" + transactionId, HttpMethod.DELETE, new HttpEntity<>(headers), Map.class);
+        assertThat(redelete.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void userACannotDeleteUserBsTransaction() {
+        HttpHeaders userAHeaders = authHeadersViaOtp();
+        HttpHeaders userBHeaders = authHeadersViaGoogle();
+
+        ResponseEntity<Map> created = restTemplate.exchange(
+                baseUrl() + "/transactions",
+                HttpMethod.POST,
+                new HttpEntity<>(Map.of("transactionDate", "2025-06-15T14:32:00Z", "amount", -100.0), userBHeaders),
+                Map.class);
+        String userBTransactionId = (String) created.getBody().get("id");
+
+        ResponseEntity<Map> response = restTemplate.exchange(
+                baseUrl() + "/transactions/" + userBTransactionId, HttpMethod.DELETE, new HttpEntity<>(userAHeaders), Map.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        // Confirms user A's failed delete attempt had no effect — the transaction is still there for its actual owner.
+        ResponseEntity<Map> stillThere = restTemplate.exchange(
+                baseUrl() + "/transactions/" + userBTransactionId, HttpMethod.GET, new HttpEntity<>(userBHeaders), Map.class);
+        assertThat(stillThere.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
     void smsRawTextIsNeverPresentInAnyTransactionResponse() throws Exception {
         HttpHeaders headers = authHeadersViaOtp();
         UUID userId = currentUserId(headers);

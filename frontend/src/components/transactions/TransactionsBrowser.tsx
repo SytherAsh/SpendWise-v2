@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import useSWRInfinite from "swr/infinite";
-import { Check, ChevronDown, ChevronRight, Pencil, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Info, Pencil, Trash2, X } from "lucide-react";
 import { apiClient, swrFetcher } from "@/lib/apiClient";
 import { useApi } from "@/lib/useApi";
 import { useCategories } from "@/lib/useCategories";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { CategorySelect } from "@/components/ui/category-select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/cn";
 import type { CategorySelection } from "./CategorySummaryGrid";
 
@@ -27,6 +28,21 @@ interface Transaction {
   bank: string | null;
   note: string | null;
   categoryId: number | null;
+}
+
+/** Full shape of `GET /transactions/:id` — a superset of the list row above, fetched lazily
+ * only when the detail modal opens (the list itself doesn't need these fields). */
+interface TransactionDetail extends Transaction {
+  debit: number;
+  credit: number;
+  balance: number | null;
+  transactionMode: string | null;
+  drCrIndicator: string;
+  transactionId: string;
+  source: string;
+  parsedAt: string;
+  confidenceScore: number | null;
+  assignedBy: string | null;
 }
 
 /** Deduplicated payee name once the canonicalization job has run, else the raw one. */
@@ -71,6 +87,7 @@ function buildPath(
   from: string,
   to: string,
   cursor: string | null,
+  search: string = "",
   limit: number = PAGE_SIZE,
 ): string {
   const params = new URLSearchParams();
@@ -83,15 +100,19 @@ function buildPath(
   }
   params.set("from", from);
   params.set("to", to);
+  if (search) params.set("search", search);
   return `/transactions?${params.toString()}`;
 }
 
 export function TransactionsBrowser({
   categoryFilter,
   onClearFilter,
+  search = "",
 }: {
   categoryFilter: CategorySelection;
   onClearFilter: () => void;
+  /** Free-text search (debounced by the caller) — matches payee, UPI id, note, or category name. */
+  search?: string;
 }) {
   const { range } = useDateRange();
   const { categories, categoryName } = useCategories();
@@ -116,13 +137,17 @@ export function TransactionsBrowser({
   const [groupBusy, setGroupBusy] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [subFilter, setSubFilter] = useState<Contact["relationshipType"] | "other" | null>(null);
+  const [detailTx, setDetailTx] = useState<Transaction | null>(null);
+  const [deleteTx, setDeleteTx] = useState<Transaction | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Flat, paginated view — active only when no tile is selected (categoryFilter === null).
   const getKey = (pageIndex: number, previous: TransactionListResponse | null) => {
     if (isGrouped) return null;
     if (previous && !previous.hasMore) return null;
     const cursor = pageIndex === 0 ? null : previous?.nextCursor ?? null;
-    return buildPath(categoryFilter, range.from, range.to, cursor);
+    return buildPath(categoryFilter, range.from, range.to, cursor, search);
   };
   const {
     data: flatPages,
@@ -131,11 +156,14 @@ export function TransactionsBrowser({
     size,
     setSize,
     isValidating,
+    mutate: mutateFlat,
   } = useSWRInfinite<TransactionListResponse>(getKey, swrFetcher, { revalidateFirstPage: false });
 
   // Grouped, bounded view — active only when a tile is selected. Fetches every matching
   // transaction at once (not just one page) so group sums/counts are accurate.
-  const groupedKey = isGrouped ? buildPath(categoryFilter, range.from, range.to, null, GROUP_FETCH_LIMIT) : null;
+  const groupedKey = isGrouped
+    ? buildPath(categoryFilter, range.from, range.to, null, search, GROUP_FETCH_LIMIT)
+    : null;
   const {
     data: groupedPage,
     error: groupedError,
@@ -146,7 +174,7 @@ export function TransactionsBrowser({
   // Dismiss any pending bulk-correction prompt as soon as the filter it was computed against
   // changes — adjusted during render (not an effect) per React's "adjusting state when a prop
   // changes" pattern, since it's derived from categoryFilter/range rather than an external system.
-  const filterKey = `${categoryFilter}|${range.from}|${range.to}`;
+  const filterKey = `${categoryFilter}|${range.from}|${range.to}|${search}`;
   const [lastFilterKey, setLastFilterKey] = useState(filterKey);
   if (filterKey !== lastFilterKey) {
     setLastFilterKey(filterKey);
@@ -157,12 +185,13 @@ export function TransactionsBrowser({
     setSubFilter(null);
   }
 
-  // Reset to the first page whenever the category tile or global date range changes — mirrors
-  // the old "Apply"/"Reset" buttons' behavior, just triggered by the new filter sources instead.
+  // Reset to the first page whenever the category tile, global date range, or search query
+  // changes — mirrors the old "Apply"/"Reset" buttons' behavior, just triggered by the new
+  // filter sources instead.
   useEffect(() => {
     void setSize(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- setSize's identity is stable per SWR
-  }, [categoryFilter, range.from, range.to]);
+  }, [categoryFilter, range.from, range.to, search]);
 
   const flatItems = (flatPages ?? []).flatMap((p) => p.data);
   const flatHasMore = flatPages && flatPages.length > 0 ? flatPages[flatPages.length - 1].hasMore : false;
@@ -308,6 +337,25 @@ export function TransactionsBrowser({
     });
   }
 
+  async function confirmDelete() {
+    if (!deleteTx) return;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      await apiClient.delete(`/transactions/${deleteTx.id}`);
+      setDeleteTx(null);
+      if (isGrouped) {
+        refreshGrouped();
+      } else {
+        void mutateFlat();
+      }
+    } catch {
+      setDeleteError("Could not delete this transaction. Please try again.");
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       {filterLabel && (
@@ -373,6 +421,8 @@ export function TransactionsBrowser({
                   groupBusy={groupBusy}
                   onConfirmGroupPending={confirmGroupPending}
                   onCancelGroupPending={() => setGroupPending(null)}
+                  onInfo={setDetailTx}
+                  onDelete={setDeleteTx}
                 />
               ))}
             </div>
@@ -400,6 +450,8 @@ export function TransactionsBrowser({
                   onStartEditPayee={() => setEditingPayeeId(t.id)}
                   onCancelEditPayee={() => setEditingPayeeId(null)}
                   onCorrectPayee={(name) => correctPayee(t, name)}
+                  onInfo={() => setDetailTx(t)}
+                  onDelete={() => setDeleteTx(t)}
                 />
               ))}
             </tbody>
@@ -414,6 +466,32 @@ export function TransactionsBrowser({
           </Button>
         </div>
       )}
+
+      <TransactionDetailDialog transaction={detailTx} onClose={() => setDetailTx(null)} categoryName={categoryName} />
+
+      <Dialog open={deleteTx != null} onOpenChange={(open) => !open && !deleteBusy && setDeleteTx(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this transaction?</DialogTitle>
+            {deleteTx && (
+              <DialogDescription>
+                {formatCurrency(deleteTx.amount, true)} {deleteTx.amount < 0 ? "to" : "from"}{" "}
+                {payeeName(deleteTx) ?? deleteTx.upiId ?? deleteTx.bank ?? "this payee"} on{" "}
+                {formatDate(deleteTx.transactionDate)} will be removed from your transactions and totals.
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          {deleteError && <ErrorState message={deleteError} />}
+          <div className="mt-1 flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => setDeleteTx(null)} disabled={deleteBusy}>
+              Cancel
+            </Button>
+            <Button type="button" variant="danger" onClick={confirmDelete} disabled={deleteBusy}>
+              {deleteBusy ? "Deleting…" : "Delete transaction"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -449,6 +527,8 @@ function TransactionRow({
   onStartEditPayee,
   onCancelEditPayee,
   onCorrectPayee,
+  onInfo,
+  onDelete,
 }: {
   t: Transaction;
   catId: number | "";
@@ -468,6 +548,8 @@ function TransactionRow({
   onStartEditPayee?: () => void;
   onCancelEditPayee?: () => void;
   onCorrectPayee?: (canonicalName: string) => void;
+  onInfo?: () => void;
+  onDelete?: () => void;
 }) {
   return (
     <tr className="border-b border-border last:border-0 hover:bg-surface-muted/60">
@@ -516,24 +598,46 @@ function TransactionRow({
         />
       </td>
       <td className="px-4 py-3 text-right">
-        {bulk && (
-          <div className="flex items-center justify-end gap-2 whitespace-nowrap">
-            <span className="text-xs text-foreground-subtle">
-              Apply to {bulk.ids.length} other {bulk.payee}?
-            </span>
-            <Button size="sm" onClick={onApplyBulk} disabled={bulkBusy}>
-              {bulkBusy ? "Applying…" : "Apply to all"}
-            </Button>
+        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+          {bulk && (
+            <>
+              <span className="text-xs text-foreground-subtle">
+                Apply to {bulk.ids.length} other {bulk.payee}?
+              </span>
+              <Button size="sm" onClick={onApplyBulk} disabled={bulkBusy}>
+                {bulkBusy ? "Applying…" : "Apply to all"}
+              </Button>
+              <button
+                type="button"
+                onClick={onDismissBulk}
+                aria-label="Dismiss"
+                className="rounded p-1 text-foreground-subtle hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </>
+          )}
+          {onInfo && (
             <button
               type="button"
-              onClick={onDismissBulk}
-              aria-label="Dismiss"
-              className="rounded p-1 text-foreground-subtle hover:text-foreground"
+              onClick={onInfo}
+              aria-label={`View details for transaction on ${formatDate(t.transactionDate)}`}
+              className="rounded p-1 text-foreground-muted hover:bg-surface-muted hover:text-brand-600 dark:hover:text-brand-300"
             >
-              <X className="size-4" />
+              <Info className="size-4" />
             </button>
-          </div>
-        )}
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              aria-label={`Delete transaction on ${formatDate(t.transactionDate)}`}
+              className="rounded p-1 text-foreground-muted hover:bg-surface-muted hover:text-[var(--color-danger)]"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          )}
+        </div>
       </td>
     </tr>
   );
@@ -613,6 +717,8 @@ function GroupCard({
   groupBusy,
   onConfirmGroupPending,
   onCancelGroupPending,
+  onInfo,
+  onDelete,
 }: {
   group: TransactionGroup;
   expanded: boolean;
@@ -639,6 +745,8 @@ function GroupCard({
   groupBusy: boolean;
   onConfirmGroupPending: () => void;
   onCancelGroupPending: () => void;
+  onInfo: (t: Transaction) => void;
+  onDelete: (t: Transaction) => void;
 }) {
   const [renamingGroup, setRenamingGroup] = useState(false);
   const transactions = group.transactionIds.map((id) => transactionsById.get(id)).filter((t): t is Transaction => t != null);
@@ -750,6 +858,8 @@ function GroupCard({
                   onStartEditPayee={() => onStartEditPayee(t.id)}
                   onCancelEditPayee={() => onStartEditPayee(null)}
                   onCorrectPayee={(name) => onCorrectPayee(t, name)}
+                  onInfo={() => onInfo(t)}
+                  onDelete={() => onDelete(t)}
                 />
               ))}
             </tbody>
@@ -758,6 +868,119 @@ function GroupCard({
       )}
     </Card>
   );
+}
+
+/** Full transaction detail modal, opened by the "i" button on any row. Fetches lazily via
+ * `GET /transactions/:id` (already returns every field shown here) each time a new transaction
+ * is selected, rather than requiring the list to carry these fields up front. */
+function TransactionDetailDialog({
+  transaction,
+  onClose,
+  categoryName,
+}: {
+  transaction: Transaction | null;
+  onClose: () => void;
+  categoryName: (id: number) => string;
+}) {
+  const [detail, setDetail] = useState<TransactionDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!transaction) {
+      setDetail(null);
+      setError(null);
+      return;
+    }
+    let cancelled = false;
+    setDetail(null);
+    setLoading(true);
+    setError(null);
+    apiClient
+      .get<TransactionDetail>(`/transactions/${transaction.id}`)
+      .then((data) => {
+        if (!cancelled) setDetail(data);
+      })
+      .catch(() => {
+        if (!cancelled) setError("Could not load transaction details.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [transaction]);
+
+  const payee = detail ? (detail.recipientCanonical ?? detail.recipientName) : null;
+
+  return (
+    <Dialog open={transaction != null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Transaction details</DialogTitle>
+          {transaction && <DialogDescription>{formatDate(transaction.transactionDate)}</DialogDescription>}
+        </DialogHeader>
+        {loading ? (
+          <Spinner />
+        ) : error ? (
+          <ErrorState message={error} />
+        ) : detail ? (
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+            <DetailField label="Payee" value={payee ?? "—"} />
+            <DetailField label="Amount" value={formatCurrency(detail.amount, true)} />
+            <DetailField label="UPI ID" value={detail.upiId ?? "—"} />
+            <DetailField label="Bank" value={detail.bank ?? "—"} />
+            <DetailField label="Balance after" value={detail.balance != null ? formatCurrency(detail.balance, true) : "—"} />
+            <DetailField label="Mode" value={detail.transactionMode ?? "—"} />
+            <DetailField label="Type" value={detail.drCrIndicator === "CR" ? "Credit" : "Debit"} />
+            <DetailField label="Bank reference" value={detail.transactionId} />
+            <DetailField label="Source" value={sourceLabel(detail.source)} />
+            <DetailField label="Recorded" value={formatDate(detail.parsedAt)} />
+            <DetailField
+              label="Category"
+              value={detail.categoryId != null ? categoryName(detail.categoryId) : "Uncategorized"}
+            />
+            <DetailField label="Categorized by" value={categorizationLabel(detail)} />
+            {detail.note && <DetailField label="Note" value={detail.note} full />}
+          </dl>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DetailField({ label, value, full }: { label: string; value: string; full?: boolean }) {
+  return (
+    <div className={full ? "col-span-2" : undefined}>
+      <dt className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">{label}</dt>
+      <dd className="mt-0.5 text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+function sourceLabel(source: string): string {
+  switch (source) {
+    case "sms":
+      return "SMS";
+    case "bank_statement":
+      return "Bank statement";
+    case "manual":
+      return "Manual entry";
+    default:
+      return source;
+  }
+}
+
+function categorizationLabel(detail: TransactionDetail): string {
+  if (detail.categoryId == null) return "—";
+  if (detail.assignedBy === "ml") {
+    return detail.confidenceScore != null
+      ? `Automatic (${Math.round(detail.confidenceScore * 100)}% confidence)`
+      : "Automatic";
+  }
+  if (detail.assignedBy === "user") return "Manual";
+  return "—";
 }
 
 /** Filter chips for Transfers/Received groups by counterparty relationship (ADR-010) — only

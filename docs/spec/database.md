@@ -101,6 +101,14 @@ CREATE TABLE transactions (
     sms_raw_text     TEXT,                       -- stored for debugging; never exposed via user API
     source           transaction_source NOT NULL,
     parsed_at        TIMESTAMP NOT NULL DEFAULT NOW(),
+    deleted_at       TIMESTAMP,                  -- soft delete (added V17, Transactions page redesign); NULL = active.
+                                                 -- Set by DELETE /api/v1/transactions/:id, never by a hard SQL DELETE —
+                                                 -- preserves an audit trail for financial data. Every read against this
+                                                 -- table (list/detail, budget progress, alerts/recurring detection,
+                                                 -- analytics, ML correction retraining) filters deleted_at IS NULL, so a
+                                                 -- deleted transaction behaves as fully gone everywhere it's consumed.
+                                                 -- Ingest-time dedup deliberately does not filter it — a soft-deleted row
+                                                 -- still blocks a re-synced SMS from resurrecting the same transaction_id.
     CONSTRAINT chk_dr_cr_consistency CHECK (
         (dr_cr_indicator = 'DR' AND amount < 0 AND debit > 0 AND credit = 0) OR
         (dr_cr_indicator = 'CR' AND amount > 0 AND credit > 0 AND debit = 0)
@@ -109,6 +117,7 @@ CREATE TABLE transactions (
 
 CREATE INDEX idx_transactions_user_date ON transactions(user_id, transaction_date DESC);
 CREATE UNIQUE INDEX idx_transactions_unique_dedup ON transactions(user_id, transaction_id); -- dedup enforced at DB level
+CREATE INDEX idx_transactions_active ON transactions(user_id, transaction_date DESC) WHERE deleted_at IS NULL; -- added V17
 ```
 
 ### `categories`

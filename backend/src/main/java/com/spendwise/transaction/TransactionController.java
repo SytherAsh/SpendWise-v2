@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -48,7 +49,8 @@ public class TransactionController {
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             @RequestParam(required = false) String sort,
-            @RequestParam(required = false) String direction) {
+            @RequestParam(required = false) String direction,
+            @RequestParam(required = false) String search) {
         CategoryFilter filter = parseCategoryFilter(category);
         Boolean creditOnly = parseDirection(direction);
         int effectiveLimit = limit != null ? limit : DEFAULT_PAGE_SIZE;
@@ -74,7 +76,8 @@ public class TransactionController {
                 filter.uncategorizedOnly(),
                 parseDate(from),
                 parseDate(to),
-                creditOnly);
+                creditOnly,
+                search);
         List<TransactionResponse> data = page.data().stream().map(TransactionResponse::from).toList();
         return new TransactionListResponse(data, page.nextCursor(), page.hasMore());
     }
@@ -100,6 +103,12 @@ public class TransactionController {
     @GetMapping("/{id}")
     public TransactionResponse getById(@AuthenticationPrincipal UUID userId, @PathVariable UUID id) {
         return TransactionResponse.from(transactionService.getById(userId, id));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@AuthenticationPrincipal UUID userId, @PathVariable UUID id) {
+        transactionService.softDelete(userId, id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping

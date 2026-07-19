@@ -37,6 +37,8 @@ public interface TransactionService {
      * @param creditOnly {@code true} for credit-only, {@code false} for debit-only, {@code null} for no
      *     direction filter — independent of {@code categoryId}/{@code uncategorizedOnly} (docs/api.md
      *     "direction"; backs the Received view, ADR-010's Transactions-page slice)
+     * @param search free-text filter matching payee, UPI id, note, or category name; {@code null}/blank
+     *     for no filter (docs/api.md "search" — Transactions page search box)
      */
     TransactionPage list(
             UUID userId,
@@ -46,7 +48,8 @@ public interface TransactionService {
             boolean uncategorizedOnly,
             Instant from,
             Instant to,
-            Boolean creditOnly);
+            Boolean creditOnly,
+            String search);
 
     /**
      * Top-{@code limit} transactions by absolute amount, largest first (E10 Analytics category
@@ -58,6 +61,15 @@ public interface TransactionService {
 
     /** @throws TransactionNotFoundException if absent or owned by a different user */
     Transaction getById(UUID userId, UUID transactionId);
+
+    /**
+     * Soft-deletes a transaction (sets {@code deleted_at}) — it disappears from every read this
+     * module and every other module's queries perform (list/detail, budget progress, alerts/
+     * recurring detection, analytics, ML retraining) but the row is retained for audit purposes.
+     *
+     * @throws TransactionNotFoundException if absent, already deleted, or owned by a different user
+     */
+    void softDelete(UUID userId, UUID transactionId);
 
     /**
      * Atomically updates {@code transaction_categories} and inserts the labeled example into
