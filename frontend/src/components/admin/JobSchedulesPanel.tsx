@@ -17,7 +17,7 @@ interface JobSchedule {
 }
 
 const DAYS_OF_WEEK = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-const INTERVAL_UNITS: Array<JobSchedule["intervalUnit"]> = ["MINUTES", "HOURS", "DAYS"];
+const INTERVAL_UNITS: Array<NonNullable<JobSchedule["intervalUnit"]>> = ["MINUTES", "HOURS", "DAYS"];
 const DAY_LABELS: Record<string, string> = {
   MON: "Monday",
   TUE: "Tuesday",

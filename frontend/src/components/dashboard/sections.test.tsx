@@ -39,6 +39,8 @@ describe("dashboard sections", () => {
           error: undefined,
           isLoading: false,
         }}
+        onConfirm={vi.fn()}
+        onDismiss={vi.fn()}
       />,
     );
     expect(screen.getByText(/budget overspend/i)).toBeInTheDocument();
@@ -102,6 +104,8 @@ describe("dashboard sections", () => {
           error: undefined,
           isLoading: false,
         }}
+        span={12}
+        onSpanChange={vi.fn()}
       />,
     );
     expect(screen.getByTestId("trend-line-chart")).toBeInTheDocument();
@@ -109,7 +113,7 @@ describe("dashboard sections", () => {
   });
 
   it("shows an error state when a section fails with no data", () => {
-    render(<AlertsSection state={{ data: undefined, error: new Error("boom"), isLoading: false }} />);
+    render(<AlertsSection state={{ data: undefined, error: new Error("boom"), isLoading: false }} onConfirm={vi.fn()} onDismiss={vi.fn()} />);
     expect(screen.getByRole("alert")).toHaveTextContent(/could not load alerts/i);
   });
 });
