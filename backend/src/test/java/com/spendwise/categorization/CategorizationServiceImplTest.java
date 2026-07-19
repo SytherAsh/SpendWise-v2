@@ -78,6 +78,75 @@ class CategorizationServiceImplTest {
     }
 
     @Test
+    void predictRequestPrefersCanonicalNameWhenSet() {
+        given(transactionService.getById(userId, transactionId)).willReturn(transactionWithCanonical("Swiggy Bangalore"));
+        given(mlClient.predict(any(MlPredictionRequest.class))).willReturn(new MlPredictionResponse(7, "Food / Dine Out", 0.94));
+
+        service.categorize(userId, transactionId);
+
+        verify(mlClient)
+                .predict(
+                        eq(
+                                new MlPredictionRequest(
+                                        "Swiggy Bangalore", "swiggy@okicici", "ICICI", "UPI", BigDecimal.valueOf(-350.0), null)));
+    }
+
+    @Test
+    void predictRequestFallsBackToRawNameWhenCanonicalBlank() {
+        given(transactionService.getById(userId, transactionId)).willReturn(transactionWithCanonical(""));
+        given(mlClient.predict(any(MlPredictionRequest.class))).willReturn(new MlPredictionResponse(7, "Food / Dine Out", 0.94));
+
+        service.categorize(userId, transactionId);
+
+        verify(mlClient)
+                .predict(
+                        eq(
+                                new MlPredictionRequest(
+                                        "Swiggy", "swiggy@okicici", "ICICI", "UPI", BigDecimal.valueOf(-350.0), null)));
+    }
+
+    @Test
+    void recategorizeIdentityCategorizesEveryMatchingTransaction() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        given(transactionService.findTransactionIdsForIdentityAsUser(userId, "Sameer Sawant", null)).willReturn(List.of(id1, id2));
+        given(transactionService.getById(userId, id1)).willReturn(transactionWithId(id1));
+        given(transactionService.getById(userId, id2)).willReturn(transactionWithId(id2));
+        given(mlClient.predict(any(MlPredictionRequest.class))).willReturn(new MlPredictionResponse(7, "Food / Dine Out", 0.94));
+
+        int result = service.recategorizeIdentity(userId, "Sameer Sawant", null);
+
+        assertThat(result).isEqualTo(2);
+        verify(transactionService).assignMlCategory(userId, id1, 7, 0.94);
+        verify(transactionService).assignMlCategory(userId, id2, 7, 0.94);
+    }
+
+    @Test
+    void recategorizeIdentityIsolatesOneTransactionsFailureFromTheRest() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        given(transactionService.findTransactionIdsForIdentityAsUser(userId, "Sameer Sawant", null)).willReturn(List.of(id1, id2));
+        given(transactionService.getById(userId, id1)).willThrow(new com.spendwise.transaction.TransactionNotFoundException());
+        given(transactionService.getById(userId, id2)).willReturn(transactionWithId(id2));
+        given(mlClient.predict(any(MlPredictionRequest.class))).willReturn(new MlPredictionResponse(7, "Food / Dine Out", 0.94));
+
+        int result = service.recategorizeIdentity(userId, "Sameer Sawant", null);
+
+        assertThat(result).isEqualTo(2);
+        verify(transactionService, never()).assignMlCategory(eq(userId), eq(id1), anyInt(), anyDouble());
+        verify(transactionService).assignMlCategory(userId, id2, 7, 0.94);
+    }
+
+    @Test
+    void recategorizeIdentityReturnsZeroWhenNoTransactionsMatch() {
+        given(transactionService.findTransactionIdsForIdentityAsUser(userId, "Nobody", null)).willReturn(List.of());
+
+        int result = service.recategorizeIdentity(userId, "Nobody", null);
+
+        assertThat(result).isZero();
+    }
+
+    @Test
     void lowConfidencePredictionAssignsMiscellaneousFallback() {
         given(transactionService.getById(userId, transactionId)).willReturn(transaction());
         given(mlClient.predict(any(MlPredictionRequest.class))).willReturn(new MlPredictionResponse(7, "Food / Dine Out", 0.2));
@@ -196,6 +265,10 @@ class CategorizationServiceImplTest {
     }
 
     private Transaction transaction() {
+        return transactionWithCanonical(null);
+    }
+
+    private Transaction transactionWithCanonical(String recipientCanonical) {
         return new Transaction(
                 transactionId,
                 userId,
@@ -210,6 +283,30 @@ class CategorizationServiceImplTest {
                 "Swiggy",
                 "ICICI",
                 "swiggy@okicici",
+                null,
+                TransactionSource.SMS,
+                Instant.parse("2026-06-15T14:33:00Z"),
+                null,
+                null,
+                null,
+                recipientCanonical);
+    }
+
+    private Transaction transactionWithId(UUID id) {
+        return new Transaction(
+                id,
+                userId,
+                Instant.parse("2026-06-15T14:32:00Z"),
+                BigDecimal.valueOf(350.0),
+                BigDecimal.ZERO,
+                BigDecimal.valueOf(-350.0),
+                null,
+                "UPI",
+                "DR",
+                "txn_1",
+                "Sameer Sawant",
+                "HDFC",
+                null,
                 null,
                 TransactionSource.SMS,
                 Instant.parse("2026-06-15T14:33:00Z"),

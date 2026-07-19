@@ -35,15 +35,30 @@ export function useMergeQueue() {
 export interface MergeDecision {
   suggestionId: string;
   same: boolean;
+  /** The candidate identity this decision is about — only needed to fire the recategorize
+   * follow-up below when `same` is true, but always passed through since the caller (
+   * MergeGroupCard) already has it in hand for every candidate in the group. */
+  candidateName: string;
+  candidateUpiId: string | null;
 }
 
 /**
- * Confirms/rejects one group's decisions, then triggers an immediate per-user re-evaluation of
- * recurring-payment detection and budget alerts (POST /alerts/reevaluate) so a confirmed merge's
- * effect is visible right away instead of waiting for the next scheduled sweep. The re-evaluation
- * call is best-effort: if it fails, the merge itself has already been saved, and the next
- * scheduled AlertEvaluatorJob run still catches it — same graceful-degradation posture every
- * background job in this app follows.
+ * Confirms/rejects one group's decisions, then fires two independent, best-effort follow-up
+ * requests so a confirmed merge's effects are visible right away instead of waiting on a
+ * scheduled job:
+ *
+ * 1. `POST /alerts/reevaluate` — immediate per-user re-evaluation of recurring-payment detection
+ *    and budget alerts.
+ * 2. `POST /categorization/recategorize` (ADR-020), once per `same: true` decision — re-runs
+ *    categorization for every transaction sharing that candidate's identity, now that its
+ *    canonical name has changed, so the merge actually changes what category those transactions
+ *    land in rather than only their display name. Fired from here (not from the backend) because
+ *    Categorization already depends on Transaction; a call the other way would be a circular
+ *    module dependency — see ADR-020 in docs/spec/decisions.md.
+ *
+ * Both follow-ups are best-effort: if either fails, the merge itself has already been saved, and
+ * the next scheduled job (AlertEvaluatorJob, or a future canonicalization resweep) still catches
+ * it — same graceful-degradation posture every background job in this app follows.
  */
 export async function resolveMergeGroup(decisions: MergeDecision[]): Promise<void> {
   await apiClient.post("/payee-merge-queue/resolve", {
@@ -54,4 +69,15 @@ export async function resolveMergeGroup(decisions: MergeDecision[]): Promise<voi
   } catch {
     // Non-fatal — see docstring above.
   }
+  await Promise.all(
+    decisions
+      .filter((d) => d.same)
+      .map((d) =>
+        apiClient
+          .post("/categorization/recategorize", { recipient_name: d.candidateName, upi_id: d.candidateUpiId })
+          .catch(() => {
+            // Non-fatal — see docstring above.
+          }),
+      ),
+  );
 }

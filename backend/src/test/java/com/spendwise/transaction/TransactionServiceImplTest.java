@@ -210,6 +210,18 @@ class TransactionServiceImplTest {
     }
 
     @Test
+    void findTransactionIdsForIdentityAsUserDelegatesToRepository() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        given(transactionRepository.findTransactionIdsForIdentityAsUser(userId, "Sameer Sawant", "sameer@ok"))
+                .willReturn(List.of(id1, id2));
+
+        List<UUID> result = service.findTransactionIdsForIdentityAsUser(userId, "Sameer Sawant", "sameer@ok");
+
+        assertThat(result).containsExactly(id1, id2);
+    }
+
+    @Test
     void correctPayeeIdentityWritesOverrideAndUpdatesCanonicalDirectly() {
         // Same effect as correctPayeeName, but starting from an identity directly rather than a
         // transaction id — the Merge Payees review queue's "confirm same" path has no specific

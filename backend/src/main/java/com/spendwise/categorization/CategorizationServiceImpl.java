@@ -102,9 +102,34 @@ public class CategorizationServiceImpl implements CategorizationService {
         RecipientCanonicalizationSweep.run(transactionService, this, adminEventLog);
     }
 
+    @Override
+    public int recategorizeIdentity(UUID userId, String recipientName, String upiId) {
+        List<UUID> transactionIds = transactionService.findTransactionIdsForIdentityAsUser(userId, recipientName, upiId);
+        for (UUID transactionId : transactionIds) {
+            // categorize() already isolates its own failures (never throws, logs and leaves the
+            // transaction as-is) — same per-item isolation CategorizationRetryJob relies on for its
+            // own batch loop, so one bad transaction here can't stop the rest of this identity's set.
+            categorize(userId, transactionId);
+        }
+        return transactionIds.size();
+    }
+
+    /**
+     * Prefers {@code recipientCanonical} over the raw {@code recipientName} when set (ML strategy
+     * phase, 2026-07-20) — same "prefer canonical, fall back to raw" idiom already established in
+     * {@code RecurringPaymentDetector#canonicalOrRawName}, so a payee rename/merge (which sets
+     * {@code recipientCanonical} immediately, see {@code TransactionService#correctPayeeIdentity})
+     * feeds the corrected name into the next prediction instead of the same noisy raw spelling that
+     * may have caused the original miscategorization. {@code recipientCanonical} is null until a
+     * canonicalization/override event sets it, so this is a no-op for every prediction path until
+     * that has happened for the identity in question.
+     */
     private static MlPredictionRequest toPredictionRequest(Transaction transaction) {
+        String recipientName = transaction.recipientCanonical() != null && !transaction.recipientCanonical().isBlank()
+                ? transaction.recipientCanonical()
+                : transaction.recipientName();
         return new MlPredictionRequest(
-                transaction.recipientName(),
+                recipientName,
                 transaction.upiId(),
                 transaction.bank(),
                 transaction.transactionMode(),

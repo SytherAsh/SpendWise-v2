@@ -269,6 +269,14 @@ export function TransactionsBrowser({
   async function putPayee(id: string, canonicalName: string) {
     setPayeeOverrides((prev) => ({ ...prev, [id]: canonicalName }));
     await apiClient.put(`/transactions/${id}/payee`, { canonical_name: canonicalName });
+    // Fires as a second, independent, best-effort request (ADR-020) — never lets a
+    // recategorize failure surface as a payee-rename failure, since the rename itself already
+    // succeeded above. See mergePayees.ts#resolveMergeGroup for the identical pattern and the
+    // module-boundary reasoning (why this is frontend-orchestrated rather than a backend call).
+    const original = transactionsById.get(id);
+    if (original) {
+      apiClient.post("/categorization/recategorize", { recipient_name: original.recipientName, upi_id: original.upiId }).catch(() => {});
+    }
   }
 
   async function correctPayee(t: Transaction, canonicalName: string) {

@@ -6,7 +6,8 @@ import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/shared/ui";
 import { cn } from "@/lib/cn";
-import type { MergeGroup, MergeCandidate } from "@/lib/mergePayees";
+import { diffTokens } from "@/lib/nameDiff";
+import type { MergeGroup, MergeCandidate, MergeDecision } from "@/lib/mergePayees";
 
 type Decision = "same" | "different" | null;
 
@@ -22,7 +23,7 @@ export function MergeGroupCard({
   busy,
 }: {
   group: MergeGroup;
-  onConfirm: (decisions: { suggestionId: string; same: boolean }[]) => void;
+  onConfirm: (decisions: MergeDecision[]) => void;
   busy: boolean;
 }) {
   const [decisions, setDecisions] = useState<Record<string, Decision>>({});
@@ -34,14 +35,22 @@ export function MergeGroupCard({
   const allDecided = group.candidates.every((c) => decisions[c.suggestionId] != null);
 
   function handleConfirm() {
-    onConfirm(group.candidates.map((c) => ({ suggestionId: c.suggestionId, same: decisions[c.suggestionId] === "same" })));
+    onConfirm(
+      group.candidates.map((c) => ({
+        suggestionId: c.suggestionId,
+        same: decisions[c.suggestionId] === "same",
+        candidateName: c.candidateName,
+        candidateUpiId: c.candidateUpiId,
+      })),
+    );
   }
 
   return (
     <Card className="space-y-5">
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">Is this the same person?</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">Comparing to</p>
         <h2 className="mt-1 font-display text-xl font-semibold text-foreground">{group.anchorCanonicalName}</h2>
+        <p className="mt-1 text-sm text-foreground-subtle">Is this the same person or business?</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -49,6 +58,7 @@ export function MergeGroupCard({
           <CandidateCard
             key={candidate.suggestionId}
             candidate={candidate}
+            anchorName={group.anchorCanonicalName}
             decision={decisions[candidate.suggestionId] ?? null}
             onDecide={(d) => setDecision(candidate.suggestionId, d)}
           />
@@ -64,10 +74,12 @@ export function MergeGroupCard({
 
 function CandidateCard({
   candidate,
+  anchorName,
   decision,
   onDecide,
 }: {
   candidate: MergeCandidate;
+  anchorName: string;
   decision: Decision;
   onDecide: (decision: Decision) => void;
 }) {
@@ -75,6 +87,8 @@ function CandidateCard({
     if (info.offset.x > DRAG_THRESHOLD) onDecide("same");
     else if (info.offset.x < -DRAG_THRESHOLD) onDecide("different");
   }
+
+  const tokens = diffTokens(candidate.candidateName, anchorName);
 
   return (
     <motion.div
@@ -91,7 +105,16 @@ function CandidateCard({
         decision === null && "border-border",
       )}
     >
-      <p className="font-medium text-foreground">{candidate.candidateName}</p>
+      {/* Differing tokens (relative to the anchor name above) are bolded and accent-colored so
+          the mismatch is visible at a glance instead of requiring a careful re-read of both names. */}
+      <p className="font-medium text-foreground">
+        {tokens.map((token, i) => (
+          <span key={i} className={token.differs ? "font-semibold text-brand-600 dark:text-brand-400" : undefined}>
+            {i > 0 ? " " : ""}
+            {token.text}
+          </span>
+        ))}
+      </p>
       <p className="text-xs text-foreground-subtle">Match score: {candidate.score}%</p>
       <div className="flex gap-2">
         <Button variant={decision === "same" ? "primary" : "secondary"} size="sm" className="flex-1" onClick={() => onDecide("same")}>

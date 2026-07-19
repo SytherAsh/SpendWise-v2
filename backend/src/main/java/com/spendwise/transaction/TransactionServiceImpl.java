@@ -226,6 +226,12 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional
+    public List<UUID> findTransactionIdsForIdentityAsUser(UUID userId, String recipientName, String upiId) {
+        return transactionRepository.findTransactionIdsForIdentityAsUser(userId, recipientName, upiId);
+    }
+
+    @Override
     public List<RecipientCanonicalOverride> findAllCanonicalOverrides() {
         // No @Transactional / RlsSession here — reads via the spendwise_jobs DataSource (BYPASSRLS),
         // same reasoning as findAllRecipientIdentities above.

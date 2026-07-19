@@ -930,3 +930,83 @@ deserializes. No auto-merge behavior changes; `canonical_names` output is byte-f
 **Phase B (deferred)**: a `payee_match` classifier trained from resolved `recipient_merge_suggestions`
 rows on the existing weekly cadence, cold-starting behind the Phase-A rules until enough labeled
 pairs accumulate — to be specified in its own follow-up once the queue has produced real labels.
+
+## ADR-020: Renaming a Payee Recategorizes Its Transactions, Triggered Client-Side to Avoid a Circular Module Dependency
+
+**Status**: Accepted
+
+**Context**: `PUT /transactions/:id/payee` (ADR-014) and `POST /payee-merge-queue/resolve`
+(ADR-015) both correct a payee's identity by writing `recipient_canonical` and
+`recipient_canonicalization_overrides` — a display/grouping fix only. Neither touches
+`category_id`. A user who renames "AMZN 8x2f1" to "Amazon" because the raw SMS-parsed name was too
+noisy to categorize correctly gets a cleaner-looking transaction list but the exact same
+(potentially wrong) category on every affected transaction — the correction that was supposed to
+fix the underlying problem has no effect on it. The user flagged this directly: "what's the point
+if it doesn't change my transaction."
+
+The fix requires two things: (1) categorization must use the corrected name, not the original raw
+one, and (2) something must re-trigger categorization for every transaction sharing that identity
+after a rename. (2) is the harder part — the natural trigger point is inside the Transaction
+module (`TransactionService#correctPayeeIdentity`, called by both rename paths), but Categorization
+already depends on Transaction (`docs/spec/architecture.md`'s allowed-dependency table:
+"Categorization → Transaction (update category)"), so a call the other way would be a circular
+module dependency — exactly the kind of "architecture questions... are open questions for this
+phase" CLAUDE.md's Current Phase section flagged before this was built, same shape as ADR-012.
+
+**Options considered**:
+
+1. **Transaction module calls Categorization directly** from `correctPayeeIdentity` — simplest to
+   read, but creates a real cycle (Categorization → Transaction already exists); forbidden by
+   CLAUDE.md's "no circular dependencies between modules" invariant.
+2. **Frontend-orchestrated second request** — after either rename endpoint succeeds, the client
+   fires an independent `POST /categorization/recategorize {recipient_name, upi_id}` (a new,
+   first-ever user-facing endpoint on the Categorization module), which reads the identity's
+   transactions via `TransactionService` (a call Categorization is already permitted to make) and
+   re-runs `categorize()` for each. No new module edge in either direction.
+3. **Event-driven decoupling** — Transaction publishes an in-process Spring event on rename;
+   Categorization listens. Avoids a compile-time dependency, but is a new architectural mechanism
+   introduced for exactly one use case, at a scale (~20–30 users, user-triggered renames, not a hot
+   path) where the added indirection buys nothing a direct second request doesn't already provide.
+
+**Decision**: Option 2.
+
+**Rationale**:
+
+- **Precedent already exists and already works for an identical shape.** `mergePayees.ts
+  #resolveMergeGroup` already solves this exact problem for Alerts: after `POST
+  /payee-merge-queue/resolve` succeeds, it fires a second, independent `POST /alerts/reevaluate`
+  call rather than having Transaction call Alerts server-side. This ADR is the same pattern applied
+  to Categorization instead of inventing a new one.
+- **No new module edge, in either direction.** Categorization's existing "May call: Transaction
+  (update category)" entry in `docs/spec/architecture.md` already covers everything
+  `recategorizeIdentity` needs (read transactions by identity, write categories) — this is a new
+  *use* of an existing allowed dependency, not a new one, so the dependency table needs no edit.
+- **Reuses the categorization write path's existing safety guarantee — nothing new to build there.**
+  `categorize()`'s write, `TransactionCategoryRepository#upsertMlAssignment`, already guards
+  `WHERE transaction_categories.assigned_by = 'ml'` (ADR predates this one — it's the same
+  mechanism `CategorizationRetryJob` relies on). Re-invoking `categorize()` per transaction
+  therefore already satisfies "never overwrite a category the user manually picked" for free — no
+  new overwrite-guard logic was written for this feature.
+- **The only real gap was the prediction input, not the write path.** `toPredictionRequest` built
+  its ML request from the raw `recipientName`, so re-calling `categorize()` before this change
+  would have sent FastAPI the same noisy input and likely gotten the same answer back. Fixed by
+  preferring `recipientCanonical` when set — the same "prefer canonical, fall back to raw" idiom
+  `RecurringPaymentDetector#canonicalOrRawName` already established for recurring detection
+  (ADR-013's canonical field), applied to a third read site rather than a new one.
+- **Ruled out Option 1 for the same reason ADR-012 ruled out granting Alerts direct FastAPI
+  access**: it would multiply the number of places a module boundary has to be trusted from, for a
+  benefit Option 2 already delivers without the new edge.
+- **Ruled out Option 3 as disproportionate.** `DemoUserRegistry` and the `ManuallyTriggerableJob`
+  marker interface (both documented in `docs/spec/architecture.md`'s addenda) show the project's
+  established bar for a new cross-module mechanism is high and narrow; a plain second HTTP request
+  from a client that already makes one is simpler, already proven (the Alerts precedent), and
+  needs no new infrastructure or shared bean.
+
+**Consequence**: A new `CategorizationController` (`POST /categorization/recategorize`) — the
+first user-facing endpoint in the Categorization module. New `CategorizationService
+#recategorizeIdentity` and `TransactionService#findTransactionIdsForIdentityAsUser`. Both frontend
+rename call sites (`TransactionsBrowser.tsx#putPayee`, `mergePayees.ts#resolveMergeGroup`) fire
+this as a second, best-effort request, same non-fatal posture as the existing `/alerts/reevaluate`
+follow-up. `docs/spec/api.md` documents the new endpoint under `/categorization` and cross-
+references it from both rename endpoints' sections. No change to `docs/spec/architecture.md`'s
+allowed-dependency table — see Rationale above.

@@ -181,6 +181,17 @@ public interface TransactionService {
     void correctPayeeIdentity(UUID userId, String recipientName, String upiId, String canonicalName);
 
     /**
+     * Every transaction id owned by {@code userId} sharing the given (recipient_name, upi_id)
+     * identity (ADR-020, ML strategy phase, 2026-07-20) — backs {@code
+     * CategorizationService#recategorizeIdentity}, so a payee rename can re-run categorization for
+     * every affected transaction. RLS-scoped (same null-safe identity match as {@link
+     * #updateCanonicalForIdentity}), not the {@code spendwise_jobs} bypass, since this runs inside a
+     * live user request rather than a background sweep — same reasoning as {@code
+     * TransactionRepository#updateCanonicalForIdentityAsUser}.
+     */
+    List<UUID> findTransactionIdsForIdentityAsUser(UUID userId, String recipientName, String upiId);
+
+    /**
      * Cross-user (ADR-014) — every user-pinned canonicalization override across all users. Backs
      * {@code RecipientCanonicalizationSweep}; bypasses RLS via the {@code spendwise_jobs} role,
      * same pattern as {@link #findAllRecipientIdentities}.

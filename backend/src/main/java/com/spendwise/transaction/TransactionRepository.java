@@ -453,4 +453,21 @@ public class TransactionRepository {
                 recipientName,
                 upiId);
     }
+
+    /**
+     * Every transaction id owned by {@code userId} sharing the given identity (ADR-020) — same
+     * NULL-safe match and RLS-scoped {@code jdbcTemplate} as {@link #updateCanonicalForIdentityAsUser},
+     * just a read instead of a write. Backs {@code CategorizationService#recategorizeIdentity}.
+     */
+    public List<UUID> findTransactionIdsForIdentityAsUser(UUID userId, String recipientName, String upiId) {
+        rlsSession.setCurrentUser(userId);
+        return jdbcTemplate.query(
+                "SELECT id FROM transactions "
+                        + "WHERE user_id = ? AND recipient_name IS NOT DISTINCT FROM ? AND upi_id IS NOT DISTINCT FROM ? "
+                        + "AND deleted_at IS NULL",
+                (rs, rowNum) -> UUID.fromString(rs.getString("id")),
+                userId,
+                recipientName,
+                upiId);
+    }
 }

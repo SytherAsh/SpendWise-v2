@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Users } from "lucide-react";
 import { Card, EmptyState, ErrorState, Spinner, StaleBanner, ProgressBar } from "@/components/shared/ui";
-import { useMergeQueue, resolveMergeGroup } from "@/lib/mergePayees";
+import { useMergeQueue, resolveMergeGroup, type MergeDecision } from "@/lib/mergePayees";
 import { MergeGroupCard } from "@/components/merge-payees/MergeGroupCard";
 
 export function MergePayeesReview() {
@@ -20,7 +20,7 @@ export function MergePayeesReview() {
   if (error && !queue) return <ErrorState message="Could not load the payee review queue." onRetry={refresh} />;
   if (!queue) return null;
 
-  async function handleConfirm(decisions: { suggestionId: string; same: boolean }[]) {
+  async function handleConfirm(decisions: MergeDecision[]) {
     setBusy(true);
     setSubmitError(null);
     try {

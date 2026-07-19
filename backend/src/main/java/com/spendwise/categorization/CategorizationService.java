@@ -100,4 +100,27 @@ public interface CategorizationService {
      * isolated internally, matching the job's existing contract.
      */
     void triggerCanonicalizationSweep();
+
+    /**
+     * Re-runs {@link #categorize} for every one of {@code userId}'s transactions sharing the given
+     * (recipient_name, upi_id) identity (ADR-020, ML strategy phase, 2026-07-20) — the user-facing
+     * counterpart to renaming a payee (via {@code TransactionService#correctPayeeIdentity}, either
+     * directly or through the Merge Payees review queue), so the correction actually changes what
+     * category those transactions land in rather than only their display name. {@code categorize}'s
+     * own {@code toPredictionRequest} now prefers {@code recipientCanonical} over the raw name, so
+     * this only has an effect once the identity's canonical name has actually changed; each
+     * transaction's own {@code categorize} call keeps its existing "never overwrite a user's own
+     * category correction" guarantee ({@code assigned_by = 'ml'} only), so this can never silently
+     * undo a category the user picked deliberately. Called by the frontend as a second, independent
+     * request after a payee rename succeeds — never by the Transaction module itself, which would
+     * create a circular module dependency (Categorization already depends on Transaction); see
+     * ADR-020 in docs/spec/decisions.md. Never throws — each transaction's failure is isolated
+     * internally (same per-item try/catch posture as {@code CategorizationRetryJob}), and the whole
+     * call is best-effort from the caller's perspective.
+     *
+     * @return the number of transactions re-attempted (not necessarily changed — {@link #categorize}
+     *     may leave a category untouched if it's user-assigned, or unchanged if the new prediction
+     *     agrees with the old one)
+     */
+    int recategorizeIdentity(UUID userId, String recipientName, String upiId);
 }

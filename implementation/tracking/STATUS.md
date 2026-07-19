@@ -198,6 +198,23 @@ phase plan; **Phase B** (a pairwise same/different classifier trained on the que
 until the queue accumulates real labels — Phase A is what generates them. UPI local-part similarity
 was deliberately deferred to Phase B (unguarded it floods the queue via shared gateway handles).
 
+**Recategorize on payee rename** (ADR-020, 2026-07-20): renaming/merging a payee previously only
+updated `recipient_canonical` (display/grouping) with zero effect on `category_id` — fixed so a
+correction actually changes what category affected transactions land in. New
+`POST /categorization/recategorize` (first user-facing endpoint on the Categorization module),
+`CategorizationService#recategorizeIdentity`, `TransactionService
+#findTransactionIdsForIdentityAsUser`; `CategorizationServiceImpl#toPredictionRequest` now prefers
+`recipientCanonical` over the raw name. Retroactive over all existing transactions sharing the
+identity, never overwrites a manually-corrected category (reuses `upsertMlAssignment`'s existing
+`assigned_by = 'ml'` guard — no new overwrite logic needed). Triggered client-side (both rename
+call sites fire it as a second, best-effort request) rather than a backend Transaction→
+Categorization call, to avoid a circular module dependency — same pattern as the existing
+`/alerts/reevaluate` follow-up. Also: Merge Payees cards now diff-highlight which tokens differ
+between the anchor and each candidate name (`frontend/src/lib/nameDiff.ts`), addressing user
+feedback that it wasn't clear which name was being compared against. Not itself a new Epic 3/4
+story — tracked as ML-strategy-phase work, not a backlog task. Full reasoning in ADR-020; endpoint
+in `docs/spec/api.md`.
+
 ## Epic 4 — [ML Categorization Service](../epics/epic-04-ml-categorization.md)
 
 - [x] E4-S1-T1 — `X-Internal-Key` middleware
