@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 import api.retrain as retrain_module
 from api.security import InternalKeyMiddleware
-from training.train import DEFAULT_DATA_PATH
+from training.dataset_locator import find_latest_dataset_file, NoLabeledDatasetFoundError
 
 TEST_KEY = "test-internal-key"
 
@@ -102,10 +102,18 @@ def test_retrain_with_no_corrections_uses_baseline_only(client: TestClient, monk
     assert captured["n_rows"] == 1
 
 
+def _no_real_dataset() -> bool:
+    try:
+        find_latest_dataset_file()
+        return False
+    except NoLabeledDatasetFoundError:
+        return True
+
+
 @pytest.mark.slow
 @pytest.mark.skipif(
-    not DEFAULT_DATA_PATH.exists(),
-    reason="ml/data/spendwise_labeled.xlsx is gitignored (real personal data) — absent in CI checkouts.",
+    _no_real_dataset(),
+    reason="ml/data/ has no labeled dataset (gitignored, real personal data) — absent in CI checkouts.",
 )
 def test_retrain_end_to_end_real_training(client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     """Real (unmocked) retrain against the actual baseline dataset, writing the

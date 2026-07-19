@@ -7,7 +7,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from evaluation.evaluate import DEFAULT_DATA_PATH, run_evaluation
+from evaluation.evaluate import run_evaluation
+from training.dataset_locator import find_latest_dataset_file, NoLabeledDatasetFoundError
 
 TEST_KEY = "test-internal-key"
 
@@ -60,10 +61,18 @@ def test_run_evaluation_without_saving_skips_report_file(synthetic_data_path, tm
     assert not reports_dir.exists()
 
 
+def _no_real_dataset() -> bool:
+    try:
+        find_latest_dataset_file()
+        return False
+    except NoLabeledDatasetFoundError:
+        return True
+
+
 @pytest.mark.slow
 @pytest.mark.skipif(
-    not DEFAULT_DATA_PATH.exists(),
-    reason="ml/data/spendwise_labeled.xlsx is gitignored (real personal data) — absent in CI checkouts.",
+    _no_real_dataset(),
+    reason="ml/data/ has no labeled dataset (gitignored, real personal data) — absent in CI checkouts.",
 )
 def test_run_evaluation_against_real_dataset_writes_report(tmp_path) -> None:
     reports_dir = tmp_path / "reports"

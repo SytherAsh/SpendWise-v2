@@ -61,11 +61,11 @@ cd backend
 
 ### Model Evaluation Script
 
-Runs against `ml/data/spendwise_labeled.xlsx` (2,086 labeled transactions from a 4-year SBI bank statement plus manual/interview labeling — see `ml/labeling/`). Must be re-run after every retraining cycle.
+Runs against whichever `.csv`/`.xlsx` file is newest in `ml/data/` (no filename is hardcoded — see `training/dataset_locator.py`, ADR-017; currently 2,086 labeled transactions from a 4-year SBI bank statement plus manual/interview labeling — see `ml/labeling/`). Must be re-run after every retraining cycle.
 
 ```bash
 cd ml
-python evaluation/evaluate.py --data data/spendwise_labeled.xlsx
+python evaluation/evaluate.py
 ```
 
 Output metrics:
@@ -82,7 +82,7 @@ The script saves a report to `ml/evaluation/reports/` with a timestamp.
 ```bash
 cd ml
 pytest tests/ -v
-python evaluation/evaluate.py --data data/spendwise_labeled.xlsx
+python evaluation/evaluate.py
 ```
 
 ---

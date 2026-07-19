@@ -19,7 +19,7 @@ from api.config import get_settings
 from api.schemas import RecurringRetrainRequest, RecurringRetrainResponse
 from training.model_pipeline import RECURRING_FEATURE_COLUMNS, build_recurring_pipeline
 from training.train import load_labeled_dataset
-from training.train_recurring import DEFAULT_DATA_PATH, build_training_frame, save_model
+from training.train_recurring import build_training_frame, save_model
 
 router = APIRouter()
 
@@ -35,7 +35,7 @@ def _corrections_to_frame(request: RecurringRetrainRequest) -> pd.DataFrame:
 
 @router.post("/retrain-recurring", response_model=RecurringRetrainResponse)
 def retrain_recurring(request: RecurringRetrainRequest) -> RecurringRetrainResponse:
-    baseline_df = load_labeled_dataset(DEFAULT_DATA_PATH)
+    baseline_df = load_labeled_dataset(None)  # newest .csv/.xlsx in ml/data/ — see training/dataset_locator.py
     bootstrap_frame = build_training_frame(baseline_df)
     corrections_frame = _corrections_to_frame(request)
     combined_frame = (

@@ -9,6 +9,10 @@ not on-device) and writes the artifact into --output, which is committed to
 the repo at MODEL_PATH per docs/operations/deployment.md's "Model artifacts"
 note (no external model store at MVP).
 
+`--data` defaults to whichever `.csv`/`.xlsx` file is newest in `ml/data/`
+(see `training/dataset_locator.py` and ADR-017) — no filename is hardcoded,
+so dropping in a new export never requires a code change.
+
 Trains the hierarchical Stage 1 (Transfer vs. Spend) + Stage 2 (spend
 sub-category) model described in training/model_pipeline.py (categorization
 strengthening, 2026-07-11). One HierarchicalCategoryModel is still saved as
@@ -29,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from api.categories import category_id_for_name  # noqa: E402
 from api.config import MODEL_FILENAME  # noqa: E402
+from training.dataset_locator import find_latest_dataset_file  # noqa: E402
 from training.model_pipeline import (  # noqa: E402
     HierarchicalCategoryModel,
     build_subcategory_pipeline,
@@ -36,12 +41,36 @@ from training.model_pipeline import (  # noqa: E402
 )
 from training.preprocessing import build_feature_frame  # noqa: E402
 
-DEFAULT_DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "spendwise_labeled.xlsx"
 DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent.parent / "models"
 
 
-def load_labeled_dataset(data_path: Path) -> pd.DataFrame:
-    return pd.read_excel(data_path)
+def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Column names are export-convention-dependent (the current file uses
+    `Transaction_Date`/`Recipient_Name`/`UPI_ID`; every reader in this codebase
+    — build_feature_frame, train_model, train_recurring — expects lowercase
+    snake_case). Normalizing once here, rather than requiring every future
+    export to match an exact casing, is what makes "swap in a new CSV with no
+    code change" actually true instead of true-until-the-next-export's-headers-
+    differ. Case and whitespace only — column *names* (recipient_name, amount,
+    category, ...) still have to match what the pipeline expects; this doesn't
+    invent a semantic mapping for a renamed or missing column."""
+    df = df.copy()
+    df.columns = [str(c).strip().lower().replace(" ", "_") for c in df.columns]
+    return df
+
+
+def load_labeled_dataset(data_path: Path | None = None) -> pd.DataFrame:
+    """`data_path=None` (the default for every caller — CLI scripts, /retrain,
+    /evaluate) resolves to whatever `find_latest_dataset_file` finds at call
+    time, not at import time — a resolved-once-at-import default would go
+    stale the moment a running `--reload` process outlives a file swap."""
+    if data_path is None:
+        data_path = find_latest_dataset_file()
+    if data_path.suffix.lower() == ".csv":
+        df = pd.read_csv(data_path)
+    else:
+        df = pd.read_excel(data_path)
+    return _normalize_columns(df)
 
 
 def train_model(df: pd.DataFrame):
@@ -81,7 +110,7 @@ def save_model(pipeline, output_dir: Path) -> Path:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train the SpendWise category classifier.")
-    parser.add_argument("--data", type=Path, default=DEFAULT_DATA_PATH)
+    parser.add_argument("--data", type=Path, default=None, help="Defaults to the newest .csv/.xlsx in ml/data/")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_DIR)
     args = parser.parse_args()
 

@@ -14,7 +14,7 @@ from api import model_store
 from api.categories import category_name_for_id
 from api.config import get_settings
 from api.schemas import RetrainRequest, RetrainResponse
-from training.train import DEFAULT_DATA_PATH, load_labeled_dataset, save_model, train_model
+from training.train import load_labeled_dataset, save_model, train_model
 
 router = APIRouter()
 
@@ -31,7 +31,7 @@ def _corrections_to_frame(request: RetrainRequest) -> pd.DataFrame:
 
 @router.post("/retrain", response_model=RetrainResponse)
 def retrain(request: RetrainRequest) -> RetrainResponse:
-    baseline_df = load_labeled_dataset(DEFAULT_DATA_PATH)
+    baseline_df = load_labeled_dataset(None)  # newest .csv/.xlsx in ml/data/ — see training/dataset_locator.py
     corrections_df = _corrections_to_frame(request)
     combined_df = pd.concat([baseline_df, corrections_df], ignore_index=True) if not corrections_df.empty else baseline_df
 

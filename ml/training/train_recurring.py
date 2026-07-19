@@ -5,11 +5,12 @@
     python training/train_recurring.py --output models/
 
 Bootstrap-trains on the same labeled transaction data as categorization
-(`ml/data/spendwise_labeled.xlsx` -- only transaction_date/amount/
-recipient_name/upi_id are used here, not the category column), using loose
-Stage 1 candidate generation (recurring_features.py) and strict-rule-derived
-weak labels (recurring_labels.py) -- see that module's docstring for why this
-is a bootstrap, not a ground-truth-labeled training set.
+(whichever `.csv`/`.xlsx` file `training/dataset_locator.py` finds newest in
+`ml/data/` -- only transaction_date/amount/recipient_name/upi_id are used
+here, not the category column), using loose Stage 1 candidate generation
+(recurring_features.py) and strict-rule-derived weak labels
+(recurring_labels.py) -- see that module's docstring for why this is a
+bootstrap, not a ground-truth-labeled training set.
 """
 
 import argparse
@@ -30,7 +31,6 @@ from training.recurring_features import (  # noqa: E402
 from training.recurring_labels import bootstrap_label  # noqa: E402
 from training.train import load_labeled_dataset  # noqa: E402
 
-DEFAULT_DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "spendwise_labeled.xlsx"
 DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent.parent / "models"
 MODEL_FILENAME = "recurring_classifier.joblib"
 
@@ -75,7 +75,7 @@ def save_model(model, output_dir: Path) -> Path:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train the SpendWise recurring-payment classifier.")
-    parser.add_argument("--data", type=Path, default=DEFAULT_DATA_PATH)
+    parser.add_argument("--data", type=Path, default=None, help="Defaults to the newest .csv/.xlsx in ml/data/")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_DIR)
     args = parser.parse_args()
 

@@ -1,7 +1,10 @@
 """Model evaluation script (E4-S2-T5).
 
     cd ml
-    python evaluation/evaluate.py --data data/spendwise_labeled.xlsx
+    python evaluation/evaluate.py
+
+`--data` defaults to whichever `.csv`/`.xlsx` file is newest in `ml/data/`
+(see `training/dataset_locator.py` and ADR-017) — no filename is hardcoded.
 
 Must be re-run after every retraining cycle (docs/operations/testing.md §2).
 Fits a fresh model on an internal 80/20 held-out split rather than scoring the
@@ -33,13 +36,12 @@ from api.categories import CATEGORIES, category_id_for_name, category_name_for_i
 from training.preprocessing import build_feature_frame  # noqa: E402
 from training.train import load_labeled_dataset, train_model  # noqa: E402
 
-DEFAULT_DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "spendwise_labeled.xlsx"
 DEFAULT_REPORTS_DIR = Path(__file__).resolve().parent / "reports"
 ALL_CATEGORY_IDS = list(range(1, len(CATEGORIES) + 1))
 
 
 def run_evaluation(
-    data_path: Path = DEFAULT_DATA_PATH,
+    data_path: Path | None = None,
     save_report: bool = True,
     reports_dir: Path = DEFAULT_REPORTS_DIR,
 ) -> dict:
@@ -114,7 +116,7 @@ def run_evaluation(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate the SpendWise category classifier.")
-    parser.add_argument("--data", type=Path, default=DEFAULT_DATA_PATH)
+    parser.add_argument("--data", type=Path, default=None, help="Defaults to the newest .csv/.xlsx in ml/data/")
     args = parser.parse_args()
 
     report = run_evaluation(data_path=args.data)

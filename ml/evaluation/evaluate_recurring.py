@@ -4,7 +4,10 @@ held-out split of *candidate groups* (not raw transactions) rather than
 scoring the committed artifact, for an honest, non-leaked accuracy estimate.
 
     cd ml
-    python evaluation/evaluate_recurring.py --data data/spendwise_labeled.xlsx
+    python evaluation/evaluate_recurring.py
+
+`--data` defaults to whichever `.csv`/`.xlsx` file is newest in `ml/data/`
+(see `training/dataset_locator.py` and ADR-017) — no filename is hardcoded.
 
 Interpreting these numbers: because training labels are bootstrapped from the
 existing strict rule (training/recurring_labels.py), high accuracy here means
@@ -29,14 +32,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from training.model_pipeline import RECURRING_FEATURE_COLUMNS, build_recurring_pipeline  # noqa: E402
 from training.train import load_labeled_dataset  # noqa: E402
-from training.train_recurring import DEFAULT_DATA_PATH, build_training_frame  # noqa: E402
+from training.train_recurring import build_training_frame  # noqa: E402
 
 DEFAULT_REPORTS_DIR = Path(__file__).resolve().parent / "reports"
 LABELS = [0, 1]
 
 
 def run_evaluation(
-    data_path: Path = DEFAULT_DATA_PATH,
+    data_path: Path | None = None,
     save_report: bool = True,
     reports_dir: Path = DEFAULT_REPORTS_DIR,
 ) -> dict:
@@ -97,7 +100,7 @@ def run_evaluation(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate the SpendWise recurring-payment classifier.")
-    parser.add_argument("--data", type=Path, default=DEFAULT_DATA_PATH)
+    parser.add_argument("--data", type=Path, default=None, help="Defaults to the newest .csv/.xlsx in ml/data/")
     args = parser.parse_args()
 
     report = run_evaluation(data_path=args.data)

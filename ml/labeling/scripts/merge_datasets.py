@@ -1,6 +1,10 @@
 """
 Step 3. Concatenates every datasets/<name>/labeled.csv into
-ml/data/spendwise_labeled.xlsx — the single file ml/training/train.py reads.
+ml/data/spendwise_labeled.xlsx. ml/training/train.py (and every other
+consumer) doesn't read this specific filename — training/dataset_locator.py
+picks whichever .csv/.xlsx file in ml/data/ is newest (ADR-017), so running
+this script and getting a fresh timestamp is what makes its output "the one
+that's used," not the filename itself.
 Drops duplicate transaction_ids across datasets (the same real transaction
 can show up in more than one source, e.g. a bank export and a later SMS
 capture of the same period).

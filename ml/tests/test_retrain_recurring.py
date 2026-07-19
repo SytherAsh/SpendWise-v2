@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 import api.retrain_recurring as retrain_recurring_module
 from api.security import InternalKeyMiddleware
-from training.train_recurring import DEFAULT_DATA_PATH
+from training.dataset_locator import find_latest_dataset_file, NoLabeledDatasetFoundError
 
 TEST_KEY = "test-internal-key"
 
@@ -83,10 +83,18 @@ def test_retrain_recurring_requires_internal_key(client: TestClient) -> None:
     assert response.status_code == 401
 
 
+def _no_real_dataset() -> bool:
+    try:
+        find_latest_dataset_file()
+        return False
+    except NoLabeledDatasetFoundError:
+        return True
+
+
 @pytest.mark.slow
 @pytest.mark.skipif(
-    not DEFAULT_DATA_PATH.exists(),
-    reason="ml/data/spendwise_labeled.xlsx is gitignored (real personal data) — absent in CI checkouts.",
+    _no_real_dataset(),
+    reason="ml/data/ has no labeled dataset (gitignored, real personal data) — absent in CI checkouts.",
 )
 def test_retrain_recurring_end_to_end_real_training(client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     monkeypatch.setenv("MODEL_PATH", str(tmp_path))

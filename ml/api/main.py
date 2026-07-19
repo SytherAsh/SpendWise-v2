@@ -5,7 +5,8 @@ See docs/architecture.md -> FastAPI ML Service.
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from api import model_store, recurring_model_store
 from api.evaluate import router as evaluate_router
@@ -16,6 +17,7 @@ from api.predict_recurring import router as predict_recurring_router
 from api.retrain import router as retrain_router
 from api.retrain_recurring import router as retrain_recurring_router
 from api.security import InternalKeyMiddleware
+from training.dataset_locator import NoLabeledDatasetFoundError
 
 
 @asynccontextmanager
@@ -38,6 +40,17 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="SpendWise ML Categorization Service", lifespan=lifespan)
 app.add_middleware(InternalKeyMiddleware)
+
+
+@app.exception_handler(NoLabeledDatasetFoundError)
+def handle_no_labeled_dataset(request: Request, exc: NoLabeledDatasetFoundError) -> JSONResponse:
+    # Without this, an empty/missing ml/data/ turns into an unhandled 500 here, which the
+    # Spring Boot caller's JWT auth filter (skipped on its own /error dispatch) then turns
+    # into a bare, bodiless 403 — same masked-error shape as the recipient_merge_suggestions
+    # RLS bug this same session. A clean 503 with a real message is at least diagnosable.
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
 app.include_router(predict_router)
 app.include_router(retrain_router)
 app.include_router(evaluate_router)
