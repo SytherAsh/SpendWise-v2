@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Plus, Search, PlayCircle } from "lucide-react";
+import { useSWRConfig } from "swr";
+import { Menu, Plus, RefreshCw, Search, PlayCircle } from "lucide-react";
 import { DateRangePicker } from "@/components/shared/DateRangePicker";
 import { NotificationsBell } from "@/components/shared/NotificationsBell";
 import { UserMenu } from "@/components/shared/UserMenu";
@@ -25,9 +27,23 @@ interface Profile {
 export function TopBar() {
   const pathname = usePathname();
   const { setMobileNavOpen, setCommandOpen, setQuickAddOpen } = useShell();
+  const { mutate } = useSWRConfig();
+  const [refreshing, setRefreshing] = useState(false);
   // Shares the SWR cache key with UserMenu's own `/users/me` fetch — no extra request.
   const { data: profile } = useApi<Profile>("/users/me");
   const isDemo = profile?.phone === DEMO_PHONE;
+
+  // Revalidates every currently-cached SWR key (every page's data), without a hard browser
+  // reload — a hard reload re-runs the app's auth bootstrap from scratch and drops the user
+  // back on the landing page, which this exists specifically to avoid.
+  async function refreshAll() {
+    setRefreshing(true);
+    try {
+      await mutate(() => true);
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border bg-surface/80 px-3 backdrop-blur-xl md:px-6">
@@ -95,6 +111,17 @@ export function TopBar() {
         <div className="hidden sm:block">
           <DateRangePicker />
         </div>
+
+        <button
+          type="button"
+          onClick={refreshAll}
+          disabled={refreshing}
+          aria-label="Refresh"
+          title="Refresh"
+          className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-sm)] border border-border text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground disabled:opacity-60"
+        >
+          <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
+        </button>
 
         <Button size="md" onClick={() => setQuickAddOpen(true)} className="gap-1.5">
           <Plus className="size-4" />
