@@ -148,6 +148,15 @@ def predict_category(ml_url: str, internal_key: str, row: dict):
         return json.loads(response.read())
 
 
+# Committing only once at the very end (the previous behavior) means a long
+# --categorize-now run -- one /predict HTTP round-trip per row -- shows zero
+# rows in the database and prints nothing to stdout until the entire file is
+# done, indistinguishable from a hang. Committing periodically makes progress
+# observable in the database as it happens, and bounds how much work a later
+# row's failure could roll back.
+COMMIT_EVERY = 25
+
+
 def import_rows(
     conn,
     rows,
@@ -160,6 +169,11 @@ def import_rows(
     skipped = 0
     with conn.cursor() as cur:
         for i, row in enumerate(rows):
+            if i > 0 and i % COMMIT_EVERY == 0:
+                conn.commit()
+                print(f"... {i}/{len(rows)} rows processed ({imported} imported, {skipped} skipped so far)",
+                      file=sys.stderr, flush=True)
+
             missing = [c for c in REQUIRED_COLUMNS if row.get(c) in (None, "")]
             if missing:
                 print(f"Skipping row {i}: missing {missing}", file=sys.stderr)
