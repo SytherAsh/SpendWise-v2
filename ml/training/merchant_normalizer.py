@@ -272,6 +272,13 @@ def find_ambiguous_fuzzy_pairs(names: list, clusters: dict, threshold: int = 90,
     raw variant's own canonical name), deduplicated, keeping the best (max) raw score
     observed between any two variants of the two clusters -- so three near-miss raw
     spellings against one other cluster surface as one ambiguous pair, not three.
+
+    `fuzz.token_sort_ratio` returns a float (e.g. 82.7586...), but `score` is reported
+    to the API as an `int` (`AmbiguousCandidate.score`, matching the whole-number scores
+    the other detectors already emit) -- rounded here, at the point a raw score becomes
+    a reported one, rather than upstream in `_pairwise_scores`, which must keep full
+    float precision since `cluster_by_fuzzy_name` reuses those same scores as distances
+    for the actual auto-merge clustering decision.
     """
     unique_names = list(dict.fromkeys(names))
     if len(unique_names) <= 1:
@@ -288,7 +295,7 @@ def find_ambiguous_fuzzy_pairs(names: list, clusters: dict, threshold: int = 90,
         key = (cluster_a, cluster_b) if cluster_a < cluster_b else (cluster_b, cluster_a)
         best_by_cluster_pair[key] = max(best_by_cluster_pair.get(key, 0), score)
 
-    return [{"name_a": a, "name_b": b, "score": s} for (a, b), s in best_by_cluster_pair.items()]
+    return [{"name_a": a, "name_b": b, "score": round(s)} for (a, b), s in best_by_cluster_pair.items()]
 
 
 def normalize_recipients(

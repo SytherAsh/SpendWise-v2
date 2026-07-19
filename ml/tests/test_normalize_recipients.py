@@ -76,3 +76,31 @@ def test_normalize_recipients_surfaces_ambiguous_groups(client: TestClient) -> N
     for group in groups:
         assert [c["key"] for c in group["candidates"]] == ["a1"]
         assert group["candidates"][0]["reason"] == "prefix_ambiguous"
+
+
+def test_normalize_recipients_surfaces_fuzzy_near_miss_through_response_schema(client: TestClient) -> None:
+    """Regression test: a fuzzy_near_miss pair's score comes straight from
+    rapidfuzz.fuzz.token_sort_ratio, which returns a float (e.g. 82.7586...),
+    but AmbiguousCandidate.score is declared `int`. Every other test for this
+    route/function calls canonicalize_with_ambiguities directly or only exercises
+    prefix_ambiguous pairs (always a whole-number score), so none of them go
+    through FastAPI's actual response-model validation on a fractional score --
+    this previously 500'd with a bare "Internal Server Error" (a pydantic
+    ResponseValidationError FastAPI has no handler for) on every real user whose
+    canonicalization sweep produced a fuzzy_near_miss candidate."""
+    payload = {
+        "entries": [
+            {"key": "b1", "recipient_name": "AIRTEL PREPAID", "upi_id": None},
+            {"key": "b2", "recipient_name": "AIRTEL POSTPAID", "upi_id": None},
+        ]
+    }
+
+    response = client.post("/normalize-recipients", json=payload, headers={"X-Internal-Key": TEST_KEY})
+
+    assert response.status_code == 200
+    groups = response.json()["ambiguous_groups"]
+    assert len(groups) == 1
+    candidate = groups[0]["candidates"][0]
+    assert candidate["reason"] == "fuzzy_near_miss"
+    assert isinstance(candidate["score"], int)
+    assert 78 <= candidate["score"] < 90
